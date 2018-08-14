@@ -33,7 +33,21 @@ int stego_gen_keys(void* buf, int count);
 Generate the orthonormal extraction keys.<br>
 Will be called at initializion.
 
-<br><br><br>
+## AES:
+### aes_encrypt:
+```c
+int aes_encrypt(const void* key, const void* data, size_t size,  void* buf)
+```
+Encrpyt `size` bytes of `data` with 128-bit AES encryption using `key`.<br>
+Places the result in `buf`.
+
+### aes_decrypt:
+```c
+int aes_decrypt(const void* key, const void* enc, size_t size, void* buf)
+```
+Decrypt `size` bytes of `enc` with 128-bit AES decryption using `key`.<br>
+Places the result in `buf`.
+
 
 ## Fuse:
 
