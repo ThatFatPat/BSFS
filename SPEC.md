@@ -49,7 +49,35 @@ Decrypt `size` bytes of `enc` with 128-bit AES decryption using `key`.<br>
 Places the result in `buf`.
 
 
-## Fuse:
+## Key Table:
+
+### Magic Number:
+```c
+#define KEYTAB_MAGIC 0xBEEFCAFE
+```
+This magic number appears at the beginning of every entry in the key table and is used to verify passwords.
+
+### keytab_lookup:
+```c
+int keytab_lookup(const void* pass, void* key)
+```
+Verifies `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.<br>
+
+### keytab_store:
+```c
+int keytab_store(off_t index, const void* pass, const void* key);
+```
+Stores `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
+
+<br><br>
+
+# FUSE:
+> Fuse requires being supplied a `fuse_operations` struct containing all the operations relevant to the file system. In our case every function pointer in that struct will point to a `bs_{function name}`  of the same signature.
+
+### CLUSTER_SIZE:
+```c
+#define CLUSTER_SIZE 2048
+```
 
 ### read_cluster:
 ```c
