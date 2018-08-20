@@ -150,7 +150,10 @@ Find the index of the next cluster in the cluster chain (file).
 **Note**: If `CLUSTER_OFFSET_EOF` is returned, `cluster` is the last cluster in the chain.
 
 ### fs_read_bitmap
-
+```c
+int fs_read_bitmap(const void* key, const void* buf, size_t bitmap_size)
+```
+Reads the bitmap of the level matching `key` to `buf`.
 
 ### fs_alloc_cluster
 ```c
@@ -164,7 +167,7 @@ int fs_dealloc_cluster(void* bitmap, cluster_offset_t cluster);
 ```
 Deallocate the cluster specified by `cluster` and change its status bit to 0, meaning it is free. 
 
-## BFT
+## BFT:
 
 ### Timestamp
 ```c
