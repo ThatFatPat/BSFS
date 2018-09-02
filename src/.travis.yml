@@ -9,4 +9,5 @@ script:
   - cmake -DCMAKE_GENERATOR=Ninja ..
   - ninja
 branches:
-  - /.*/
+  only:
+    - /.*/
