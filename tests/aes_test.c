@@ -2,6 +2,6 @@
 
 int main(int argc, char const *argv[])
 {
-    test_func();
+    init_aes();
     return 0;
 }
