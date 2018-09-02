@@ -1,0 +1,10 @@
+before_install:
+  - sudo apt-get install -y libssl-dev ninja cmake build-essential meson xz-utils
+  - ./install_fuse
+  - mkdir build
+language: c
+compiler: clang
+script:
+  - cd build
+  - cmake -DCMAKE_GENERATOR=Ninja ..
+  - ninja
