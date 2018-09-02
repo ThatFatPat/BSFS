@@ -1,8 +1,6 @@
-#ifndef BS_AES_H
-#define BS_AES_H
+#ifndef BS_ENC_H
+#define BS_ENC_H
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 
-#endif // BS_AES_H
+
+#endif // BS_ENC_H
