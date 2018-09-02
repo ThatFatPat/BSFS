@@ -1,6 +1,6 @@
 before_install:
   - sudo apt-get install -y libssl-dev ninja cmake build-essential meson xz-utils
-  - ./install_fuse
+  - ./install_fuse.sh
   - mkdir build
 language: c
 compiler: clang
