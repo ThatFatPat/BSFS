@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(BSFS)
+project(BSFS C)
 
 find_package(OpenSSL REQUIRED)
 
@@ -16,8 +16,12 @@ set(SOURCE_FILES
   src/stego.c
 )
 
+set(WARNINGS -Wall -Wextra)
+
 add_library(bsfs-core ${SOURCE_FILES})
 target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} ${FUSE3_LIBRARIES})
+target_compile_options(bsfs-core PRIVATE ${WARNINGS})
 
 add_executable(bsfs src/main.c)
 target_link_libraries(bsfs bsfs-core ${FUSE3_LIBRARIES})
+target_compile_options(bsfs PRIVATE ${WARNINGS})
