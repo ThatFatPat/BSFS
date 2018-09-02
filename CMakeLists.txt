@@ -14,8 +14,10 @@ set(SOURCE_FILES
   src/fuse_ops.c
   src/keytab.c
   src/stego.c
-  src/main.c
 )
 
-add_executable(bsfs ${SOURCE_FILES})
-target_link_libraries(bsfs ${OPENSSL_LIBRARIES} ${FUSE3_LIBRARIES})
+add_library(bsfs-core ${SOURCE_FILES})
+target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} ${FUSE3_LIBRARIES})
+
+add_executable(bsfs src/main.c)
+target_link_libraries(bsfs bsfs-core ${FUSE3_LIBRARIES})
