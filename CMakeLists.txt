@@ -10,7 +10,7 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR} ${FUSE3_INCLUDE_DIR})
 
 set(SOURCE_FILES
   src/bft.c
-  src/bs_aes.c
+  src/enc.c
   src/fuse_ops.c
   src/keytab.c
   src/stego.c
