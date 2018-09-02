@@ -13,3 +13,8 @@ script:
 branches:
   only:
     - /.*/
+matrix:
+  include:
+    - os: linux
+      dist: bionic
+      sudo: required
