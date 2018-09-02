@@ -8,3 +8,5 @@ script:
   - cd build
   - cmake -DCMAKE_GENERATOR=Ninja ..
   - ninja
+branches:
+  - all
