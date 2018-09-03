@@ -76,7 +76,7 @@ Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key t
 
 ### keytab_store:
 ```c
-int keytab_store(const void* disk, off_t index, const void* pass, const void* key);
+int keytab_store(void* disk, off_t index, const void* pass, const void* key);
 ```
 Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
 
