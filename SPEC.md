@@ -4,9 +4,9 @@
 ## Stego:
 ### Key Size:
 ```c
-#define STEGO_KEY_SIZE 128
+#define STEGO_KEY_BITS 128
 ```
-This key size is also the number of cover files present on the system.
+Number of bits in a key; also the number of cover files present on the system.
 
 
 ### stego_read_level:
