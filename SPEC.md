@@ -248,17 +248,23 @@ Look up the file specified by `filename` in `bft`. If found, fill out the respec
 
 **Note**: `ent` should be passed uninitialized, and should be destroyed with `bft_entry_destroy` only if the function succeeds.
 
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
 ### bft_write_entry
 ```c
 int bft_write_entry(void* bft, const bft_entry_t* ent);
 ```
 Write `ent` to the BFT. If an entry with the filename already exists, it is updated.
 
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
 ### bft_remove_entry
 ```c
 int bft_remove_entry(void* bft, const bft_entry_t* ent);
 ```
 Remove the entry indicated by `ent` from `bft`.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_entry_iter_t
 ```c
@@ -275,6 +281,8 @@ Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
 passed directly to the function on every iteration and can be used to maintain
 application-specific data.
 
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
 ### bft_read_bft
 ```c
 int bft_read_bft(const void* key, const void* disk, size_t level_size,
@@ -282,6 +290,7 @@ int bft_read_bft(const void* key, const void* disk, size_t level_size,
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_write_bft
 ```c
@@ -289,3 +298,5 @@ int bft_write_bft(const void* key, void* disk, size_t level_size,
   const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
