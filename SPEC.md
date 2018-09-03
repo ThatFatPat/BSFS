@@ -274,3 +274,18 @@ int bft_iter_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
 passed directly to the function on every iteration and can be used to maintain
 application-specific data.
+
+### bft_read_bft
+```c
+int bft_read_bft(const void* key, const void* disk, size_t level_size,
+  void* bft);
+```
+Read the BFT written at the beginning of the level specified by `key` into `bft`.
+
+
+### bft_write_bft
+```c
+int bft_write_bft(const void* key, void* disk, size_t level_size,
+  const void* bft);
+```
+Write `bft` to the beginning of the level specified by `key`.
