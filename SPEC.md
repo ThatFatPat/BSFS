@@ -257,3 +257,18 @@ Write `ent` to the BFT. If an entry with the filename already exists, it is upda
 int bft_remove_entry(void* bft, const bft_entry_t* ent);
 ```
 Remove the entry indicated by `ent` from `bft`.
+
+### bft_entry_iter_t
+```c
+typedef void (*bft_entry_iter_t)(const bft_entry_t* ent, void* ctx);
+```
+A callback function which is called once for every entry in the BFT via
+`bft_iter_entries`. The `ctx` parameter can be used to pass application-specific data.
+
+### bft_iter_entries
+```c
+int bft_iter_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
+```
+Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
+passed directly to the function on every iteration and can be used to maintain
+application-specific data.
