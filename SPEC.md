@@ -238,9 +238,9 @@ void bft_entry_destroy(bft_entry_t* ent);
 ```
 Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After calling this function, `ent` should be considered invalid and should not be used unless it is reinitialized.
 
-### bft_lookup:
+### bft_find_entry:
 ```c
-int bft_lookup(const void* bft, const char* filename, bft_entry_t* ent);
+int bft_find_entry(const void* bft, const char* filename, bft_entry_t* ent);
 ```
 Look up the file specified by `filename` in `bft`. If found, fill out the respective fields of `ent` to contain information about the requested entry.
 
