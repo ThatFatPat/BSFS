@@ -70,13 +70,13 @@ This magic number appears at the beginning of every entry in the key table and i
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(const void* disk, const void* pass, void* key);
+int keytab_lookup(const void* disk, const char* pass, void* key);
 ```
 Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.
 
 ### keytab_store:
 ```c
-int keytab_store(void* disk, off_t index, const void* pass, const void* key);
+int keytab_store(void* disk, off_t index, const char* pass, const void* key);
 ```
 Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
 
