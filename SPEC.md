@@ -152,9 +152,16 @@ Find the index of the next cluster in the cluster chain (file).
 ### fs_read_bitmap
 ```c
 int fs_read_bitmap(const void* key, const void* disk, size_t level_size,
-  void* buf, size_t bitmap_size)
+  void* buf, size_t bitmap_size);
 ```
-Reads the bitmap of the level matching `key` to `buf`.
+Read the bitmap of the level matching `key` to `buf`.
+
+### fs_write_bitmap
+```c
+int fs_write_bitmap(const void* key, void* disk, size_t level_size,
+  const void* buf, size_t bitmap_size);
+```
+Write the contents of `buf` to the bitmap in the level specified by `key`.
 
 ### fs_alloc_cluster
 ```c
