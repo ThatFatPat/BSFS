@@ -211,7 +211,7 @@ typedef struct bft_entry {
   mode_t mode;
   bft_timestamp_t atim;
   bft_timestamp_t mtim;
-} bft_entry;
+} bft_entry_t;
 ```
 
 #### Structure on Disk (stored in big-endian):
@@ -225,7 +225,7 @@ typedef struct bft_entry {
 
 ### bft_entry_init
 ```c
-int bft_entry_init(bft_entry* ent, const char* name, size_t size, mode_t mode,
+int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
   cluster_offset_t initial_cluster, bft_timestamp_t atim, bft_timestamp_t mtim);
 ```
 Initializes a `bft_entry` with the specified information. `name` is copied into `ent->name`, so the original may be destroyed.
@@ -234,13 +234,13 @@ Initializes a `bft_entry` with the specified information. `name` is copied into 
 
 ### bft_entry_destroy
 ```c
-void bft_entry_destroy(bft_entry* ent);
+void bft_entry_destroy(bft_entry_t* ent);
 ```
 Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After calling this function, `ent` should be considered invalid and should not be used unless it is reinitialized.
 
 ### bft_lookup:
 ```c
-int bft_lookup(const void* bft, const char* filename, bft_entry* ent);
+int bft_lookup(const void* bft, const char* filename, bft_entry_t* ent);
 ```
 Look up the file specified by `filename` in `bft`. If found, fill out the respective fields of `ent` to contain information about the requested entry.
 
@@ -248,12 +248,12 @@ Look up the file specified by `filename` in `bft`. If found, fill out the respec
 
 ### bft_write_entry
 ```c
-int bft_write_entry(void* bft, const bft_entry* ent);
+int bft_write_entry(void* bft, const bft_entry_t* ent);
 ```
 Write `ent` to the BFT. If an entry with the filename already exists, it is updated.
 
 ### bft_remove_entry
 ```c
-int bft_remove_entry(void* bft, const bft_entry* ent);
+int bft_remove_entry(void* bft, const bft_entry_t* ent);
 ```
 Remove the entry indicated by `ent` from `bft`.
