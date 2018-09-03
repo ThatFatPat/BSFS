@@ -61,6 +61,8 @@ Places the result in `buf`.
 ```c
 #define MAX_LEVELS 16
 ```
+The maximum number of security levels on the system (and hence the maximal size
+of the key table).
 
 ### Magic Number:
 ```c
