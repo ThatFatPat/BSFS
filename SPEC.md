@@ -134,7 +134,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, const void* disk, size_t level_size,
+int fs_write_cluster(const void* key, void* disk, size_t level_size,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
