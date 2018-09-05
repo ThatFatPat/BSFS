@@ -203,6 +203,8 @@ Size of a BFT entry on disk, in bytes.
 ```
 Maximum length of a file name, in bytes.
 
+**Note**: This includes the terminating null character, capping the effective maximum file name at 63 bytes.
+
 
 ### struct bft_entry
 ```c
@@ -218,7 +220,7 @@ typedef struct bft_entry {
 
 #### Structure on Disk (stored in big-endian):
 
-1. `name` - 64 UTF-8 Code Units
+1. `name` - 64 UTF-8 Code Units (including terminating null)
 1. `initial_cluster` - 32 Bits
 1. `size` - 32 Bits
 1. `mode` - 32 Bits
