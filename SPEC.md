@@ -240,9 +240,9 @@ void bft_entry_destroy(bft_entry_t* ent);
 ```
 Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After calling this function, `ent` should be considered invalid and should not be used unless it is reinitialized.
 
-### bft_find_entry:
+### bft_find_table_entry:
 ```c
-int bft_find_entry(const void* bft, const char* filename, bft_entry_t* ent);
+int bft_find_table_entry(const void* bft, const char* filename, bft_entry_t* ent);
 ```
 Look up the file specified by `filename` in `bft`. If found, fill out the respective fields of `ent` to contain information about the requested entry.
 
@@ -250,17 +250,17 @@ Look up the file specified by `filename` in `bft`. If found, fill out the respec
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_write_entry
+### bft_write_table_entry
 ```c
-int bft_write_entry(void* bft, const bft_entry_t* ent);
+int bft_write_table_entry(void* bft, const bft_entry_t* ent);
 ```
 Write `ent` to the BFT. If an entry with the filename already exists, it is updated.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_remove_entry
+### bft_remove_table_entry
 ```c
-int bft_remove_entry(void* bft, const bft_entry_t* ent);
+int bft_remove_table_entry(void* bft, const bft_entry_t* ent);
 ```
 Remove the entry indicated by `ent` from `bft`.
 
@@ -273,9 +273,9 @@ typedef void (*bft_entry_iter_t)(const bft_entry_t* ent, void* ctx);
 A callback function which is called once for every entry in the BFT via
 `bft_iter_entries`. The `ctx` parameter can be used to pass application-specific data.
 
-### bft_iter_entries
+### bft_iter_table_entries
 ```c
-int bft_iter_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
+int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 ```
 Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
 passed directly to the function on every iteration and can be used to maintain
@@ -283,18 +283,18 @@ application-specific data.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_read_bft
+### bft_read_table
 ```c
-int bft_read_bft(const void* key, const void* disk, size_t level_size,
+int bft_read_table(const void* key, const void* disk, size_t level_size,
   void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_write_bft
+### bft_write_table
 ```c
-int bft_write_bft(const void* key, void* disk, size_t level_size,
+int bft_write_table(const void* key, void* disk, size_t level_size,
   const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
