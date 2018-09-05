@@ -248,6 +248,12 @@ void bft_entry_destroy(bft_entry_t* ent);
 ```
 Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After calling this function, `ent` should be considered invalid and should not be used unless it is reinitialized.
 
+### bft_find_free_table_entry:
+```c
+int bft_find_free_table_entry(const void* bft, bft_offset_t* off);
+```
+Search for empty space in `bft`, returning the offset of one of the available entries.
+
 ### bft_find_table_entry:
 ```c
 int bft_find_table_entry(const void* bft, const char* filename, bft_offset_t* off);
