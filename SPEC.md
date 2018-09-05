@@ -42,18 +42,21 @@ Generate the orthonormal extraction keys.
 ## AES:
 ### aes_encrypt:
 ```c
-int aes_encrypt(const void* key, const void* data, size_t size, void* buf);
+int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size);
 ```
-Encrpyt `size` bytes of `data` with 128-bit AES encryption using `key`.<br>
-Places the result in `buf`.
+Encrpyt `size` bytes of `data` with 128-bit AES encryption using a key derived from `password`.<br>
+Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+
+**Note**: Make sure to free the buffer with `free` after use. 
 
 ### aes_decrypt:
 ```c
-int aes_decrypt(const void* key, const void* enc, size_t size, void* buf);
+int aes_decrypt(const void* password, size_t password_size, const void* enc, size_t size, void** buf_pointer, size_t* buf_size);
 ```
-Decrypt `size` bytes of `enc` with 128-bit AES decryption using `key`.<br>
-Places the result in `buf`.
+Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
+Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 
+**Note**: Make sure to free the buffer with `free` after use. 
 
 ## Key Table:
 
