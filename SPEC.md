@@ -4,9 +4,9 @@
 ## Stego:
 ### Key Size:
 ```c
-#define STEGO_KEY_SIZE 128
+#define STEGO_KEY_BITS 128
 ```
-This key size is also the number of cover files present on the system.
+Number of bits in a key; also the number of cover files present on the system.
 
 
 ### stego_read_level:
@@ -61,6 +61,8 @@ Places the result in `buf`.
 ```c
 #define MAX_LEVELS 16
 ```
+The maximum number of security levels on the system (and hence the maximal size
+of the key table).
 
 ### Magic Number:
 ```c
@@ -70,13 +72,13 @@ This magic number appears at the beginning of every entry in the key table and i
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(const void* disk, const void* pass, void* key);
+int keytab_lookup(const void* disk, const char* pass, void* key);
 ```
 Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.
 
 ### keytab_store:
 ```c
-int keytab_store(void* disk, off_t index, const void* pass, const void* key);
+int keytab_store(void* disk, off_t index, const char* pass, const void* key);
 ```
 Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
 
@@ -134,7 +136,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, const void* disk, size_t level_size,
+int fs_write_cluster(const void* key, void* disk, size_t level_size,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
@@ -151,9 +153,17 @@ Find the index of the next cluster in the cluster chain (file).
 
 ### fs_read_bitmap
 ```c
-int fs_read_bitmap(const void* key, const void* buf, size_t bitmap_size)
+int fs_read_bitmap(const void* key, const void* disk, size_t level_size,
+  void* buf, size_t bitmap_size);
 ```
-Reads the bitmap of the level matching `key` to `buf`.
+Read the bitmap of the level matching `key` to `buf`.
+
+### fs_write_bitmap
+```c
+int fs_write_bitmap(const void* key, void* disk, size_t level_size,
+  const void* buf, size_t bitmap_size);
+```
+Write the contents of `buf` to the bitmap in the level specified by `key`.
 
 ### fs_alloc_cluster
 ```c
@@ -193,6 +203,14 @@ Size of a BFT entry on disk, in bytes.
 ```
 Maximum length of a file name, in bytes.
 
+**Note**: This includes the terminating null character, capping the effective maximum file name at 63 bytes.
+
+
+### bft_offset_t
+```c
+typedef int16_t bft_offset_t;
+```
+Represents an offset into the BFT.
 
 ### struct bft_entry
 ```c
@@ -203,12 +221,12 @@ typedef struct bft_entry {
   mode_t mode;
   bft_timestamp_t atim;
   bft_timestamp_t mtim;
-} bft_entry;
+} bft_entry_t;
 ```
 
 #### Structure on Disk (stored in big-endian):
 
-1. `name` - 64 UTF-8 Code Units
+1. `name` - 64 UTF-8 Code Units (including terminating null)
 1. `initial_cluster` - 32 Bits
 1. `size` - 32 Bits
 1. `mode` - 32 Bits
@@ -217,7 +235,7 @@ typedef struct bft_entry {
 
 ### bft_entry_init
 ```c
-int bft_entry_init(bft_entry* ent, const char* name, size_t size, mode_t mode,
+int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
   cluster_offset_t initial_cluster, bft_timestamp_t atim, bft_timestamp_t mtim);
 ```
 Initializes a `bft_entry` with the specified information. `name` is copied into `ent->name`, so the original may be destroyed.
@@ -226,26 +244,80 @@ Initializes a `bft_entry` with the specified information. `name` is copied into 
 
 ### bft_entry_destroy
 ```c
-void bft_entry_destroy(bft_entry* ent);
+void bft_entry_destroy(bft_entry_t* ent);
 ```
 Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After calling this function, `ent` should be considered invalid and should not be used unless it is reinitialized.
 
-### bft_lookup:
+### bft_find_free_table_entry:
 ```c
-int bft_lookup(const void* bft, const char* filename, bft_entry* ent);
+int bft_find_free_table_entry(const void* bft, bft_offset_t* off);
 ```
-Look up the file specified by `filename` in `bft`. If found, fill out the respective fields of `ent` to contain information about the requested entry.
+Search for empty space in `bft`, returning the offset of one of the available entries.
 
-**Note**: `ent` should be passed uninitialized, and should be destroyed with `bft_entry_destroy` only if the function succeeds.
-
-### bft_write_entry
+### bft_find_table_entry:
 ```c
-int bft_write_entry(void* bft, const bft_entry* ent);
+int bft_find_table_entry(const void* bft, const char* filename, bft_offset_t* off);
 ```
-Write `ent` to the BFT. If an entry with the filename already exists, it is updated.
+Look up the file specified by `filename` in `bft`. If found, set `off` to the offset of the relevant entry.
 
-### bft_remove_entry
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+### bft_read_table_entry
 ```c
-int bft_remove_entry(void* bft, const bft_entry* ent);
+int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off);
 ```
-Remove the entry indicated by `ent` from `bft`.
+Read the entry at offset `off` in `bft` and fill out `ent`.
+
+**Note**: `ent` should be freed only if the function succeeds.
+
+### bft_write_table_entry
+```c
+int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
+```
+Write `ent` to `bft` at offset `off`.
+
+**Note**: The previous content at offset `off`, if any exists, is overwritten.
+**Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+### bft_remove_table_entry
+```c
+int bft_remove_table_entry(void* bft, bft_offset_t off);
+```
+Remove the entry at offset `off` from `bft`.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+### bft_entry_iter_t
+```c
+typedef void (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
+```
+A callback function which is called once for every entry in the BFT via
+`bft_iter_table_entries`.
+
+### bft_iter_table_entries
+```c
+int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
+```
+Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
+passed directly to the function on every iteration and can be used to maintain
+application-specific data.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+### bft_read_table
+```c
+int bft_read_table(const void* key, const void* disk, size_t level_size,
+  void* bft);
+```
+Read the BFT written at the beginning of the level specified by `key` into `bft`.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+### bft_write_table
+```c
+int bft_write_table(const void* key, void* disk, size_t level_size,
+  const void* bft);
+```
+Write `bft` to the beginning of the level specified by `key`.
+
+**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
