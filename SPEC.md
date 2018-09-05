@@ -281,10 +281,10 @@ Remove the entry at offset `off` from `bft`.
 
 ### bft_entry_iter_t
 ```c
-typedef void (*bft_entry_iter_t)(const bft_entry_t* ent, void* ctx);
+typedef void (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
 ```
 A callback function which is called once for every entry in the BFT via
-`bft_iter_table_entries`. The `ctx` parameter can be used to pass application-specific data.
+`bft_iter_table_entries`.
 
 ### bft_iter_table_entries
 ```c
