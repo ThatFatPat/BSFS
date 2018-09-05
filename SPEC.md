@@ -262,6 +262,14 @@ Look up the file specified by `filename` in `bft`. If found, set `off` to the of
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
+### bft_read_table_entry
+```c
+int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off);
+```
+Read the entry at offset `off` in `bft` and fill out `ent`.
+
+**Note**: `ent` should be freed only if the function succeeds.
+
 ### bft_write_table_entry
 ```c
 int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
