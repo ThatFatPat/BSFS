@@ -292,18 +292,19 @@ Remove the entry at offset `off` from `bft`.
 
 ### bft_entry_iter_t
 ```c
-typedef void (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
+typedef bool (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
 ```
 A callback function which is called once for every entry in the BFT via
 `bft_iter_table_entries`.
+Returning `false` indicates that iteration should stop.
 
 ### bft_iter_table_entries
 ```c
 int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 ```
-Iterate over all of the entries in `bft`, calling `iter` on each. `ctx` will be
-passed directly to the function on every iteration and can be used to maintain
-application-specific data.
+Iterate over all of the entries in `bft`, calling `iter` on each. If `iter`
+returns `false`, iteration stops. `ctx` will be passed directly to the function
+on every iteration and can be used to maintain application-specific data.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
