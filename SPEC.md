@@ -271,7 +271,7 @@ Remove the entry indicated by `ent` from `bft`.
 typedef void (*bft_entry_iter_t)(const bft_entry_t* ent, void* ctx);
 ```
 A callback function which is called once for every entry in the BFT via
-`bft_iter_entries`. The `ctx` parameter can be used to pass application-specific data.
+`bft_iter_table_entries`. The `ctx` parameter can be used to pass application-specific data.
 
 ### bft_iter_table_entries
 ```c
