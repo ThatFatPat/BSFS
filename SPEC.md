@@ -206,6 +206,12 @@ Maximum length of a file name, in bytes.
 **Note**: This includes the terminating null character, capping the effective maximum file name at 63 bytes.
 
 
+### bft_offset_t
+```c
+typedef int16_t bft_offset_t;
+```
+Represents an offset into the BFT.
+
 ### struct bft_entry
 ```c
 typedef struct bft_entry {
@@ -244,27 +250,26 @@ Destroy the entry and deallocate any memory allocated by `bft_entry_init`. After
 
 ### bft_find_table_entry:
 ```c
-int bft_find_table_entry(const void* bft, const char* filename, bft_entry_t* ent);
+int bft_find_table_entry(const void* bft, const char* filename, bft_offset_t* off);
 ```
-Look up the file specified by `filename` in `bft`. If found, fill out the respective fields of `ent` to contain information about the requested entry.
-
-**Note**: `ent` should be passed uninitialized, and should be destroyed with `bft_entry_destroy` only if the function succeeds.
+Look up the file specified by `filename` in `bft`. If found, set `off` to the offset of the relevant entry.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_write_table_entry
 ```c
-int bft_write_table_entry(void* bft, const bft_entry_t* ent);
+int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 ```
-Write `ent` to the BFT. If an entry with the filename already exists, it is updated.
+Write `ent` to `bft` at offset `off`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: The previous content at offset `off`, if any exists, is overwritten.
+**Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_remove_table_entry
 ```c
-int bft_remove_table_entry(void* bft, const bft_entry_t* ent);
+int bft_remove_table_entry(void* bft, bft_offset_t off);
 ```
-Remove the entry indicated by `ent` from `bft`.
+Remove the entry at offset `off` from `bft`.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
