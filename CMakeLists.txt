@@ -5,4 +5,4 @@ add_subdirectory(src)
 add_subdirectory(tests)
 
 enable_testing()
-add_test(test bsfs-test)
+add_test(test tests/bsfs-test)
