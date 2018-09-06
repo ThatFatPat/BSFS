@@ -9,11 +9,7 @@
 
 static int gen_key(const void* password, size_t password_size, void* key, void* iv) {
   int res_size;
- 	/*
-   * Gen key & IV for AES 128 CBC mode. A SHA1 digest is used to hash the supplied key material.
-   * nrounds is the number of times the we hash the material. More rounds are more secure but
-   * slower.
-   */
+  
   res_size = EVP_BytesToKey(EVP_aes_128_cbc(), EVP_sha1(), NULL, (uint8_t*) password,
    password_size, NROUNDS, (uint8_t*) key, (uint8_t*) iv);
   if (res_size != 16) {
