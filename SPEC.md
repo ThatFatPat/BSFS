@@ -75,6 +75,11 @@ considered invalid.
 ```
 Number of bits in a key; also the number of cover files present on the system.
 
+### compute_level_size:
+```c
+size_t compute_level_size(size_t disk_size);
+```
+Calculate the size of a single level given the size of the disk.
 
 ### stego_read_level:
 ```c
@@ -156,12 +161,6 @@ Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index
 
 # FUSE:
 > Fuse requires being supplied a `fuse_operations` struct containing all the operations relevant to the file system. In our case every function pointer in that struct will point to a `bs_{function name}`  of the same signature.
-
-### compute_level_size:
-```c
-size_t compute_level_size(size_t disk_size);
-```
-Calculate the size of a single level given the size of the disk.
 
 ## Cluster Management:
 
