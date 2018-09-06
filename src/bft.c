@@ -25,3 +25,16 @@ void bft_entry_destroy(bft_entry_t* ent) {
   free((void*) ent->name);
   *ent = (bft_entry_t) {0}; // turn use-after-free into a guaranteed crash
 }
+
+
+int bft_find_free_table_entry(const void* bft, bft_offset_t* off) {
+  const uint8_t* bft_bytes = (const uint8_t*) bft;
+
+  for (bft_offset_t i = 0; i < BFT_MAX_ENTRIES; i++) {
+    if (bft_bytes[i * BFT_ENTRY_SIZE] == 0) {
+      *off = i;
+      return 0;
+    }
+  }
+  return -ENOSPC;
+}
