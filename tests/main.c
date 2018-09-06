@@ -13,7 +13,7 @@ int main() {
   srunner_add_suite(runner, keytab_suite());
   srunner_add_suite(runner, stego_suite());
 
-  srunner_run_all(runner, CK_NORMAL);
+  srunner_run_all(runner, CK_VERBOSE);
   int failed_tests = srunner_ntests_failed(runner);
   srunner_free(runner);
 
