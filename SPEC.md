@@ -23,6 +23,12 @@ void disk_free(bs_disk_t disk);
 ```
 Clean up `disk`, releasing any resources held by it.
 
+### disk_get_size:
+```c
+size_t disk_get_size(bs_disk_t disk);
+```
+Retrieve the size of `disk`.
+
 ### disk_lock_read:
 ```c
 int disk_lock_read(bs_disk_t disk, const void** data);
@@ -72,7 +78,7 @@ Number of bits in a key; also the number of cover files present on the system.
 
 ### stego_read_level:
 ```c
-int stego_read_level(const void* key, bs_disk_t disk, size_t level_size,
+int stego_read_level(const void* key, bs_disk_t disk,
   void* buf, off_t off, size_t size);
 ```
 Read `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -83,7 +89,7 @@ Read `size` bytes out of encrypted file specified by `key`, beginning at offset 
 
 ### stego_write_level:
 ```c
-int stego_write_level(const void* key, bs_disk_t disk, size_t level_size,
+int stego_write_level(const void* key, bs_disk_t disk,
   const void* buf, off_t off, size_t size);
 ```
 Write `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -191,8 +197,8 @@ Determine how many clusters would fit into a level of size `level_size`, taking 
 
 ### fs_read_cluster:
 ```c
-int fs_read_cluster(const void* key, bs_disk_t disk, size_t level_size,
-  void* buf, cluster_offset_t cluster);
+int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
+  cluster_offset_t cluster);
 ```
 Read the `cluster_index` cluster from the file matching `key` and places its contents in `buf`.
 
@@ -200,7 +206,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, bs_disk_t disk, size_t level_size,
+int fs_write_cluster(const void* key, bs_disk_t disk,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
@@ -217,14 +223,14 @@ Find the index of the next cluster in the cluster chain (file).
 
 ### fs_read_bitmap:
 ```c
-int fs_read_bitmap(const void* key, bs_disk_t disk, size_t level_size,
+int fs_read_bitmap(const void* key, bs_disk_t disk,
   void* buf, size_t bitmap_size);
 ```
 Read the bitmap of the level matching `key` to `buf`.
 
 ### fs_write_bitmap:
 ```c
-int fs_write_bitmap(const void* key, bs_disk_t disk, size_t level_size,
+int fs_write_bitmap(const void* key, bs_disk_t disk,
   const void* buf, size_t bitmap_size);
 ```
 Write the contents of `buf` to the bitmap in the level specified by `key`.
@@ -370,8 +376,7 @@ application-specific data.
 
 ### bft_read_table:
 ```c
-int bft_read_table(const void* key, bs_disk_t disk, size_t level_size,
-  void* bft);
+int bft_read_table(const void* key, bs_disk_t disk, void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
@@ -379,8 +384,7 @@ Read the BFT written at the beginning of the level specified by `key` into `bft`
 
 ### bft_write_table:
 ```c
-int bft_write_table(const void* key, bs_disk_t disk, size_t level_size,
-  const void* bft);
+int bft_write_table(const void* key, bs_disk_t disk, const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
 
