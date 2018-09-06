@@ -38,3 +38,11 @@ int bft_find_free_table_entry(const void* bft, bft_offset_t* off) {
   }
   return -ENOSPC;
 }
+
+int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off) {
+  return -ENOSYS;
+}
+
+int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off) {
+  return -ENOSYS;
+}

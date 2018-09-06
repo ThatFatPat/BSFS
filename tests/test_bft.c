@@ -61,6 +61,33 @@ START_TEST(test_bft_find_free_entry_nospace)
 END_TEST
 
 
+START_TEST(test_bft_entry_roundtrip)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+
+  bft_entry_t original;
+  bft_entry_init(&original, "file", 1024, 0, 1, 0, 0);
+
+  int write_status = bft_write_table_entry(bft, &original, 0);
+  ck_assert_int_eq(write_status, 0);
+
+  bft_entry_t read;
+  int read_status = bft_read_table_entry(bft, &read, 0);
+  ck_assert_int_eq(read_status, 0);
+
+  ck_assert_str_eq(original.name, read.name);
+  ck_assert(original.size == read.size);
+  ck_assert_uint_eq(original.mode, read.mode);
+  ck_assert_uint_eq(original.initial_cluster, read.initial_cluster);
+  ck_assert_uint_eq(original.atim, read.atim);
+  ck_assert_uint_eq(original.mtim, read.mtim);
+
+  bft_entry_destroy(&read);
+  bft_entry_destroy(&original);
+}
+END_TEST
+
+
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
   
@@ -73,6 +100,10 @@ Suite* bft_suite(void) {
   tcase_add_test(find_free_tc, test_bft_find_free_entry);
   tcase_add_test(find_free_tc, test_bft_find_free_entry_nospace);
   suite_add_tcase(suite, find_free_tc);
+
+  TCase* readwrite_tc = tcase_create("read_write_entry");
+  tcase_add_test(readwrite_tc, test_bft_entry_roundtrip);
+  suite_add_tcase(suite, readwrite_tc);
 
   return suite;
 }
