@@ -3,13 +3,13 @@
 
 ## Disk:
 
-### bs_disk_t
+### bs_disk_t:
 ```c
 typedef /* unspecified */ bs_disk_t;
 ```
 An opaque type representing a disk - usable only with disk APIs.
 
-### disk_create
+### disk_create:
 ```c
 int disk_create(int fd, bs_disk_t* disk);
 ```
@@ -17,13 +17,13 @@ Create a disk backed by the file referenced by `fd`. Takes ownership of `fd`.
 
 **Note**: Be sure to call `disk_free` when done, if the function succeeded.
 
-### disk_free
+### disk_free:
 ```c
 void disk_free(bs_disk_t disk);
 ```
 Clean up `disk`, releasing any resources held by it.
 
-### disk_lock_read
+### disk_lock_read:
 ```c
 int disk_lock_read(bs_disk_t disk, const void** data);
 ```
@@ -33,7 +33,7 @@ Lock `disk` for reading, returning a buffer which can be used to read data on th
 
 **Note**: Every successful call to `disk_lock_read` **must** be paired with a call to `disk_unlock_read`. Failure to do so can result in deadlock.
 
-### disk_unlock_read
+### disk_unlock_read:
 ```c
 int disk_unlock_read(bs_disk_t disk);
 ```
@@ -52,7 +52,7 @@ Lock `disk` for writing, returning a buffer which can be used to write data to t
 
 **Note**: Every successful call to `disk_lock_write` **must** be paired with a call to `disk_unlock_write`. Failure to do so can result in deadlock.
 
-### disk_unlock_write
+### disk_unlock_write:
 ```c
 int disk_unlock_write(bs_disk_t disk);
 ```
@@ -151,15 +151,15 @@ Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index
 # FUSE:
 > Fuse requires being supplied a `fuse_operations` struct containing all the operations relevant to the file system. In our case every function pointer in that struct will point to a `bs_{function name}`  of the same signature.
 
-### compute_level_size
+### compute_level_size:
 ```c
 size_t compute_level_size(size_t disk_size);
 ```
 Calculate the size of a single level given the size of the disk.
 
-## Cluster Management
+## Cluster Management:
 
-### Cluster Offsets
+### Cluster Offsets:
 ```c
 typedef uint32_t cluster_offset_t;
 ```
@@ -182,7 +182,7 @@ The size of every cluster.
 ```
 The effective size of every cluster, for data storage purposes (every cluster has a link to the next one at the end).
 
-### fs_count_clusters
+### fs_count_clusters:
 ```c
 size_t fs_count_clusters(size_t level_size);
 ```
@@ -207,7 +207,7 @@ Write the contents of `buf` to the cluster specified by `cluster`, in the level 
 
 **Note:** Assumes `buf` is of size `CLUSTER_SIZE`.
 
-### fs_next_cluster
+### fs_next_cluster:
 ```c
 cluster_offset_t fs_next_cluster(const void* cluster);
 ```
@@ -215,27 +215,27 @@ Find the index of the next cluster in the cluster chain (file).
 
 **Note**: If `CLUSTER_OFFSET_EOF` is returned, `cluster` is the last cluster in the chain.
 
-### fs_read_bitmap
+### fs_read_bitmap:
 ```c
 int fs_read_bitmap(const void* key, bs_disk_t disk, size_t level_size,
   void* buf, size_t bitmap_size);
 ```
 Read the bitmap of the level matching `key` to `buf`.
 
-### fs_write_bitmap
+### fs_write_bitmap:
 ```c
 int fs_write_bitmap(const void* key, bs_disk_t disk, size_t level_size,
   const void* buf, size_t bitmap_size);
 ```
 Write the contents of `buf` to the bitmap in the level specified by `key`.
 
-### fs_alloc_cluster
+### fs_alloc_cluster:
 ```c
 int fs_alloc_cluster(void* bitmap, cluster_offset_t* new_cluster);
 ```
 Find the first empty cluster in `bitmap` and change its status bit to 1, meaning it is in use. 
 
-### fs_dealloc_cluster
+### fs_dealloc_cluster:
 ```c
 int fs_dealloc_cluster(void* bitmap, cluster_offset_t cluster);
 ```
@@ -243,25 +243,25 @@ Deallocate the cluster specified by `cluster` and change its status bit to 0, me
 
 ## BFT:
 
-### Timestamp
+### Timestamp:
 ```c
 typedef uint32_t bft_timestamp_t;
 ```
 Represents a file timestamp, stored in the BFT.
 
-### BFT_MAX_ENTRIES
+### BFT_MAX_ENTRIES:
 ```c
 #define BFT_MAX_ENTRIES 8192
 ```
 Maximum number of entries in the BFT.
 
-### BFT_ENTRY_SIZE
+### BFT_ENTRY_SIZE:
 ```c
 #define BFT_ENTRY_SIZE 84
 ```
 Size of a BFT entry on disk, in bytes.
 
-### BFT_MAX_FILENAME
+### BFT_MAX_FILENAME:
 ```c
 #define BFT_MAX_FILENAME 64
 ```
@@ -270,13 +270,13 @@ Maximum length of a file name, in bytes.
 **Note**: This includes the terminating null character, capping the effective maximum file name at 63 bytes.
 
 
-### bft_offset_t
+### bft_offset_t:
 ```c
 typedef int16_t bft_offset_t;
 ```
 Represents an offset into the BFT.
 
-### struct bft_entry
+### struct bft_entry:
 ```c
 typedef struct bft_entry {
   const char* name;
@@ -297,7 +297,7 @@ typedef struct bft_entry {
 1. `atim` - 32 Bits
 1. `mtim` - 32 Bits
 
-### bft_entry_init
+### bft_entry_init:
 ```c
 int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
   cluster_offset_t initial_cluster, bft_timestamp_t atim, bft_timestamp_t mtim);
@@ -306,7 +306,7 @@ Initializes a `bft_entry` with the specified information. `name` is copied into 
 
 **Note**: When `ent` is no longer in use, be sure to call `bft_entry_destroy`.
 
-### bft_entry_destroy
+### bft_entry_destroy:
 ```c
 void bft_entry_destroy(bft_entry_t* ent);
 ```
@@ -326,7 +326,7 @@ Look up the file specified by `filename` in `bft`. If found, set `off` to the of
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_read_table_entry
+### bft_read_table_entry:
 ```c
 int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off);
 ```
@@ -334,7 +334,7 @@ Read the entry at offset `off` in `bft` and fill out `ent`.
 
 **Note**: `ent` should be freed only if the function succeeds.
 
-### bft_write_table_entry
+### bft_write_table_entry:
 ```c
 int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 ```
@@ -343,7 +343,7 @@ Write `ent` to `bft` at offset `off`.
 **Note**: The previous content at offset `off`, if any exists, is overwritten.
 **Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_remove_table_entry
+### bft_remove_table_entry:
 ```c
 int bft_remove_table_entry(void* bft, bft_offset_t off);
 ```
@@ -351,14 +351,14 @@ Remove the entry at offset `off` from `bft`.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_entry_iter_t
+### bft_entry_iter_t:
 ```c
 typedef void (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
 ```
 A callback function which is called once for every entry in the BFT via
 `bft_iter_table_entries`.
 
-### bft_iter_table_entries
+### bft_iter_table_entries:
 ```c
 int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 ```
@@ -368,7 +368,7 @@ application-specific data.
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_read_table
+### bft_read_table:
 ```c
 int bft_read_table(const void* key, bs_disk_t disk, size_t level_size,
   void* bft);
@@ -377,7 +377,7 @@ Read the BFT written at the beginning of the level specified by `key` into `bft`
 
 **Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
-### bft_write_table
+### bft_write_table:
 ```c
 int bft_write_table(const void* key, bs_disk_t disk, size_t level_size,
   const void* bft);
