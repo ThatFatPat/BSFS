@@ -1,6 +1,67 @@
 # API:
 > **All functions should return a (negative) error code on failure, 0 on success.**
 
+## Disk:
+
+### bs_disk_t
+```c
+typedef /* unspecified */ bs_disk_t;
+```
+An opaque type representing a disk - usable only with disk APIs.
+
+### disk_create
+```c
+int disk_create(int fd, bs_disk_t* disk);
+```
+Create a disk backed by the file referenced by `fd`. Takes ownership of `fd`.
+
+**Note**: Be sure to call `disk_free` when done, if the function succeeded.
+
+### disk_free
+```c
+void disk_free(bs_disk_t disk);
+```
+Clean up `disk`, releasing any resources held by it.
+
+### disk_lock_read
+```c
+int disk_lock_read(bs_disk_t disk, const void** data);
+```
+Lock `disk` for reading, returning a buffer which can be used to read data on the disk.
+
+**Note**: Multiple threads may lock a disk for reading simultaneously, but only a single thread can lock a disk for writing at a time.
+
+**Note**: Every successful call to `disk_lock_read` **must** be paired with a call to `disk_unlock_read`. Failure to do so can result in deadlock.
+
+### disk_unlock_read
+```c
+int disk_unlock_read(bs_disk_t disk);
+```
+Unlock a disk previously locked for reading on this thread.
+
+**Note**: After calling this function, the buffer returned by `disk_lock_read` should be
+considered invalid.
+
+### disk_lock_write:
+```c
+int disk_lock_write(bs_disk_t disk, void** data);
+```
+Lock `disk` for writing, returning a buffer which can be used to write data to the disk.
+
+**Note**: Multiple threads may lock a disk for reading simultaneously, but only a single thread can lock a disk for writing at a time.
+
+**Note**: Every successful call to `disk_lock_write` **must** be paired with a call to `disk_unlock_write`. Failure to do so can result in deadlock.
+
+### disk_unlock_write
+```c
+int disk_unlock_write(bs_disk_t disk);
+```
+Unlock a disk previously locked for writing on this thread.
+
+**Note**: After calling this function, the buffer returned by `disk_lock_write` should be
+considered invalid.
+
+
 ## Stego:
 ### Key Size:
 ```c
@@ -11,7 +72,7 @@ Number of bits in a key; also the number of cover files present on the system.
 
 ### stego_read_level:
 ```c
-int stego_read_level(const void* key, const void* disk, size_t level_size,
+int stego_read_level(const void* key, bs_disk_t disk, size_t level_size,
   void* buf, off_t off, size_t size);
 ```
 Read `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -22,7 +83,7 @@ Read `size` bytes out of encrypted file specified by `key`, beginning at offset 
 
 ### stego_write_level:
 ```c
-int stego_write_level(const void* key, void* disk, size_t level_size,
+int stego_write_level(const void* key, bs_disk_t disk, size_t level_size,
   const void* buf, off_t off, size_t size);
 ```
 Write `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -75,13 +136,13 @@ This magic number appears at the beginning of every entry in the key table and i
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(const void* disk, const char* pass, void* key);
+int keytab_lookup(bs_disk_t disk, const char* pass, void* key);
 ```
 Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.
 
 ### keytab_store:
 ```c
-int keytab_store(void* disk, off_t index, const char* pass, const void* key);
+int keytab_store(bs_disk_t disk, off_t index, const char* pass, const void* key);
 ```
 Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
 
@@ -130,7 +191,7 @@ Determine how many clusters would fit into a level of size `level_size`, taking 
 
 ### fs_read_cluster:
 ```c
-int fs_read_cluster(const void* key, const void* disk, size_t level_size,
+int fs_read_cluster(const void* key, bs_disk_t disk, size_t level_size,
   void* buf, cluster_offset_t cluster);
 ```
 Read the `cluster_index` cluster from the file matching `key` and places its contents in `buf`.
@@ -139,7 +200,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, void* disk, size_t level_size,
+int fs_write_cluster(const void* key, bs_disk_t disk, size_t level_size,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
@@ -156,14 +217,14 @@ Find the index of the next cluster in the cluster chain (file).
 
 ### fs_read_bitmap
 ```c
-int fs_read_bitmap(const void* key, const void* disk, size_t level_size,
+int fs_read_bitmap(const void* key, bs_disk_t disk, size_t level_size,
   void* buf, size_t bitmap_size);
 ```
 Read the bitmap of the level matching `key` to `buf`.
 
 ### fs_write_bitmap
 ```c
-int fs_write_bitmap(const void* key, void* disk, size_t level_size,
+int fs_write_bitmap(const void* key, bs_disk_t disk, size_t level_size,
   const void* buf, size_t bitmap_size);
 ```
 Write the contents of `buf` to the bitmap in the level specified by `key`.
@@ -309,7 +370,7 @@ application-specific data.
 
 ### bft_read_table
 ```c
-int bft_read_table(const void* key, const void* disk, size_t level_size,
+int bft_read_table(const void* key, bs_disk_t disk, size_t level_size,
   void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
@@ -318,7 +379,7 @@ Read the BFT written at the beginning of the level specified by `key` into `bft`
 
 ### bft_write_table
 ```c
-int bft_write_table(const void* key, void* disk, size_t level_size,
+int bft_write_table(const void* key, bs_disk_t disk, size_t level_size,
   const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
