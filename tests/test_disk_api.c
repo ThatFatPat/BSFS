@@ -1,6 +1,6 @@
-#include "test_bft.h"
+#include "test_disk_api.h"
 
-START_TEST(test_example)
+START_TEST(disk_create)
 {
   ck_assert_int_eq(3, 3);
 }
