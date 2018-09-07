@@ -74,17 +74,25 @@ size_t disk_get_size(bs_disk_t disk) {
 }
 
 int disk_lock_read(bs_disk_t disk, const void **data) {
-  return -ENOSYS;
+  if (int ret = pthread_rwlock_rdlock(&disk->lock)) {
+    return -ret;
+  }
+  *data = disk->data;
+  return 0;
 }
 
 int disk_unlock_read(bs_disk_t disk) {
-  return -ENOSYS;
+  return -pthread_rwlock_unlock(&disk->lock);
 }
 
 int disk_lock_write(bs_disk_t disk, void **data) {
-  return -ENOSYS;
+  if (int ret = pthread_rwlock_wrlock(&disk->lock)) {
+    return -ret;
+  }
+  *data = disk->data;
+  return 0;
 }
 
 int disk_unlock_write(bs_disk_t disk) {
-  return -ENOSYS;
+  return disk_unlock_read(disk);
 }
