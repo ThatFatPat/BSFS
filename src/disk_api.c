@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <errno.h>
 
-struct disk {
+struct _disk {
   int fd;
   void* data;
   size_t data_size;

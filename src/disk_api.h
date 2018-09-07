@@ -1,7 +1,7 @@
 #ifndef BS_DISK_API_H
 #define BS_DISK_API_H
 
-typedef struct disk bs_disk_t;
+typedef struct _disk bs_disk_t;
 
 int disk_create(int fd, bs_disk_t *disk);
 void disk_free(bs_disk_t disk);
