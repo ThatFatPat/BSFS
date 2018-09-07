@@ -1,6 +1,8 @@
 #ifndef BS_DISK_API_H
 #define BS_DISK_API_H
 
+#include <stddef.h>
+
 typedef struct _disk bs_disk_t;
 
 int disk_create(int fd, bs_disk_t *disk);

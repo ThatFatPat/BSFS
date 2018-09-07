@@ -1,6 +1,5 @@
 #include "disk_api.h"
 #include <stdbool.h>
-#include <stddef.h>
 #include <errno.h>
 
 struct _disk {
