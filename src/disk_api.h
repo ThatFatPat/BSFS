@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-typedef struct _disk bs_disk_t;
+typedef struct bs_disk_impl* bs_disk_t;
 
 int disk_create(int fd, bs_disk_t *disk);
 void disk_free(bs_disk_t disk);
