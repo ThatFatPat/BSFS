@@ -1,15 +1,20 @@
 #include "test_disk_api.h"
 #include "disk_api.h"
 #include <stdio.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+
+#define FILEPATH "../res/data.bsf"
 
 START_TEST(test_disk_create)
 {
   bs_disk_t* disk;
-  FILE *fptr;
-  fptr = fopen("../res/data.bsf", "rw");
-  ck_assert(fptr != NULL); // Make sure file at res/data.bsf opens and returns file pointer.
-  int ret = disk_create(fileno(fptr), disk);
-  ck_assert_int_eq(ret, 0);
+  int fptr;
+  fptr = open(FILEPATH, O_RDWR);
+  ck_assert(fptr != -1); // Make sure file at res/data.bsf opens and returns file pointer.
+  ck_assert_int_eq(disk_create(fptr, disk), 0);
+  close(fptr);
 }
 END_TEST
 
