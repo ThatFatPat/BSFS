@@ -11,6 +11,7 @@ set(SOURCE_FILES
   fuse_ops.c
   keytab.c
   stego.c
+  disk_api.c
 )
 
 add_compile_options(-Wall -Wextra -Wpedantic)
