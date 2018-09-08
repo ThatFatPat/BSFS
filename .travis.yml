@@ -1,20 +1,16 @@
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y libssl-dev cmake build-essential meson xz-utils
-install:
-  - ./install_fuse.sh
-  - mkdir build
-language: c
+sudo: required
+
+services:
+  - docker
+
 compiler: clang
+
+before_install:
+  - docker pull ubuntu:bionic
+  - docker run /bin/bash -c "cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
+
 script:
-  - cd build
-  - cmake -DCMAKE_GENERATOR=Ninja ..
-  - ninja
+  - cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6
 branches:
   only:
     - /.*/
-matrix:
-  include:
-    - os: linux
-      dist: bionic
-      sudo: required
