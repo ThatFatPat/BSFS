@@ -1,5 +1,6 @@
 FROM ubuntu:bionic
 
+ENV BRANCH=${GIT_BRANCH}
 # Install Dependencies
 RUN apt-get update 
 RUN apt-get install -y clang check wget git libssl-dev cmake pkg-config meson udev ninja-build xz-utils
