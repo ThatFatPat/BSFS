@@ -2,7 +2,7 @@ FROM ubuntu:bionic
 
 # Install Dependencies
 RUN apt-get update 
-RUN apt-get install -y --force-yes clang check libssl-dev cmake meson ninja-build build-essential xz-utils
+RUN apt-get install -y --allow clang check wget libssl-dev cmake meson ninja-build xz-utils
 
 # Install libfuse
 RUN wget https://api.github.com/repos/libfuse/libfuse/tarball/fuse-3.2.6
