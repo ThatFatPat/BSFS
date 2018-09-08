@@ -1,0 +1,15 @@
+sudo: required
+
+services:
+  - docker
+
+compiler: clang
+
+before_install:
+  - docker pull ubuntu:bionic
+  - docker build -t bsfs .
+script:
+  - docker run -e TRAVIS_BRANCH bsfs /bin/bash -c "echo $TRAVIS_BRANCH&& cd /root/BSFS/ && git checkout $TRAVIS_BRANCH && mkdir build && cd build && CC=clang cmake -G Ninja  .. && ninja && ctest -V -j6"
+branches:
+  only:
+    - /.*/
