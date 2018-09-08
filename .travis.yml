@@ -7,10 +7,10 @@ compiler: clang
 
 before_install:
   - docker pull ubuntu:bionic
-  - docker build .
+  - docker build -t bsfs .
 
 script:
-  - docker run ubuntu:bionic /bin/bash -c "cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
+  - docker run bsfs /bin/bash -c "cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
   - cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6
 branches:
   only:
