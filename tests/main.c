@@ -13,7 +13,7 @@ int main() {
   srunner_add_suite(runner, fuse_ops_suite());
   srunner_add_suite(runner, keytab_suite());
   srunner_add_suite(runner, stego_suite());
-  srunner_add_suite(runner, disk_api_suite());
+  srunner_add_suite(runner, disk_suite());
 
   srunner_run_all(runner, CK_NORMAL);
   int failed_tests = srunner_ntests_failed(runner);

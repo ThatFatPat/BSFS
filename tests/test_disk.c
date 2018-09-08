@@ -45,7 +45,7 @@ START_TEST(test_disk_roundtrip)
 }
 END_TEST
 
-Suite* disk_api_suite(void) {
+Suite* disk_suite(void) {
   Suite* suite = suite_create("disk_api");
   TCase* disk_create_tcase = tcase_create("test_disk_create");
   TCase* disk_roundtrip_tcase = tcase_create("test_disk_roundtrip");

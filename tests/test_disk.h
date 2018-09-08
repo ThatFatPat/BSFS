@@ -3,6 +3,6 @@
 
 #include <check.h>
 
-Suite* disk_api_suite(void);
+Suite* disk_suite(void);
 
 #endif // TEST_DISK_API_H
