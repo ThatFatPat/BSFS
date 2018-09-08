@@ -13,6 +13,7 @@ RUN cd build
 RUN ninja
 RUN sudo ninja install
 RUN sudo ldconfig
+RUN cd .. && cd ..
 
 RUN git clone https://github.com/ThatFatPat/BSFS /root/BSFS
 RUN cd /root/BSFS
