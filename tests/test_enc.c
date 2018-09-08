@@ -38,7 +38,7 @@ START_TEST(test_roundup_buffer){
     &cipher, &cipher_size);
   ck_assert_int_eq(status, 0);
   ck_assert_int_eq(cipher_size % 16, 0);
-  ck_assert_int_eq(cipher_size, strlen(plain));
+  ck_assert_int_ne(cipher_size, strlen(plain));
   ck_assert_int_ne(cipher_size, 0);
 
 }
