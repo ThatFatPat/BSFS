@@ -29,7 +29,7 @@ START_TEST(test_disk_roundtrip)
   bs_disk_t disk;
   int fptr = open_tmp_file();
   ck_assert_int_eq(disk_create(fptr, &disk), 0);
-  char* write_text = "This is a shorter text.";
+  char write_text[] = "This is a shorter text.";
   void* writeable_disk;
   ck_assert_int_eq(disk_lock_write(disk, &writeable_disk), 0);
   strcpy((char*)writeable_disk, write_text);
