@@ -41,6 +41,7 @@ START_TEST(test_roundup_buffer){
   ck_assert_int_ne(cipher_size, strlen(plain));
   ck_assert_int_ne(cipher_size, 0);
 
+  free(cipher);
 }
 END_TEST
 
