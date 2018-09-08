@@ -6,6 +6,8 @@ services:
 compiler: clang
 
 before_install:
+  - echo $TRAVIS_BRANCH
+  - echo ${TRAVIS_BRANCH}
   - docker pull ubuntu:bionic
   - docker build -t bsfs .
 script:
