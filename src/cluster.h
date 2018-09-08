@@ -1,6 +1,10 @@
 #ifndef BS_CLUSTER_H
 #define BS_CLUSTER_H
 
+#include "disk.h"
+#include <stdint.h>
+#include <stddef.h>
+
 typedef uint32_t cluster_offset_t;
 #define CLUSTER_OFFSET_EOF UINT32_MAX
 #define CLUSTER_SIZE 2048
