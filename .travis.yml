@@ -6,7 +6,7 @@ services:
 compiler: clang
 
 env:
- - BRANCH:
+  - BRANCH:$(git branch | grep \* | cut -d ' ' -f2)
 
 before_install:
   - export GIT_BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
@@ -15,7 +15,7 @@ before_install:
   - docker pull ubuntu:bionic
   - docker build -t bsfs .
 script:
-  - docker run -e BRANCH=$GIT_BRANCH bsfs /bin/bash -c "cd /root/BSFS/ && git checkout $BRANCH && mkdir build && cd build && cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
+  - docker run bsfs /bin/bash -c "cd /root/BSFS/ && git checkout $BRANCH && mkdir build && cd build && cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
 branches:
   only:
     - /.*/
