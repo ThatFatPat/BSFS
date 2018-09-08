@@ -11,4 +11,3 @@ RUN cd ./fuse-3.2.6; meson build; cd build; ninja; ninja install; ldconfig
 
 
 RUN git clone https://github.com/ThatFatPat/BSFS /root/BSFS
-RUN cd /root/BSFS; git checkout travis-ci;
