@@ -4,7 +4,7 @@
 #include <string.h>
 
 
-START_TEST(test_roundtrip1)
+START_TEST(test_roundtrip)
 {
   const char* password = "Doctor Who";
   const char* plain = "But what kind of Doctor?";
@@ -28,12 +28,31 @@ START_TEST(test_roundtrip1)
 }
 END_TEST
 
+START_TEST(test_roundup_buffer){
+  const char* password = "Doctor Who";
+  const char* plain = "But what kind of Doctor?";
+  
+  void* cipher = NULL;
+  size_t cipher_size = 0;
+  int status = aes_encrypt(password, strlen(password), plain, strlen(plain) + 1,
+    &cipher, &cipher_size);
+  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(cipher_size % 16, 0);
+  ck_assert_int_ne(cipher_size, strlen(plain));
+  ck_assert_int_ne(cipher_size, 0);
+
+}
+END_TEST
+
 Suite* enc_suite(void) {
   Suite* suite = suite_create("enc");
   TCase* roundtrip_tcase = tcase_create("Round Trip");
+  TCase* roundup_buffer_tcase = tcase_create("Round Up Buffer");
 
-  tcase_add_test(roundtrip_tcase, test_roundtrip1);
+  tcase_add_test(roundtrip_tcase, test_roundtrip);
+  tcase_add_test(roundup_buffer_tcase, test_roundup_buffer);
   suite_add_tcase(suite, roundtrip_tcase);
+  suite_add_tcase(suite, roundup_buffer_tcase);
 
   return suite;
 }
