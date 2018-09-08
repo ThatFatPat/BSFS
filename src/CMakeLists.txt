@@ -14,8 +14,6 @@ set(SOURCE_FILES
   disk.c
 )
 
-add_compile_options(-Wall -Wextra -Wpedantic)
-
 add_library(bsfs-core ${SOURCE_FILES})
 target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} ${FUSE3_LIBRARIES})
 
