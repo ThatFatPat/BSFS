@@ -9,7 +9,7 @@
 
 static int gen_key(const void* password, size_t password_size, void* key, void* iv) {
   int res_size;
-  
+
   res_size = EVP_BytesToKey(EVP_aes_128_cbc(), EVP_sha1(), NULL, (uint8_t*) password,
    password_size, NROUNDS, (uint8_t*) key, (uint8_t*) iv);
   if (res_size != 16) {
@@ -20,6 +20,8 @@ static int gen_key(const void* password, size_t password_size, void* key, void* 
 
 int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size) {
   int ret = 0;
+  int content_size, final_size;
+  uint8_t* ciphertext;
   EVP_CIPHER_CTX* e_ctx = EVP_CIPHER_CTX_new();
 
   if (!e_ctx) {
@@ -38,8 +40,9 @@ int aes_encrypt(const void* password, size_t password_size, const void* data, si
     goto cleanup_ctx;
   }
 
-  int content_size = 0, final_size = 0;
-  uint8_t* ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE - 1);
+  content_size = 0;
+  final_size = 0;
+  ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE - 1);
 
   if (!EVP_EncryptUpdate(e_ctx, ciphertext, &content_size, (const uint8_t*) data, size)) {
     ret = -1;
