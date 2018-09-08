@@ -8,7 +8,7 @@ compiler: clang
 before_install:
   - docker pull ubuntu:bionic
   - docker build -t bsfs .
-
+  - docker "git clone https://github.com/ThatFatPat/BSFS /root/BSFS && cd /root/BSFS && git checkout travis-ci && ./install_fuse.sh"
 script:
   - docker run bsfs /bin/bash -c "cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
   - cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6
