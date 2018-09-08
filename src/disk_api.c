@@ -19,11 +19,12 @@ struct bs_disk_impl {
 
 int disk_create(int fd, bs_disk_t *disk) {
   int ret;
+  int ret_pthread;
   *disk = NULL;
 
   bs_disk_t disk_local = (bs_disk_t) malloc(sizeof(struct bs_disk_impl));
   if (!disk_local) {
-    return -ENOMEM;                
+    return -ENOMEM;    
   }
 
   if (flock(fd, LOCK_EX) == -1) { // Locks the file with file descriptor `fd` to be EXCLUSIVE to THIS FD.
@@ -43,7 +44,8 @@ int disk_create(int fd, bs_disk_t *disk) {
     goto fail_after_flock;
   }
 
-  if (int ret_pthread = pthread_rwlock_init(&disk_local->lock, NULL)) {
+  ret_pthread = pthread_rwlock_init(&disk_local->lock, NULL);
+  if (ret_pthread) {
     ret = -ret_pthread;
     goto fail_after_flock;
   }
@@ -74,7 +76,8 @@ size_t disk_get_size(bs_disk_t disk) {
 }
 
 int disk_lock_read(bs_disk_t disk, const void **data) {
-  if (int ret = pthread_rwlock_rdlock(&disk->lock)) {
+  int ret = pthread_rwlock_rdlock(&disk->lock);
+  if (ret) {
     return -ret;
   }
   *data = disk->data;
@@ -86,7 +89,8 @@ int disk_unlock_read(bs_disk_t disk) {
 }
 
 int disk_lock_write(bs_disk_t disk, void **data) {
-  if (int ret = pthread_rwlock_wrlock(&disk->lock)) {
+  int ret = pthread_rwlock_wrlock(&disk->lock);
+  if (ret) {
     return -ret;
   }
   *data = disk->data;
