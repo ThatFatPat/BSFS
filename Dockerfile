@@ -1,6 +1,6 @@
 FROM ubuntu:bionic
 
-ENV BRANCH ${TRAVIS_BRANCH}
+ENV BRANCH=${TRAVIS_BRANCH}
 
 # Install Dependencies
 RUN apt-get update 
