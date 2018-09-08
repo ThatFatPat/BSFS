@@ -5,4 +5,4 @@ cd fuse-3.2.6
 meson build
 cd build
 ninja
-sudo ninja install
+ninja install
