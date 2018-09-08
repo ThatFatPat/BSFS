@@ -12,7 +12,7 @@ before_install:
   - export GIT_BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
   - docker pull ubuntu:bionic
   - docker build -t bsfs .
-  - docker run -e BRANCH=$GIT_BRANCH "git clone https://github.com/ThatFatPat/BSFS /root/BSFS && cd /root/BSFS && git checkout travis-ci && ./install_fuse.sh"
+  - docker run -e BRANCH=$GIT_BRANCH bsfs /bin/bash -c "git clone https://github.com/ThatFatPat/BSFS /root/BSFS && cd /root/BSFS && git checkout travis-ci &&"
 script:
   - docker run -e BRANCH=$GIT_BRANCH bsfs /bin/bash -c "cd /root/BSFS/ && git checkout $BRANCH && cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
   - cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6
