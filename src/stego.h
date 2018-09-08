@@ -1,4 +1,3 @@
-
 #ifndef BS_STEGO_H
 #define BS_STEGO_H
 
@@ -14,4 +13,5 @@ int stego_write_level(const void* key, void* disk, size_t level_size,
 
 int stego_gen_keys(void* buf, int count);
 
-#endif
+
+#endif // BS_STEGO_H
