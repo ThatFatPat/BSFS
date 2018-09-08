@@ -9,7 +9,7 @@ set(TEST_SOURCES
   test_fuse_ops.c
   test_keytab.c
   test_stego.c
-  test_disk_api.c
+  test_disk.c
   main.c
 )
 

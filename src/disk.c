@@ -1,4 +1,4 @@
-#include "disk_api.h"
+#include "disk.h"
 
 #include <errno.h>
 #include <pthread.h>

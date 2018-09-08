@@ -1,5 +1,6 @@
-#include "test_disk_api.h"
-#include "disk_api.h"
+#include "test_disk.h"
+
+#include "disk.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/file.h>

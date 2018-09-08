@@ -3,7 +3,7 @@
 #include "test_fuse_ops.h"
 #include "test_keytab.h"
 #include "test_stego.h"
-#include "test_disk_api.h"
+#include "test_disk.h"
 #include <check.h>
 #include <stdlib.h>
 
