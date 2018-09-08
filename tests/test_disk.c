@@ -1,16 +1,16 @@
 #include "test_disk.h"
 
 #include "disk.h"
-#include <stdio.h>
 #include <fcntl.h>
-#include <sys/file.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 static int open_tmp_file(){
-  char mk_filename[] = "/tmp/data.bsfXXXXXX";
-  int fptr = mkstemp(mk_filename);
+  int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
   char content[] = "Hello, I'm the Doctor.\n Basically, Run.\n";
   write(fptr, content, sizeof(content));
   return fptr;
