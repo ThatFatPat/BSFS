@@ -19,4 +19,5 @@ RUN apt-get install -y clang check wget git libssl-dev cmake pkg-config meson ni
 
 RUN git clone https://github.com/ThatFatPat/BSFS /root/BSFS
 RUN cd /root/BSFS
+RUN git checkout travis-ci
 RUN ./install_fuse.sh
