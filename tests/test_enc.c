@@ -21,7 +21,7 @@ START_TEST(test_roundtrip)
     &decrypted, &decrypted_size);
   ck_assert_int_eq(status, 0);
 
-  ck_assert_str_ne(plain, (char*)decrypted);
+  ck_assert_str_eq(plain, (char*)decrypted);
 
   free(decrypted);
   free(cipher);

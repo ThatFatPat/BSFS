@@ -2,7 +2,7 @@
 
 START_TEST(test_example)
 {
-  ck_assert_int_ne(3, 3);
+  ck_assert_int_eq(3, 3);
 }
 END_TEST
 
