@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#define STEGO_KEY_SIZE 128
+#define STEGO_KEY_BITS 128
 
 int stego_read_level(const void* key, const void* disk, size_t level_size,
   void* buf, off_t off, size_t size);
