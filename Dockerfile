@@ -6,7 +6,7 @@ RUN apt-get install -y clang check wget libssl-dev cmake meson ninja-build xz-ut
 
 # Install libfuse
 RUN wget https://github.com/libfuse/libfuse/releases/download/fuse-3.2.6/fuse-3.2.6.tar.xz
-RUN tar xf fuse-3.2.6.tar.xf
+RUN tar xf fuse-3.2.6.tar.xz
 RUN cd fuse-3.2.6
 RUN meson build
 RUN cd build
