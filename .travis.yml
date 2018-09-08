@@ -9,7 +9,7 @@ before_install:
   - docker pull ubuntu:bionic
   - docker build -t bsfs .
 script:
-  - docker run bsfs /bin/bash -c "cd /root/BSFS/ && git checkout $BRANCH && mkdir build && cd build && cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
+  - docker run bsfs /bin/bash -c "echo $BRANCH cd /root/BSFS/ && git checkout $BRANCH && mkdir build && cd build && cmake -DCMAKE_GENERATOR=Ninja .. && ninja && ctest -V -j6"
 branches:
   only:
     - /.*/
