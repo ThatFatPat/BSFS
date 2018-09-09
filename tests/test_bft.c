@@ -8,7 +8,7 @@
 START_TEST(test_bft_init_basic)
 {
   bft_entry_t ent;
-  bft_entry_init(&ent, "Test", 42, 0, 1, 2, 3);
+  ck_assert_int_eq(bft_entry_init(&ent, "Test", 42, 0, 1, 2, 3), 0);
   
   ck_assert_str_eq(ent.name, "Test");
   ck_assert_uint_eq(ent.size, 42);
@@ -25,7 +25,7 @@ START_TEST(test_bft_init_deep_copy)
 {
   const char* name = "entry";
   bft_entry_t ent;
-  bft_entry_init(&ent, name, 0, 0, 0, 0, 0);
+  ck_assert_int_eq(bft_entry_init(&ent, name, 0, 0, 0, 0, 0), 0);
   ck_assert_ptr_ne(ent.name, name);
   bft_entry_destroy(&ent);
 }
@@ -67,7 +67,7 @@ START_TEST(test_bft_entry_roundtrip)
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t original;
-  bft_entry_init(&original, "file", 1024, 0, 1, 0, 0);
+  ck_assert_int_eq(bft_entry_init(&original, "file", 1024, 0, 1, 0, 0), 0);
 
   int write_status = bft_write_table_entry(bft, &original, 0);
   ck_assert_int_eq(write_status, 0);
@@ -102,7 +102,7 @@ START_TEST(test_bft_write_entry_past_end)
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t ent;
-  bft_entry_init(&ent, "file", 0, 0, 0, 0, 0);
+  ck_assert_int_eq(bft_entry_init(&ent, "file", 0, 0, 0, 0, 0), 0);
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, BFT_MAX_ENTRIES), -EINVAL);
 }
 END_TEST
@@ -122,17 +122,20 @@ START_TEST(test_bft_read_entry_deep_copy)
   void* bft = calloc(BFT_MAX_ENTRIES, BFT_ENTRY_SIZE);
 
   bft_entry_t orig_ent;
-  bft_entry_init(&orig_ent, "file", 0, 0, 0, 0, 0);
-  bft_write_table_entry(bft, &orig_ent, 0);
+  ck_assert_int_eq(bft_entry_init(&orig_ent, "file", 0, 0, 0, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &orig_ent, 0), 0);
 
   bft_entry_t read_ent;
-  bft_read_table_entry(bft, &read_ent, 0);
+  ck_assert_int_eq(bft_read_table_entry(bft, &read_ent, 0), 0);
   ck_assert_ptr_ne(read_ent.name, bft);
   
   free(bft);
 
   // note: after free
   ck_assert_str_eq(read_ent.name, orig_ent.name);
+
+  bft_entry_destroy(&read_ent);
+  bft_entry_destroy(&orig_ent);
 }
 END_TEST
 
@@ -141,11 +144,11 @@ START_TEST(test_bft_write_entry_name_too_long)
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t ent;
-  bft_entry_init(
+  ck_assert_int_eq(bft_entry_init(
     &ent,
     "1234567890123456789012345678901234567890123456789012345678901234",
     0, 0, 0, 0, 0
-  );
+  ), 0);
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, 0), -ENAMETOOLONG);
 }
 END_TEST
