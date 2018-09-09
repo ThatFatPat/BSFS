@@ -191,7 +191,7 @@ END_TEST
 
 static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
   void* ctx) {
-  ck_assert_uint_lt(off, 2);
+  ck_assert_int_lt(off, 2);
 
   bft_entry_t* orig_ent = (bft_entry_t*) ctx + off;
 
