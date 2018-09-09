@@ -73,6 +73,7 @@ static int do_read_entry(const uint8_t* raw_ent, bft_entry_t* ent) {
   raw_ent += sizeof(uint32_t);
 
   ent->mtim = read_big_endian(raw_ent);
+  return 0;
 }
 
 static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
@@ -96,6 +97,7 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
   raw_ent += sizeof(uint32_t);
 
   write_big_endian(raw_ent, ent->mtim);
+  return 0;
 }
 
 
