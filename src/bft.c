@@ -52,6 +52,53 @@ static void write_big_endian(void* buf, uint32_t host_endian) {
   memcpy(buf, &big_endian, sizeof(uint32_t));
 }
 
+static int do_read_entry(const uint8_t* raw_ent, bft_entry_t* ent) {
+  if (raw_ent[BFT_MAX_FILENAME - 1] != 0) {
+    return -EIO; // missing null terminator on filename
+  }
+
+  ent->name = (const char*) raw_ent;
+  raw_ent += BFT_MAX_FILENAME;
+  
+  ent->initial_cluster = read_big_endian(raw_ent);
+  raw_ent += sizeof(uint32_t);
+  
+  ent->size = read_big_endian(raw_ent);
+  raw_ent += sizeof(uint32_t);
+
+  ent->mode = read_big_endian(raw_ent);
+  raw_ent += sizeof(uint32_t);
+
+  ent->atim = read_big_endian(raw_ent);
+  raw_ent += sizeof(uint32_t);
+
+  ent->mtim = read_big_endian(raw_ent);
+}
+
+static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
+  if (strlen(ent->name) >= BFT_MAX_FILENAME) {
+    return -ENAMETOOLONG;
+  }
+  
+  strncpy((char*) raw_ent, ent->name, BFT_MAX_FILENAME);
+  raw_ent += BFT_MAX_FILENAME;
+
+  write_big_endian(raw_ent, ent->initial_cluster);
+  raw_ent += sizeof(uint32_t);
+
+  write_big_endian(raw_ent, ent->size);
+  raw_ent += sizeof(uint32_t);
+
+  write_big_endian(raw_ent, ent->mode);
+  raw_ent += sizeof(uint32_t);
+
+  write_big_endian(raw_ent, ent->atim);
+  raw_ent += sizeof(uint32_t);
+
+  write_big_endian(raw_ent, ent->mtim);
+}
+
+
 int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off) {
   return -ENOSYS;
 }
