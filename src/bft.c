@@ -122,3 +122,8 @@ int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off) {
   }
   return do_write_entry((uint8_t*) bft + off * BFT_ENTRY_SIZE, ent);
 }
+
+int bft_remove_table_entry(void* bft, bft_offset_t off) {
+  memset((uint8_t*) bft + off * BFT_ENTRY_SIZE, 0, BFT_ENTRY_SIZE);
+  return 0;
+}
