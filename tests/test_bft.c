@@ -77,7 +77,7 @@ START_TEST(test_bft_entry_roundtrip)
   ck_assert_int_eq(read_status, 0);
 
   ck_assert_str_eq(original.name, read.name);
-  ck_assert(original.size == read.size);
+  ck_assert_uint_eq(original.size, read.size);
   ck_assert_uint_eq(original.mode, read.mode);
   ck_assert_uint_eq(original.initial_cluster, read.initial_cluster);
   ck_assert_uint_eq(original.atim, read.atim);
