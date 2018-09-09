@@ -1,6 +1,7 @@
 #ifndef BS_BFT_H
 #define BS_BFT_H
 
+#include "disk.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -48,9 +49,8 @@ int bft_find_table_entry(const void* bft, const char* filename,
   bft_offset_t* off);
 
 
-int bft_read_table(const void* key, const void* disk, size_t level_size,
-  void* bft);
+int bft_read_table(const void* key, bs_disk_t disk, void* bft);
 
-int bft_write_table(const void* key, void* disk, size_t level_size, void* bft);
+int bft_write_table(const void* key, bs_disk_t disk, void* bft);
 
 #endif // BS_BFT_H
