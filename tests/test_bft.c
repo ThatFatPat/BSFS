@@ -94,6 +94,7 @@ START_TEST(test_bft_read_entry_past_end)
 
   bft_entry_t ent;
   ck_assert_int_eq(bft_read_table_entry(bft, &ent, BFT_MAX_ENTRIES), -EINVAL);
+  bft_entry_destroy(&ent);
 }
 END_TEST
 
@@ -104,6 +105,7 @@ START_TEST(test_bft_write_entry_past_end)
   bft_entry_t ent;
   ck_assert_int_eq(bft_entry_init(&ent, "file", 0, 0, 0, 0, 0), 0);
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, BFT_MAX_ENTRIES), -EINVAL);
+  bft_entry_destroy(&ent);
 }
 END_TEST
 
@@ -114,6 +116,7 @@ START_TEST(test_bft_read_entry_corrupt)
 
   bft_entry_t ent;
   ck_assert_int_eq(bft_read_table_entry(bft, &ent, 0), -EIO);
+  bft_entry_destroy(&ent);
 }
 END_TEST
 
@@ -150,6 +153,7 @@ START_TEST(test_bft_write_entry_name_too_long)
     0, 0, 0, 0, 0
   ), 0);
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, 0), -ENAMETOOLONG);
+  bft_entry_destroy(&ent);
 }
 END_TEST
 
