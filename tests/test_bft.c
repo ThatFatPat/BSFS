@@ -226,6 +226,64 @@ START_TEST(test_bft_iter_entries)
 END_TEST
 
 
+struct test_bft_iter_bailout_ctx {
+  int iter;
+  bool bail;
+};
+
+static bool test_bft_iter_bailout_iter(bft_offset_t off, const bft_entry_t* ent,
+  void* raw_ctx) {
+  (void) off;
+  (void) ent;
+
+  struct test_bft_iter_bailout_ctx* ctx =
+    (struct test_bft_iter_bailout_ctx*) raw_ctx;
+  
+  ctx->iter++;
+  if (ctx->iter > 1 && ctx->bail) {
+    return false;
+  }
+  return true;
+}
+
+START_TEST(test_bft_iter_bailout)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
+  bft_entry_t ent;
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file1", 10, 0, 0, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 0), 0);
+  bft_entry_destroy(&ent);
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file2", 50, 0, 1, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 1), 0);
+  bft_entry_destroy(&ent);
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file3", 500, 0, 2, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 2), 0);
+  bft_entry_destroy(&ent);
+
+  struct test_bft_iter_bailout_ctx ctx = {
+    .iter = 0,
+    .bail = false
+  };
+  ck_assert_int_eq(
+    bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0
+  );
+  ck_assert_int_eq(ctx.iter, 3);
+
+  ctx = (struct test_bft_iter_bailout_ctx) {
+    .iter = 0,
+    .bail = true
+  };
+  ck_assert_int_eq(
+    bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0
+  );
+  ck_assert_int_eq(ctx.iter, 2);
+}
+END_TEST
+
+
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
   
@@ -255,6 +313,7 @@ Suite* bft_suite(void) {
 
   TCase* iter_tc = tcase_create("iter_entries");
   tcase_add_test(iter_tc, test_bft_iter_entries);
+  tcase_add_test(iter_tc, test_bft_iter_bailout);
   suite_add_tcase(suite, iter_tc);
 
   return suite;
