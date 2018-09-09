@@ -129,5 +129,21 @@ int bft_remove_table_entry(void* bft, bft_offset_t off) {
 }
 
 int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx) {
-  return -ENOSYS;
+  const uint8_t* bft_bytes = (const uint8_t*) bft;
+
+  for (bft_offset_t off = 0; off < BFT_MAX_ENTRIES; off++) {
+    const uint8_t* raw_ent = bft_bytes + off * BFT_ENTRY_SIZE;
+    if (*raw_ent) { // non-empty entry
+      bft_entry_t ent;
+      int status = do_read_entry(raw_ent, &ent);
+      if (status < 0) {
+        return status;
+      }
+      if (!iter(off, &ent, ctx)) {
+        break;
+      }
+    }
+  }
+
+  return 0;
 }
