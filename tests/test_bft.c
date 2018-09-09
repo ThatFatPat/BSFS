@@ -181,6 +181,13 @@ START_TEST(test_bft_remove_entry)
 }
 END_TEST
 
+START_TEST(test_bft_remove_entry_past_end)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  ck_assert_int_eq(bft_remove_table_entry(bft, BFT_MAX_ENTRIES), -EINVAL);
+}
+END_TEST
+
 
 static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
   void* ctx) {
@@ -243,6 +250,7 @@ Suite* bft_suite(void) {
 
   TCase* remove_tc = tcase_create("remove_entry");
   tcase_add_test(remove_tc, test_bft_remove_entry);
+  tcase_add_test(remove_tc, test_bft_remove_entry_past_end);
   suite_add_tcase(suite, remove_tc);
 
   TCase* iter_tc = tcase_create("iter_entries");
