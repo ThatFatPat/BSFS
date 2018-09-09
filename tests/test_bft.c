@@ -284,6 +284,46 @@ START_TEST(test_bft_iter_bailout)
 END_TEST
 
 
+START_TEST(test_bft_find_entry)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
+  bft_entry_t ent;
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file1", 10, 0, 0, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 0), 0);
+  bft_entry_destroy(&ent);
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file2", 50, 0, 1, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 1), 0);
+  bft_entry_destroy(&ent);
+
+  ck_assert_int_eq(bft_entry_init(&ent, "file3", 500, 0, 2, 0, 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &ent, 2), 0);
+  bft_entry_destroy(&ent);
+
+  bft_offset_t found;
+  ck_assert_int_eq(
+    bft_find_table_entry(bft, "file1", &found), 0
+  );
+  ck_assert_int_eq(found, 0);
+
+  ck_assert_int_eq(
+    bft_find_table_entry(bft, "file2", &found), 0
+  );
+  ck_assert_int_eq(found, 1);
+
+  ck_assert_int_eq(
+    bft_find_table_entry(bft, "file3", &found), 0
+  );
+  ck_assert_int_eq(found, 2);
+
+  ck_assert_int_eq(
+    bft_find_table_entry(bft, "nonexistant", &found), -ENOENT
+  );
+}
+END_TEST
+
+
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
   
@@ -315,6 +355,10 @@ Suite* bft_suite(void) {
   tcase_add_test(iter_tc, test_bft_iter_entries);
   tcase_add_test(iter_tc, test_bft_iter_bailout);
   suite_add_tcase(suite, iter_tc);
+
+  TCase* find_tc = tcase_create("find_entry");
+  tcase_add_test(find_tc, test_bft_find_entry);
+  suite_add_tcase(suite, find_tc);
 
   return suite;
 }
