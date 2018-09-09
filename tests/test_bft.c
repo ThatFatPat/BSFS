@@ -182,6 +182,43 @@ START_TEST(test_bft_remove_entry)
 END_TEST
 
 
+static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
+  void* ctx) {
+  ck_assert_uint_lt(off, 2);
+
+  bft_entry_t* orig_ent = (bft_entry_t*) ctx + off;
+
+  ck_assert_str_eq(ent->name, orig_ent->name);
+  ck_assert_uint_eq(ent->size, orig_ent->size);
+  ck_assert_uint_eq(ent->mode, orig_ent->mode);
+  ck_assert_uint_eq(ent->initial_cluster, orig_ent->initial_cluster);
+  ck_assert_uint_eq(ent->atim, orig_ent->atim);
+  ck_assert_uint_eq(ent->mtim, orig_ent->mtim);
+
+  return true;
+}
+
+START_TEST(test_bft_iter_entries)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
+
+  bft_entry_t entries[2];
+  ck_assert_int_eq(bft_entry_init(&entries[0], "file1", 12, 0, 0, 567, 560), 0);
+  ck_assert_int_eq(bft_entry_init(&entries[1], "file2", 50, 0, 3, 700, 690), 0);
+
+  ck_assert_int_eq(bft_write_table_entry(bft, &entries[0], 0), 0);
+  ck_assert_int_eq(bft_write_table_entry(bft, &entries[1], 1), 0);
+
+  ck_assert_int_eq(
+    bft_iter_table_entries(bft, test_bft_iter_entries_iter, entries), 0
+  );
+
+  bft_entry_destroy(&entries[0]);
+  bft_entry_destroy(&entries[1]);
+}
+END_TEST
+
+
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
   
@@ -207,6 +244,10 @@ Suite* bft_suite(void) {
   TCase* remove_tc = tcase_create("remove_entry");
   tcase_add_test(remove_tc, test_bft_remove_entry);
   suite_add_tcase(suite, remove_tc);
+
+  TCase* iter_tc = tcase_create("iter_entries");
+  tcase_add_test(iter_tc, test_bft_iter_entries);
+  suite_add_tcase(suite, iter_tc);
 
   return suite;
 }

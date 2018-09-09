@@ -127,3 +127,7 @@ int bft_remove_table_entry(void* bft, bft_offset_t off) {
   memset((uint8_t*) bft + off * BFT_ENTRY_SIZE, 0, BFT_ENTRY_SIZE);
   return 0;
 }
+
+int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx) {
+  return -ENOSYS;
+}
