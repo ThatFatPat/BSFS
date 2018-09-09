@@ -332,7 +332,7 @@ Suite* bft_suite(void) {
   tcase_add_test(lifetime_tc, test_bft_init_deep_copy);
   suite_add_tcase(suite, lifetime_tc);
 
-  TCase* find_free_tc = tcase_create("bft_find_free_entry");
+  TCase* find_free_tc = tcase_create("find_free_entry");
   tcase_add_test(find_free_tc, test_bft_find_free_entry);
   tcase_add_test(find_free_tc, test_bft_find_free_entry_nospace);
   suite_add_tcase(suite, find_free_tc);
