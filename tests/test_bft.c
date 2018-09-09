@@ -106,6 +106,16 @@ START_TEST(test_bft_write_entry_past_end)
 }
 END_TEST
 
+START_TEST(test_bft_read_entry_corrupt)
+{
+  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  memset(bft, 'a', sizeof(bft));
+
+  bft_entry_t ent;
+  ck_assert_int_eq(bft_read_table_entry(bft, &ent, 0), -EIO);
+}
+END_TEST
+
 
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
@@ -124,6 +134,7 @@ Suite* bft_suite(void) {
   tcase_add_test(readwrite_tc, test_bft_entry_roundtrip);
   tcase_add_test(readwrite_tc, test_bft_read_entry_past_end);
   tcase_add_test(readwrite_tc, test_bft_write_entry_past_end);
+  tcase_add_test(readwrite_tc, test_bft_read_entry_corrupt);
   suite_add_tcase(suite, readwrite_tc);
 
   return suite;
