@@ -150,3 +150,8 @@ int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx) {
 
   return 0;
 }
+
+int bft_find_table_entry(const void* bft, const char* filename,
+  bft_offset_t* off) {
+  return -ENOSYS;
+}

@@ -36,9 +36,6 @@ void bft_entry_destroy(bft_entry_t* ent);
 
 int bft_find_free_table_entry(const void* bft, bft_offset_t* off);
 
-int bft_find_table_entry(const void* bft, const char* filename,
-  bft_offset_t* off);
-
 int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off);
 
 int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
@@ -46,6 +43,9 @@ int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 int bft_remove_table_entry(void* bft, bft_offset_t off);
 
 int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
+
+int bft_find_table_entry(const void* bft, const char* filename,
+  bft_offset_t* off);
 
 
 int bft_read_table(const void* key, const void* disk, size_t level_size,
