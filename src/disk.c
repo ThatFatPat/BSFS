@@ -47,7 +47,7 @@ int disk_create(int fd, bs_disk_t *disk) {
   ret_pthread = pthread_rwlock_init(&disk_local->lock, NULL);
   if (ret_pthread) {
     ret = -ret_pthread;
-    goto fail_after_flock;
+    goto fail_after_mmap;
   }
 
   disk_local->data_size = sb.st_size;
@@ -56,6 +56,8 @@ int disk_create(int fd, bs_disk_t *disk) {
   return 0;
 
   // Failure
+  fail_after_mmap:
+  munmap(disk_local->data, sb.st_size);
   fail_after_flock:
   flock(fd, LOCK_UN);
   fail_after_alloc:
