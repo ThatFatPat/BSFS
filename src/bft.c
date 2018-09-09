@@ -100,9 +100,23 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
 
 
 int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off) {
-  return -ENOSYS;
+  if (off >= BFT_MAX_ENTRIES) {
+    return -EINVAL;
+  }
+
+  bft_entry_t direct_ent;
+  int read_status = do_read_entry((const uint8_t*) bft + off * BFT_ENTRY_SIZE,
+    &direct_ent);
+  if (read_status < 0) {
+    return read_status;
+  }
+  return bft_entry_init(ent, direct_ent.name, direct_ent.size, direct_ent.mode,
+    direct_ent.initial_cluster, direct_ent.atim, direct_ent.mtim);
 }
 
 int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off) {
-  return -ENOSYS;
+  if (off >= BFT_MAX_ENTRIES) {
+    return -EINVAL;
+  }
+  return do_write_entry((uint8_t*) bft + off * BFT_ENTRY_SIZE, ent);
 }
