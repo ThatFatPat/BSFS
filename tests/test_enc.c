@@ -1,4 +1,5 @@
 #include "test_enc.h"
+
 #include "enc.h"
 #include <stdlib.h>
 #include <string.h>
