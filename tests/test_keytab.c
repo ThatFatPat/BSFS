@@ -1,7 +1,6 @@
 #include "test_keytab.h"
 
-START_TEST(test_example)
-{
+START_TEST(test_example) {
   ck_assert_int_eq(3, 3);
 }
 END_TEST
