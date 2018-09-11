@@ -1,24 +1,27 @@
 #include "enc.h"
+
 #include <errno.h>
-#include <stdint.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-
+#include <stdint.h>
 
 #define NROUNDS 5
 
-static int gen_key(const void* password, size_t password_size, void* key, void* iv) {
+static int gen_key(const void* password, size_t password_size, void* key,
+                   void* iv) {
   int res_size;
 
-  res_size = EVP_BytesToKey(EVP_aes_128_cbc(), EVP_sha1(), NULL, (uint8_t*) password,
-   password_size, NROUNDS, (uint8_t*) key, (uint8_t*) iv);
+  res_size =
+      EVP_BytesToKey(EVP_aes_128_cbc(), EVP_sha1(), NULL, (uint8_t*) password,
+                     password_size, NROUNDS, (uint8_t*) key, (uint8_t*) iv);
   if (res_size != 16) {
     return -1;
   }
   return 0;
 }
 
-int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size) {
+int aes_encrypt(const void* password, size_t password_size, const void* data,
+                size_t size, void** buf_pointer, size_t* buf_size) {
   int ret = 0;
   int content_size, final_size;
   uint8_t* ciphertext;
@@ -34,7 +37,7 @@ int aes_encrypt(const void* password, size_t password_size, const void* data, si
   if (ret != 0) {
     goto cleanup_ctx;
   }
-  
+
   if (!EVP_EncryptInit_ex(e_ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
     ret = -1;
     goto cleanup_ctx;
@@ -44,7 +47,8 @@ int aes_encrypt(const void* password, size_t password_size, const void* data, si
   final_size = 0;
   ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE - 1);
 
-  if (!EVP_EncryptUpdate(e_ctx, ciphertext, &content_size, (const uint8_t*) data, size)) {
+  if (!EVP_EncryptUpdate(e_ctx, ciphertext, &content_size,
+                         (const uint8_t*) data, size)) {
     ret = -1;
     free(ciphertext);
     goto cleanup_ctx;
@@ -59,13 +63,14 @@ int aes_encrypt(const void* password, size_t password_size, const void* data, si
   *buf_size = content_size + final_size;
   *buf_pointer = ciphertext;
 
-  cleanup_ctx:
+cleanup_ctx:
   EVP_CIPHER_CTX_free(e_ctx);
 
   return ret;
 }
 
-int aes_decrypt(const void* password, size_t password_size, const void* enc, size_t size, void** buf_pointer, size_t* buf_size) {
+int aes_decrypt(const void* password, size_t password_size, const void* enc,
+                size_t size, void** buf_pointer, size_t* buf_size) {
   int ret = 0;
   EVP_CIPHER_CTX* d_ctx = EVP_CIPHER_CTX_new();
 
@@ -79,7 +84,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc, siz
   if (ret != 0) {
     goto cleanup_ctx;
   }
-  
+
   if (!EVP_DecryptInit_ex(d_ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
     ret = -1;
     goto cleanup_ctx;
@@ -88,7 +93,8 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc, siz
   int content_size = 0, final_size = 0;
   uint8_t* plaintext = (uint8_t*) malloc(size);
 
-  if (!EVP_DecryptUpdate(d_ctx, plaintext, &content_size, (const uint8_t*) enc, size)) {
+  if (!EVP_DecryptUpdate(d_ctx, plaintext, &content_size, (const uint8_t*) enc,
+                         size)) {
     ret = -1;
     free(plaintext);
     goto cleanup_ctx;
@@ -103,7 +109,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc, siz
   *buf_size = content_size + final_size;
   *buf_pointer = plaintext;
 
-  cleanup_ctx:
+cleanup_ctx:
   EVP_CIPHER_CTX_free(d_ctx);
 
   return ret;
