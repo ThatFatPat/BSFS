@@ -25,7 +25,7 @@ int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
 void bft_entry_destroy(bft_entry_t* ent) {
   // Const-removal is safe if `ent` was initialized with `bft_entry_init`.
   free((void*) ent->name);
-  *ent = (bft_entry_t){0}; // turn use-after-free into a guaranteed crash
+  *ent = (bft_entry_t){ 0 }; // turn use-after-free into a guaranteed crash
 }
 
 int bft_find_free_table_entry(const void* bft, bft_offset_t* off) {
@@ -171,8 +171,9 @@ static bool find_free_entry_iter(bft_offset_t off, const bft_entry_t* ent,
 
 int bft_find_table_entry(const void* bft, const char* filename,
                          bft_offset_t* off) {
-  struct find_free_entry_ctx ctx = {
-      .name = filename, .off = off, .found = false};
+  struct find_free_entry_ctx ctx = { .name = filename,
+                                     .off = off,
+                                     .found = false };
 
   int iter_status = bft_iter_table_entries(bft, find_free_entry_iter, &ctx);
   if (iter_status < 0) {
