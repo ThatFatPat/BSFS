@@ -6,7 +6,8 @@
 #include <string.h>
 
 int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
-  uint32_t initial_cluster, bft_timestamp_t atim, bft_timestamp_t mtim) {
+                   uint32_t initial_cluster, bft_timestamp_t atim,
+                   bft_timestamp_t mtim) {
   ent->name = strdup(name);
   if (!ent->name) {
     return -errno;
@@ -24,9 +25,8 @@ int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
 void bft_entry_destroy(bft_entry_t* ent) {
   // Const-removal is safe if `ent` was initialized with `bft_entry_init`.
   free((void*) ent->name);
-  *ent = (bft_entry_t) {0}; // turn use-after-free into a guaranteed crash
+  *ent = (bft_entry_t){0}; // turn use-after-free into a guaranteed crash
 }
-
 
 int bft_find_free_table_entry(const void* bft, bft_offset_t* off) {
   const uint8_t* bft_bytes = (const uint8_t*) bft;
@@ -39,7 +39,6 @@ int bft_find_free_table_entry(const void* bft, bft_offset_t* off) {
   }
   return -ENOSPC;
 }
-
 
 static uint32_t read_big_endian(const void* buf) {
   uint32_t big_endian;
@@ -59,10 +58,10 @@ static int do_read_entry(const uint8_t* raw_ent, bft_entry_t* ent) {
 
   ent->name = (const char*) raw_ent;
   raw_ent += BFT_MAX_FILENAME;
-  
+
   ent->initial_cluster = read_big_endian(raw_ent);
   raw_ent += sizeof(uint32_t);
-  
+
   ent->size = read_big_endian(raw_ent);
   raw_ent += sizeof(uint32_t);
 
@@ -80,7 +79,7 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
   if (strlen(ent->name) >= BFT_MAX_FILENAME) {
     return -ENAMETOOLONG;
   }
-  
+
   strncpy((char*) raw_ent, ent->name, BFT_MAX_FILENAME);
   raw_ent += BFT_MAX_FILENAME;
 
@@ -100,20 +99,20 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
   return 0;
 }
 
-
 int bft_read_table_entry(const void* bft, bft_entry_t* ent, bft_offset_t off) {
   if (off >= BFT_MAX_ENTRIES) {
     return -EINVAL;
   }
 
   bft_entry_t direct_ent;
-  int read_status = do_read_entry((const uint8_t*) bft + off * BFT_ENTRY_SIZE,
-    &direct_ent);
+  int read_status =
+      do_read_entry((const uint8_t*) bft + off * BFT_ENTRY_SIZE, &direct_ent);
   if (read_status < 0) {
     return read_status;
   }
   return bft_entry_init(ent, direct_ent.name, direct_ent.size, direct_ent.mode,
-    direct_ent.initial_cluster, direct_ent.atim, direct_ent.mtim);
+                        direct_ent.initial_cluster, direct_ent.atim,
+                        direct_ent.mtim);
 }
 
 int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off) {
@@ -151,7 +150,6 @@ int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx) {
   return 0;
 }
 
-
 struct find_free_entry_ctx {
   const char* name;
   bft_offset_t* off;
@@ -159,7 +157,7 @@ struct find_free_entry_ctx {
 };
 
 static bool find_free_entry_iter(bft_offset_t off, const bft_entry_t* ent,
-  void* raw_ctx) {
+                                 void* raw_ctx) {
   struct find_free_entry_ctx* ctx = (struct find_free_entry_ctx*) raw_ctx;
 
   if (strcmp(ent->name, ctx->name) == 0) {
@@ -172,12 +170,9 @@ static bool find_free_entry_iter(bft_offset_t off, const bft_entry_t* ent,
 }
 
 int bft_find_table_entry(const void* bft, const char* filename,
-  bft_offset_t* off) {
+                         bft_offset_t* off) {
   struct find_free_entry_ctx ctx = {
-    .name = filename,
-    .off = off,
-    .found = false
-  };
+      .name = filename, .off = off, .found = false};
 
   int iter_status = bft_iter_table_entries(bft, find_free_entry_iter, &ctx);
   if (iter_status < 0) {
@@ -186,6 +181,6 @@ int bft_find_table_entry(const void* bft, const char* filename,
   if (!ctx.found) {
     return -ENOENT;
   }
-  
+
   return 0;
 }
