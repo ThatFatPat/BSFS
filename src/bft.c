@@ -150,15 +150,15 @@ int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx) {
   return 0;
 }
 
-struct find_free_entry_ctx {
+struct find_entry_ctx {
   const char* name;
   bft_offset_t* off;
   bool found;
 };
 
-static bool find_free_entry_iter(bft_offset_t off, const bft_entry_t* ent,
-                                 void* raw_ctx) {
-  struct find_free_entry_ctx* ctx = (struct find_free_entry_ctx*) raw_ctx;
+static bool find_entry_iter(bft_offset_t off, const bft_entry_t* ent,
+                            void* raw_ctx) {
+  struct find_entry_ctx* ctx = (struct find_entry_ctx*) raw_ctx;
 
   if (strcmp(ent->name, ctx->name) == 0) {
     *ctx->off = off;
@@ -171,11 +171,9 @@ static bool find_free_entry_iter(bft_offset_t off, const bft_entry_t* ent,
 
 int bft_find_table_entry(const void* bft, const char* filename,
                          bft_offset_t* off) {
-  struct find_free_entry_ctx ctx = { .name = filename,
-                                     .off = off,
-                                     .found = false };
+  struct find_entry_ctx ctx = { .name = filename, .off = off, .found = false };
 
-  int iter_status = bft_iter_table_entries(bft, find_free_entry_iter, &ctx);
+  int iter_status = bft_iter_table_entries(bft, find_entry_iter, &ctx);
   if (iter_status < 0) {
     return iter_status;
   }
