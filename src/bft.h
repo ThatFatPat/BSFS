@@ -26,9 +26,9 @@ typedef struct bft_entry {
 typedef bool (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
 
 // TODO: use cluster_offset_t
-int bft_entry_init(bft_entry_t* ent, const char* name, size_t size,
-  mode_t mode, uint32_t initial_cluster, bft_timestamp_t atim,
-  bft_timestamp_t mtim);
+int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
+                   uint32_t initial_cluster, bft_timestamp_t atim,
+                   bft_timestamp_t mtim);
 void bft_entry_destroy(bft_entry_t* ent);
 
 int bft_find_free_table_entry(const void* bft, bft_offset_t* off);
@@ -39,7 +39,7 @@ int bft_remove_table_entry(void* bft, bft_offset_t off);
 
 int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 int bft_find_table_entry(const void* bft, const char* filename,
-  bft_offset_t* off);
+                         bft_offset_t* off);
 
 int bft_read_table(const void* key, bs_disk_t disk, void* bft);
 int bft_write_table(const void* key, bs_disk_t disk, void* bft);

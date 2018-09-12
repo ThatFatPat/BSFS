@@ -5,11 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-START_TEST(test_bft_init_basic)
-{
+START_TEST(test_bft_init_basic) {
   bft_entry_t ent;
   ck_assert_int_eq(bft_entry_init(&ent, "Test", 42, 0, 1, 2, 3), 0);
-  
+
   ck_assert_str_eq(ent.name, "Test");
   ck_assert_uint_eq(ent.size, 42);
   ck_assert_uint_eq(ent.mode, 0);
@@ -21,8 +20,7 @@ START_TEST(test_bft_init_basic)
 }
 END_TEST
 
-START_TEST(test_bft_init_deep_copy)
-{
+START_TEST(test_bft_init_deep_copy) {
   const char* name = "entry";
   bft_entry_t ent;
   ck_assert_int_eq(bft_entry_init(&ent, name, 0, 0, 0, 0, 0), 0);
@@ -31,11 +29,9 @@ START_TEST(test_bft_init_deep_copy)
 }
 END_TEST
 
-
-START_TEST(test_bft_find_free_entry)
-{
+START_TEST(test_bft_find_free_entry) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
-  
+
   bft_offset_t first_off;
   int first_status = bft_find_free_table_entry(bft, &first_off);
   ck_assert_int_eq(first_status, 0);
@@ -50,8 +46,7 @@ START_TEST(test_bft_find_free_entry)
 }
 END_TEST
 
-START_TEST(test_bft_find_free_entry_nospace)
-{
+START_TEST(test_bft_find_free_entry_nospace) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
   memset(bft, 'a', sizeof(bft)); // 'fill' BFT
 
@@ -61,9 +56,7 @@ START_TEST(test_bft_find_free_entry_nospace)
 }
 END_TEST
 
-
-START_TEST(test_bft_entry_roundtrip)
-{
+START_TEST(test_bft_entry_roundtrip) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t original;
@@ -88,8 +81,7 @@ START_TEST(test_bft_entry_roundtrip)
 }
 END_TEST
 
-START_TEST(test_bft_read_entry_past_end)
-{
+START_TEST(test_bft_read_entry_past_end) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t ent;
@@ -98,8 +90,7 @@ START_TEST(test_bft_read_entry_past_end)
 }
 END_TEST
 
-START_TEST(test_bft_write_entry_past_end)
-{
+START_TEST(test_bft_write_entry_past_end) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t ent;
@@ -109,8 +100,7 @@ START_TEST(test_bft_write_entry_past_end)
 }
 END_TEST
 
-START_TEST(test_bft_read_entry_corrupt)
-{
+START_TEST(test_bft_read_entry_corrupt) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
   memset(bft, 'a', sizeof(bft));
 
@@ -120,8 +110,7 @@ START_TEST(test_bft_read_entry_corrupt)
 }
 END_TEST
 
-START_TEST(test_bft_read_entry_deep_copy)
-{
+START_TEST(test_bft_read_entry_deep_copy) {
   void* bft = calloc(BFT_MAX_ENTRIES, BFT_ENTRY_SIZE);
 
   bft_entry_t orig_ent;
@@ -131,7 +120,7 @@ START_TEST(test_bft_read_entry_deep_copy)
   bft_entry_t read_ent;
   ck_assert_int_eq(bft_read_table_entry(bft, &read_ent, 0), 0);
   ck_assert_ptr_ne(read_ent.name, bft);
-  
+
   free(bft);
 
   // note: after free
@@ -142,24 +131,22 @@ START_TEST(test_bft_read_entry_deep_copy)
 }
 END_TEST
 
-START_TEST(test_bft_write_entry_name_too_long)
-{
+START_TEST(test_bft_write_entry_name_too_long) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
 
   bft_entry_t ent;
-  ck_assert_int_eq(bft_entry_init(
-    &ent,
-    "1234567890123456789012345678901234567890123456789012345678901234",
-    0, 0, 0, 0, 0
-  ), 0);
+  ck_assert_int_eq(
+      bft_entry_init(
+          &ent,
+          "1234567890123456789012345678901234567890123456789012345678901234", 0,
+          0, 0, 0, 0),
+      0);
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, 0), -ENAMETOOLONG);
   bft_entry_destroy(&ent);
 }
 END_TEST
 
-
-START_TEST(test_bft_remove_entry)
-{
+START_TEST(test_bft_remove_entry) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
 
   bft_offset_t free_off;
@@ -181,16 +168,14 @@ START_TEST(test_bft_remove_entry)
 }
 END_TEST
 
-START_TEST(test_bft_remove_entry_past_end)
-{
+START_TEST(test_bft_remove_entry_past_end) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
   ck_assert_int_eq(bft_remove_table_entry(bft, BFT_MAX_ENTRIES), -EINVAL);
 }
 END_TEST
 
-
 static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
-  void* ctx) {
+                                       void* ctx) {
   ck_assert_int_lt(off, 2);
 
   bft_entry_t* orig_ent = (bft_entry_t*) ctx + off;
@@ -205,8 +190,7 @@ static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
   return true;
 }
 
-START_TEST(test_bft_iter_entries)
-{
+START_TEST(test_bft_iter_entries) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
 
   bft_entry_t entries[2];
@@ -217,14 +201,12 @@ START_TEST(test_bft_iter_entries)
   ck_assert_int_eq(bft_write_table_entry(bft, &entries[1], 1), 0);
 
   ck_assert_int_eq(
-    bft_iter_table_entries(bft, test_bft_iter_entries_iter, entries), 0
-  );
+      bft_iter_table_entries(bft, test_bft_iter_entries_iter, entries), 0);
 
   bft_entry_destroy(&entries[0]);
   bft_entry_destroy(&entries[1]);
 }
 END_TEST
-
 
 struct test_bft_iter_bailout_ctx {
   int iter;
@@ -232,13 +214,13 @@ struct test_bft_iter_bailout_ctx {
 };
 
 static bool test_bft_iter_bailout_iter(bft_offset_t off, const bft_entry_t* ent,
-  void* raw_ctx) {
+                                       void* raw_ctx) {
   (void) off;
   (void) ent;
 
   struct test_bft_iter_bailout_ctx* ctx =
-    (struct test_bft_iter_bailout_ctx*) raw_ctx;
-  
+      (struct test_bft_iter_bailout_ctx*) raw_ctx;
+
   ctx->iter++;
   if (ctx->iter > 1 && ctx->bail) {
     return false;
@@ -246,8 +228,7 @@ static bool test_bft_iter_bailout_iter(bft_offset_t off, const bft_entry_t* ent,
   return true;
 }
 
-START_TEST(test_bft_iter_bailout)
-{
+START_TEST(test_bft_iter_bailout) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
   bft_entry_t ent;
 
@@ -263,29 +244,19 @@ START_TEST(test_bft_iter_bailout)
   ck_assert_int_eq(bft_write_table_entry(bft, &ent, 2), 0);
   bft_entry_destroy(&ent);
 
-  struct test_bft_iter_bailout_ctx ctx = {
-    .iter = 0,
-    .bail = false
-  };
+  struct test_bft_iter_bailout_ctx ctx = {.iter = 0, .bail = false};
   ck_assert_int_eq(
-    bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0
-  );
+      bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0);
   ck_assert_int_eq(ctx.iter, 3);
 
-  ctx = (struct test_bft_iter_bailout_ctx) {
-    .iter = 0,
-    .bail = true
-  };
+  ctx = (struct test_bft_iter_bailout_ctx){.iter = 0, .bail = true};
   ck_assert_int_eq(
-    bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0
-  );
+      bft_iter_table_entries(bft, test_bft_iter_bailout_iter, &ctx), 0);
   ck_assert_int_eq(ctx.iter, 2);
 }
 END_TEST
 
-
-START_TEST(test_bft_find_entry)
-{
+START_TEST(test_bft_find_entry) {
   uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = {0};
   bft_entry_t ent;
 
@@ -302,31 +273,22 @@ START_TEST(test_bft_find_entry)
   bft_entry_destroy(&ent);
 
   bft_offset_t found;
-  ck_assert_int_eq(
-    bft_find_table_entry(bft, "file1", &found), 0
-  );
+  ck_assert_int_eq(bft_find_table_entry(bft, "file1", &found), 0);
   ck_assert_int_eq(found, 0);
 
-  ck_assert_int_eq(
-    bft_find_table_entry(bft, "file2", &found), 0
-  );
+  ck_assert_int_eq(bft_find_table_entry(bft, "file2", &found), 0);
   ck_assert_int_eq(found, 1);
 
-  ck_assert_int_eq(
-    bft_find_table_entry(bft, "file3", &found), 0
-  );
+  ck_assert_int_eq(bft_find_table_entry(bft, "file3", &found), 0);
   ck_assert_int_eq(found, 2);
 
-  ck_assert_int_eq(
-    bft_find_table_entry(bft, "nonexistant", &found), -ENOENT
-  );
+  ck_assert_int_eq(bft_find_table_entry(bft, "nonexistant", &found), -ENOENT);
 }
 END_TEST
 
-
 Suite* bft_suite(void) {
   Suite* suite = suite_create("bft");
-  
+
   TCase* lifetime_tc = tcase_create("lifetime");
   tcase_add_test(lifetime_tc, test_bft_init_basic);
   tcase_add_test(lifetime_tc, test_bft_init_deep_copy);
