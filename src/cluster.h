@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 typedef uint32_t cluster_offset_t;
+
 #define CLUSTER_OFFSET_EOF UINT32_MAX
 #define CLUSTER_SIZE 2048
 #define CLUSTER_DATA_SIZE (CLUSTER_SIZE - sizeof(cluster_offset_t))
