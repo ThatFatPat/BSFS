@@ -104,7 +104,7 @@ Write `size` bytes out of encrypted file specified by `key`, beginning at offset
 
 ### stego_gen_keys:
 ```c
-int stego_gen_keys(void* buf, int count);
+int stego_gen_keys(void* buf, size_t count);
 ```
 Generate the orthonormal extraction keys.
 
