@@ -4,9 +4,10 @@
 #include <openssl/rand.h>
 #include <stdint.h>
 
-static int scalar_product(uint8_t* a, uint8_t* b,
-                          int size) { // Computing the scalar product of a and
-                                      // b, with "size" bytes length.
+/**
+ * Computing the scalar product of a and b, with "size" bytes length.
+ */
+static int scalar_product(uint8_t* a, uint8_t* b, int size) {
   int out = 0;
   for (int i = 0; i < size; i++) {
     for (int j = 0; j < CHAR_BIT; j++) {
@@ -18,9 +19,10 @@ static int scalar_product(uint8_t* a, uint8_t* b,
   return out;
 }
 
-static int
-norm(uint8_t* a,
-     int size) { // Computing the norm of a, with "size" bytes length.
+/**
+ * Computing the norm of a, with "size" bytes length.
+ */
+static int norm(uint8_t* a, int size) {
   int out = 0;
   for (int i = 0; i < size; i++) {
     for (int j = 0; j < CHAR_BIT; j++) {
@@ -32,9 +34,11 @@ norm(uint8_t* a,
   return out;
 }
 
-static void
-generate_random_key(uint8_t* buf) { // Generating a random key. The 2 last bytes
-                                    // are filled with 0.
+/**
+ * Generating a random key.
+ * The 2 last bytes are filled with 0.
+ */
+static void generate_random_key(uint8_t* buf) {
   int bytes_in_key = STEGO_KEY_BITS / CHAR_BIT;
   buf = (uint8_t*) malloc(bytes_in_key);
   RAND_bytes((unsigned char*) buf, sizeof(buf) - 2);
@@ -42,9 +46,11 @@ generate_random_key(uint8_t* buf) { // Generating a random key. The 2 last bytes
   buf[bytes_in_key - 1] = 0;
 }
 
-int stego_gen_keys(void* buf,
-                   int count) { // Generating "count" orthonormal keys. Uses
-                                // special Gram-Schmidt to do so.
+/**
+ * Generating "count" orthonormal keys.
+ * Uses special Gram-Schmidt to do so.
+ */
+int stego_gen_keys(void* buf, int count) {
   int key_size = STEGO_KEY_BITS / CHAR_BIT;
   int total_keys_size = count * (key_size);
   uint8_t* keys = (uint8_t*) malloc(total_keys_size);
@@ -90,7 +96,8 @@ static int write_level_encrypted(const void* key, bs_disk_t disk,
   return ENOSYS;
 }
 
-static int calculate_cover_files_sum(void* subtracted, void* subtracting) {
+static int calculate_cover_files_sum(bs_disk_t disk, off_t first_cover,
+                                     off_t second_cover) {
   return ENOSYS;
 }
 
