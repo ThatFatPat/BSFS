@@ -245,13 +245,13 @@ Write the contents of `buf` to the bitmap in the level specified by `key`.
 
 ### fs_alloc_cluster:
 ```c
-int fs_alloc_cluster(void* bitmap, size_t bitmap_size, cluster_offset_t* new_cluster);
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t* new_cluster);
 ```
 Find the first empty cluster in `bitmap` and change its status bit to 1, meaning it is in use. 
 
 ### fs_dealloc_cluster:
 ```c
-int fs_dealloc_cluster(void* bitmap, size_t bitmap_size, cluster_offset_t cluster);
+int fs_dealloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t cluster);
 ```
 Deallocate the cluster specified by `cluster` and change its status bit to 0, meaning it is free. 
 
