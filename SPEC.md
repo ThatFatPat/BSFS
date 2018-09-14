@@ -132,6 +132,13 @@ Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 
 ## Key Table:
 
+### Key Table Entry Size:
+```c
+#define KEYTAB_ENTRY_SIZE 32
+```
+The size of a keytab entry in bytes.
+**Note**: This is the size of an entry on the disk (due to AES encryption limitations).
+
 ### Max Levels:
 ```c
 #define MAX_LEVELS 16
