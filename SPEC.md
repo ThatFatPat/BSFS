@@ -138,6 +138,7 @@ Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 #define KEYTAB_ENTRY_SIZE 32
 ```
 The size of a keytab entry in bytes.
+
 **Note**: This is the size of an entry on the disk (due to AES encryption limitations).
 
 ### Max Levels:
@@ -354,6 +355,7 @@ int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 Write `ent` to `bft` at offset `off`.
 
 **Note**: The previous content at offset `off`, if any exists, is overwritten.
+
 **Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_remove_table_entry:
