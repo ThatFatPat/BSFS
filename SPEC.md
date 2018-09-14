@@ -72,6 +72,7 @@ considered invalid.
 ### Key Size:
 ```c
 #define STEGO_KEY_BITS 128
+#define STEGO_KEY_BYTES (STEGO_KEY_BITS/CHAR_BIT)
 ```
 Number of bits in a key; also the number of cover files present on the system.
 
