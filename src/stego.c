@@ -86,39 +86,39 @@ int stego_gen_keys(void* buf, int count) {
 }
 
 static off_t cover_offset(int i) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 static int calculate_files_sum(void* first_file, void* second_file,
                                void* files_sum, size_t files_size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 static int covers_linear_combination(bs_disk_t disk, const void* key) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 static int direct_reading(bs_disk_t disk, off_t off, void* buf, size_t size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 static int read_encrypted_level(const void* key, const void* disk,
                                 size_t level_size, void* buf, off_t off,
                                 size_t size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 static int write_level_encrypted(const void* key, bs_disk_t disk,
                                  const void* buf, off_t off, size_t size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
                      size_t size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
 
 int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
-  return ENOSYS;
+  return -ENOSYS;
 }
