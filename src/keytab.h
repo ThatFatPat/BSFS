@@ -1,5 +1,7 @@
 #ifndef BS_KEYTAB_H
 #define BS_KEYTAB_H
+#include "disk.h"
+#include <sys/types.h>
 
 #define KEYTAB_MAGIC "DEADBEEF"
 #define KEYTAB_MAGIC_SIZE (sizeof KEYTAB_MAGIC)
