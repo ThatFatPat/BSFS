@@ -1,12 +1,9 @@
 #include "keytab.h"
 
-void* get_keytab_pointer() {
-  return 0;
-}
+static bool is_key_matching_index(const void* keytab_pointer,
+                                  const void* password, int index) {
 
-bool is_key_matching_index(const void* password, int index) {
-
-  void* entry_pointer = get_pointer_from_index(index);
+  const void* entry_pointer = get_pointer_from_index(keytab_pointer, index);
 
   void* buffer;
   size_t buffer_size;
@@ -16,17 +13,19 @@ bool is_key_matching_index(const void* password, int index) {
 
   for (int i = 0; i < KEYTAB_MAGIC_SIZE; i++) {
     if (((char*) buffer)[i] != KEYTAB_MAGIC[i]) {
+      free(buffer);
       return false;
     }
   }
 
+  free(buffer);
   return true;
 }
 
-int get_key_index(const void* password) {
+static int get_key_index(const void* keytab_pointer, const void* password) {
 
   for (int i = 0; i < KEYTAB_LEN; i++) {
-    if (is_key_matching_index(password, i)) {
+    if (is_key_matching_index(keytab_pointer, password, i)) {
       return i;
     }
   }
@@ -34,47 +33,78 @@ int get_key_index(const void* password) {
   return -1;
 }
 
-void* get_pointer_from_index(int key_index) {
-  return get_keytab_pointer() + key_index * KEYTAB_ENTRY_SIZE;
+static const void* get_pointer_from_index(const void* keytab_pointer,
+                                          int key_index) {
+  return keytab_pointer + key_index * KEYTAB_ENTRY_SIZE; // check sizes
 }
 
 // value MUST be of the size KEYTAB_KEY_SIZE or only part of it will be actually
 // written
-void change_keytab_val_with_key(const void* password, const void* value) {
+static void change_keytab_val_with_key(void* keytab_pointer,
+                                       const void* password,
+                                       const void* value) {
 
-  int key_index = get_key_index(password);
+  int key_index = get_key_index(keytab_pointer, password);
+}
+
+int keytab_lookup(bs_disk_t disk, const void* password, void* key) {
+
+  const void* keytab_pointer;
+  disk_lock_read(disk, &keytab_pointer);
+
+  int key_index = get_key_index(keytab_pointer, password);
 
   if (key_index != -1) {
-    // password is correct
-
-    char* data =
-        KEYTAB_MAGIC; // TODO (concatinate the magic number with the value)
-    void* data_pointer = &data;
+    char* enc_entry = (char*) get_pointer_from_index(keytab_pointer, key_index);
 
     void* buffer;
     size_t buffer_size;
 
-    aes_encrypt(password, (size_t) KEYTAB_KEY_SIZE, data_pointer,
-                (size_t) KEYTAB_ENTRY_SIZE, &buffer, &buffer_size);
+    if (aes_decrypt(password, KEYTAB_KEY_SIZE, enc_entry, KEYTAB_ENTRY_SIZE,
+                    &buffer, &buffer_size) != 0) {
+      disk_unlock_read(disk);
+      return -1;
+    }
 
-    *(char*) get_pointer_from_index(key_index) =
-        *(char*) buffer; // CHECK IF WORKS CORRECTLY
+    key = buffer + KEYTAB_MAGIC_SIZE;
+
+    free(buffer);
+    disk_unlock_read(disk);
+
+    return 0;
   }
+
+  disk_unlock_read(disk);
+
+  return -1;
 }
 
-// before calling this, make sure that get_key_index(password) != -1
-// otherwise will always return 0
-char* get_next_key(const void* password) {
+int keytab_store(bs_disk_t disk, off_t index, const char* password,
+                 const void* key) {
 
-  void* keytab_pointer = get_keytab_pointer();
+  void* keytab_pointer;
+  disk_lock_write(disk, &keytab_pointer);
 
-  int key_index = get_key_index(password);
+  char* data = KEYTAB_MAGIC;
+  strcat(data, (const char*) key);
+  // CHECK if concatenation works correctly
 
-  if (key_index != -1) {
-    return (char*) ((int) keytab_pointer +
-                    (int) get_pointer_from_index(
-                        key_index)); // CHECK IF INT SIZE IS CORRECT
-  }
+  void* data_pointer = &data;
+
+  void* buffer;
+  size_t buffer_size;
+
+  if (aes_encrypt(password, (size_t) KEYTAB_KEY_SIZE, data_pointer,
+                  (size_t) KEYTAB_ENTRY_SIZE, &buffer, &buffer_size) != 0) {
+    disk_unlock_write(disk);
+    return -1;
+  };
+
+  memcpy((void*) get_pointer_from_index(keytab_pointer, index), buffer,
+         buffer_size);
+
+  free(buffer);
+  disk_unlock_write(disk);
 
   return 0;
 }
