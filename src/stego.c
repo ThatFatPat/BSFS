@@ -39,11 +39,10 @@ static bool norm(uint8_t* a, size_t size) {
  * The 2 last bytes are filled with 0.
  */
 static int generate_random_key(uint8_t* buf) {
-  int bytes_in_key = STEGO_KEY_BITS / CHAR_BIT;
-  if (RAND_bytes((unsigned char*) buf, bytes_in_key - 2) == 0) {
+  if (RAND_bytes((unsigned char*) buf, STEGO_KEY_BYTES - 2) == 0) {
     return -1;
   }
-  memset(buf + bytes_in_key - 2, 0, 2);
+  memset(buf + STEGO_KEY_BYTES - 2, 0, 2);
   return 0;
 }
 
@@ -52,32 +51,32 @@ static int generate_random_key(uint8_t* buf) {
  * Uses special Gram-Schmidt to do so.
  */
 int stego_gen_keys(void* buf, int count) {
-  size_t key_size = STEGO_KEY_BITS / CHAR_BIT;
-  size_t total_keys_size = count * (key_size);
+  size_t total_keys_size = count * (STEGO_KEY_BYTES);
   uint8_t* int_buf = (uint8_t*) buf;
-  for (size_t i = 0; i < total_keys_size; i += key_size) {
+  for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_BYTES) {
     uint8_t* rnd_key = int_buf + i;
     if (generate_random_key(rnd_key) == -1) {
       return -1;
     }
     for (size_t j = 0; j < i;
-         j += key_size) { // Add to "rnd_key" all the keys before him which have
-                          // scalar product 1 with him.
-      int product =
-          scalar_product(rnd_key, int_buf + j, STEGO_KEY_BITS / CHAR_BIT);
+         j += STEGO_KEY_BYTES) { // Add to "rnd_key" all the keys before him
+                                 // which have
+                                 // scalar product 1 with him.
+      int product = scalar_product(rnd_key, int_buf + j, STEGO_KEY_BYTES);
       if (product == 1) {
-        for (size_t l = 0; l < key_size; l++) {
+        for (size_t l = 0; l < STEGO_KEY_BYTES; l++) {
           rnd_key[l] ^= int_buf[j + l];
         }
       }
     }
-    if (norm(rnd_key, key_size) == 0) { // If the norm of the key is 0, set the
-                                        // proper bit in the last two bytes.
-      int key_num = i / key_size;
+    if (norm(rnd_key, STEGO_KEY_BYTES) ==
+        0) { // If the norm of the key is 0, set the
+             // proper bit in the last two bytes.
+      int key_num = i / STEGO_KEY_BYTES;
       if (key_num < 8) {
-        rnd_key[key_size - 2] |= 1UL << key_num;
+        rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
       } else {
-        rnd_key[key_size - 1] |= 1UL << (key_num - 8);
+        rnd_key[STEGO_KEY_BYTES - 1] |= 1UL << (key_num - 8);
       }
     }
   }
