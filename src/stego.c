@@ -30,9 +30,7 @@ static bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size) {
 /**
  * Computing the norm of a, with "size" bytes length.
  */
-static bool
-norm(uint8_t* a,
-     size_t size) { // Computing the norm of a, with "size" bytes length.
+static bool norm(uint8_t* a, size_t size) {
   return scalar_product(a, a, size);
 }
 
@@ -40,8 +38,7 @@ norm(uint8_t* a,
  * Generating a random key.
  * The 2 last bytes are filled with 0.
  */
-static int generate_random_key(uint8_t* buf) { // Generating a random key. The 2
-                                               // last bytes are filled with 0.
+static int generate_random_key(uint8_t* buf) {
   int bytes_in_key = STEGO_KEY_BITS / CHAR_BIT;
   if (RAND_bytes((unsigned char*) buf, bytes_in_key - 2) == 0) {
     return -1;
@@ -54,9 +51,7 @@ static int generate_random_key(uint8_t* buf) { // Generating a random key. The 2
  * Generating "count" orthonormal keys.
  * Uses special Gram-Schmidt to do so.
  */
-int stego_gen_keys(void* buf,
-                   int count) { // Generating "count" orthonormal keys. Uses
-                                // special Gram-Schmidt to do so.
+int stego_gen_keys(void* buf, int count) {
   size_t key_size = STEGO_KEY_BITS / CHAR_BIT;
   size_t total_keys_size = count * (key_size);
   uint8_t* int_buf = (uint8_t*) buf;
