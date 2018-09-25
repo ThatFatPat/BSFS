@@ -89,16 +89,41 @@ static off_t cover_offset(int i) {
   return -ENOSYS;
 }
 
-static int calculate_files_sum(void* first_file, void* second_file,
-                               void* files_sum, size_t files_size) {
+/**
+ * Calculate the the linear combination of
+ */
+static int vector_linear_combination(void* linear_combination,
+                                     uint8_t* coefficients,
+                                     size_t coefficients_size,
+                                     void* first_vector, void* second_vector,
+                                     size_t vectors_size) {
+  for (int i = 0; i < coefficients_size; i++) {
+    if (coefficients >> == 1) {
+      for (int l = 0; l < key_size; l++) {
+        rnd_key[l] += keys[j + l];
+      }
+    }
+  }
+
   return -ENOSYS;
 }
 
-static int covers_linear_combination(bs_disk_t disk, const void* key) {
+/**
+ * Calculate the linear combination of all the cover files by the key in a
+ * specific range (between off and off + size).
+ * The result is also the multiplication of the key vector with
+ * the cover files matrix.
+ */
+static int ranged_covers_linear_combination(const void* key, bs_disk_t disk,
+                                            off_t off, size_t size, void* buf) {
   return -ENOSYS;
 }
 
-static int direct_reading(bs_disk_t disk, off_t off, void* buf, size_t size) {
+static int direct_read(bs_disk_t disk, off_t off, void* buf, size_t size) {
+  return -ENOSYS;
+}
+
+static int direct_write(bs_disk_t disk, off_t off, void* buf, size_t size) {
   return -ENOSYS;
 }
 
