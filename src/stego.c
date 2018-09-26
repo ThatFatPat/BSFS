@@ -63,15 +63,16 @@ int stego_gen_keys(void* buf, int count) {
                                  // which have
                                  // scalar product 1 with him.
       int product = scalar_product(rnd_key, int_buf + j, STEGO_KEY_BYTES);
-      if (product == 1) {
+      if (product) {
         for (size_t l = 0; l < STEGO_KEY_BYTES; l++) {
           rnd_key[l] ^= int_buf[j + l];
         }
       }
     }
-    if (norm(rnd_key, STEGO_KEY_BYTES) ==
-        0) { // If the norm of the key is 0, set the
-             // proper bit in the last two bytes.
+
+    if (!norm(rnd_key,
+              STEGO_KEY_BYTES)) { // If the norm of the key is 0, set the
+                                  // proper bit in the last two bytes.
       int key_num = i / STEGO_KEY_BYTES;
       if (key_num < 8) {
         rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
@@ -92,9 +93,8 @@ static off_t cover_offset(int i) {
  */
 static int vector_linear_combination(void* linear_combination,
                                      uint8_t* coefficients,
-                                     size_t coefficients_size,
-                                     void* first_vector, void* second_vector,
-                                     size_t vectors_size) {
+                                     size_t coefficients_size, void* vectors,
+                                     size_t vector_size, size_t vectors_size) {
   return -ENOSYS;
 }
 
@@ -136,3 +136,4 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
 int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
   return -ENOSYS;
+}
