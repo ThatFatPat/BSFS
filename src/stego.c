@@ -58,10 +58,10 @@ int stego_gen_keys(void* buf, int count) {
     if (generate_random_key(rnd_key) == -1) {
       return -1;
     }
-    for (size_t j = 0; j < i;
-         j += STEGO_KEY_BYTES) { // Add to "rnd_key" all the keys before him
-                                 // which have
-                                 // scalar product 1 with him.
+
+    // Add to "rnd_key" all the keys before him which have scalar product 1 with
+    // him.
+    for (size_t j = 0; j < i; j += STEGO_KEY_BYTES) {
       int product = scalar_product(rnd_key, int_buf + j, STEGO_KEY_BYTES);
       if (product) {
         for (size_t l = 0; l < STEGO_KEY_BYTES; l++) {
@@ -70,9 +70,8 @@ int stego_gen_keys(void* buf, int count) {
       }
     }
 
-    if (!norm(rnd_key,
-              STEGO_KEY_BYTES)) { // If the norm of the key is 0, set the
-                                  // proper bit in the last two bytes.
+    // If the norm of the key is 0, set the proper bit in the last two bytes.
+    if (!norm(rnd_key, STEGO_KEY_BYTES)) {
       int key_num = i / STEGO_KEY_BYTES;
       if (key_num < 8) {
         rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
@@ -100,7 +99,7 @@ static int vector_linear_combination(void* linear_combination,
   uint8_t* int_first_vector = (uint8_t*) first_vector;
   uint8_t* int_second_vector = (uint8_t*) second_vector;
 
-  for (int i = 0; i < vector_size; i++) {
+  for (size_t i = 0; i < vector_size; i++) {
     int_linear_combination[i] = int_first_vector[i];
     if (coefficient) {
       int_linear_combination[i] ^= int_second_vector[i];

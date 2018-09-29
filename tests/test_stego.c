@@ -1,9 +1,9 @@
 #include "test_stego.h"
+#include "stego.h"
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stego.h>
 
 static int count_bits(uint8_t a) {
   int ret = 0;
@@ -14,6 +14,9 @@ static int count_bits(uint8_t a) {
   return ret;
 }
 
+/**
+ * Computing the scalar product of a and b, with "size" bytes length.
+ */
 static bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size) {
   bool ret = 0;
   for (size_t i = 0; i < size; i++) {
@@ -22,15 +25,17 @@ static bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size) {
   return ret;
 }
 
-static bool
-norm(uint8_t* a,
-     size_t size) { // Computing the norm of a, with "size" bytes length.
+/**
+ * Computing the norm of a, with "size" bytes length.
+ */
+static bool norm(uint8_t* a, size_t size) {
   return scalar_product(a, a, size);
 }
 
-static bool
-check_orthonormality(void* buf,
-                     int count) { // Don't check for linear independency
+/**
+ * Don't check for linear independency
+ */
+static bool check_orthonormality(void* buf, int count) {
   uint8_t* int_buf = (uint8_t*) buf;
   size_t key_size = STEGO_KEY_BITS / CHAR_BIT;
   size_t total_keys_size = count * (key_size);
@@ -71,7 +76,7 @@ static int vector_linear_combination(void* linear_combination,
   uint8_t* int_first_vector = (uint8_t*) first_vector;
   uint8_t* int_second_vector = (uint8_t*) second_vector;
 
-  for (int i = 0; i < vector_size; i++) {
+  for (size_t i = 0; i < vector_size; i++) {
     int_linear_combination[i] = int_first_vector[i];
     if (coefficient) {
       int_linear_combination[i] ^= int_second_vector[i];
