@@ -89,13 +89,25 @@ static off_t cover_offset(int i) {
 }
 
 /**
- * Calculate the linear combination of
+ * Calculate the first_vector + coefficient * second_vector.
+ * Put the result into linear_combination.
  */
 static int vector_linear_combination(void* linear_combination,
-                                     uint8_t* coefficients,
-                                     size_t coefficients_size, void* vectors,
-                                     size_t vector_size, size_t vectors_size) {
-  return -ENOSYS;
+                                     void* first_vector, void* second_vector,
+                                     size_t vector_size, bool coefficient) {
+
+  uint8_t* int_linear_combination = (uint8_t*) linear_combination;
+  uint8_t* int_first_vector = (uint8_t*) first_vector;
+  uint8_t* int_second_vector = (uint8_t*) second_vector;
+
+  for (int i = 0; i < vector_size; i++) {
+    int_linear_combination[i] = int_first_vector[i];
+    if (coefficient) {
+      int_linear_combination[i] ^= int_second_vector[i];
+    }
+  }
+
+  return 0;
 }
 
 /**

@@ -61,11 +61,52 @@ START_TEST(test_gen_keys) {
 }
 END_TEST
 
+/*-----------------------------------------------------------------------------------*/
+
+static int vector_linear_combination(void* linear_combination,
+                                     void* first_vector, void* second_vector,
+                                     size_t vector_size, bool coefficient) {
+
+  uint8_t* int_linear_combination = (uint8_t*) linear_combination;
+  uint8_t* int_first_vector = (uint8_t*) first_vector;
+  uint8_t* int_second_vector = (uint8_t*) second_vector;
+
+  for (int i = 0; i < vector_size; i++) {
+    int_linear_combination[i] = int_first_vector[i];
+    if (coefficient) {
+      int_linear_combination[i] ^= int_second_vector[i];
+    }
+  }
+
+  return 0;
+}
+
+START_TEST(test_linear_combination) {
+  int vector1 = 38262900;
+  int vector2 = 93374014;
+  int linear_combination1;
+  int linear_combination2;
+  vector_linear_combination((void*) &linear_combination1, (void*) &vector1,
+                            (void*) &vector2, sizeof(int), 0);
+  vector_linear_combination((void*) &linear_combination2, (void*) &vector1,
+                            (void*) &vector2, sizeof(int), 1);
+  ck_assert_msg((linear_combination1 == vector1) &&
+                    (linear_combination2 == (vector1 ^ vector2)),
+                "Error in vector_linear_combination");
+}
+END_TEST
+
 Suite* stego_suite(void) {
+
   Suite* suite = suite_create("stego");
-  TCase* example_tcase = tcase_create("stego_gen_keys");
-  tcase_add_test(example_tcase, test_gen_keys);
-  suite_add_tcase(suite, example_tcase);
+  TCase* stego_gen_keys_tcase = tcase_create("stego_gen_keys");
+  TCase* stego_read_write_tcase = tcase_create("stego_read_write");
+
+  tcase_add_test(stego_gen_keys_tcase, test_gen_keys);
+  suite_add_tcase(suite, stego_gen_keys_tcase);
+
+  tcase_add_test(stego_read_write_tcase, test_linear_combination);
+  suite_add_tcase(suite, stego_read_write_tcase);
 
   return suite;
 }
