@@ -3,7 +3,7 @@
 
 #include "disk.h"
 #include "enc.h"
-#include <stdlib.h>
+#include <sys/types.h>
 
 #define STEGO_KEY_BITS 128
 #define STEGO_KEY_BYTES (STEGO_KEY_BITS / CHAR_BIT)
