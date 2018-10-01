@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <string.h>
 
+static int vector_linear_combination(void* linear_combination,
+                                     void* first_vector, void* second_vector,
+                                     size_t vector_size, bool coefficient);
+
 static int count_bits(uint8_t a) {
   int ret = 0;
   while (a) {
@@ -54,29 +58,27 @@ int stego_gen_keys(void* buf, int count) {
   size_t total_keys_size = count * (STEGO_KEY_BYTES);
   uint8_t* int_buf = (uint8_t*) buf;
   for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_BYTES) {
-    uint8_t* rnd_key = int_buf + i;
-    if (generate_random_key(rnd_key) == -1) {
+    uint8_t* int_rnd_key = int_buf + i;
+    if (generate_random_key(int_rnd_key) == -1) {
       return -1;
     }
 
     // Add to "rnd_key" all the keys before him which have scalar product 1 with
     // him.
+    void* rnd_key = (void*) int_rnd_key;
     for (size_t j = 0; j < i; j += STEGO_KEY_BYTES) {
-      int product = scalar_product(rnd_key, int_buf + j, STEGO_KEY_BYTES);
-      if (product) {
-        for (size_t l = 0; l < STEGO_KEY_BYTES; l++) {
-          rnd_key[l] ^= int_buf[j + l];
-        }
-      }
+      int product = scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_BYTES);
+      vector_linear_combination(rnd_key, rnd_key, (void*) (int_buf + j),
+                                STEGO_KEY_BYTES, product);
     }
 
     // If the norm of the key is 0, set the proper bit in the last two bytes.
-    if (!norm(rnd_key, STEGO_KEY_BYTES)) {
+    if (!norm(int_rnd_key, STEGO_KEY_BYTES)) {
       int key_num = i / STEGO_KEY_BYTES;
       if (key_num < 8) {
-        rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
+        int_rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
       } else {
-        rnd_key[STEGO_KEY_BYTES - 1] |= 1UL << (key_num - 8);
+        int_rnd_key[STEGO_KEY_BYTES - 1] |= 1UL << (key_num - 8);
       }
     }
   }
