@@ -8,6 +8,8 @@
 #define STEGO_KEY_BITS 128
 #define STEGO_KEY_BYTES (STEGO_KEY_BITS / CHAR_BIT)
 
+size_t compute_level_size(size_t disk_size);
+
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
                      size_t size);
 

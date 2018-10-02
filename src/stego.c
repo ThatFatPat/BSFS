@@ -1,11 +1,15 @@
 #include "stego.h"
+#include "keytab.h"
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <openssl/rand.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#define KEYTAB_SIZE (KEYTAB_ENTRY_SIZE * MAX_LEVELS)
 
 static int vector_linear_combination(void* linear_combination,
                                      void* first_vector, void* second_vector,
@@ -85,8 +89,12 @@ int stego_gen_keys(void* buf, int count) {
   return 0;
 }
 
-static off_t cover_offset(int i) {
-  return -ENOSYS;
+size_t compute_level_size(size_t disk_size) {
+  return floor((float) (disk_size - KEYTAB_SIZE) / STEGO_KEY_BITS);
+}
+
+static off_t cover_offset(bs_disk_t disk, int i) {
+  return KEYTAB_SIZE + i * compute_level_size(disk_get_size(disk));
 }
 
 /**
