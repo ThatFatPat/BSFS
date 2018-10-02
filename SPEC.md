@@ -71,7 +71,7 @@ considered invalid.
 ## Stego:
 ### Amount of Cover Files:
 ```c
-#define COVER_FILES_AMOUNT 128
+#define COVER_FILES_COUNT 128
 ```
 Number of cover files present on the system; also the number of bits in a key.
 
