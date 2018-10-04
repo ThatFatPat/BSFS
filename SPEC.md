@@ -69,12 +69,17 @@ considered invalid.
 
 
 ## Stego:
+### Amount of Cover Files:
+```c
+#define COVER_FILE_COUNT 128
+```
+Number of cover files present on the system; also the number of bits in a key.
+
 ### Key Size:
 ```c
-#define STEGO_KEY_BITS 128
-#define STEGO_KEY_BYTES (STEGO_KEY_BITS/CHAR_BIT)
+#define STEGO_KEY_SIZE (COVER_FILES_AMOUNT/CHAR_BIT)
 ```
-Number of bits in a key; also the number of cover files present on the system.
+The size of a key, in bytes.
 
 ### compute_level_size:
 ```c
