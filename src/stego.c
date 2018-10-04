@@ -46,10 +46,10 @@ static bool norm(uint8_t* a, size_t size) {
  * The 2 last bytes are filled with 0.
  */
 static int generate_random_key(uint8_t* buf) {
-  if (RAND_bytes((unsigned char*) buf, STEGO_KEY_BYTES - 2) == 0) {
+  if (RAND_bytes((unsigned char*) buf, STEGO_KEY_SIZE - 2) == 0) {
     return -1;
   }
-  memset(buf + STEGO_KEY_BYTES - 2, 0, 2);
+  memset(buf + STEGO_KEY_SIZE - 2, 0, 2);
   return 0;
 }
 
@@ -58,9 +58,9 @@ static int generate_random_key(uint8_t* buf) {
  * Uses special Gram-Schmidt to do so.
  */
 int stego_gen_keys(void* buf, int count) {
-  size_t total_keys_size = count * (STEGO_KEY_BYTES);
+  size_t total_keys_size = count * (STEGO_KEY_SIZE);
   uint8_t* int_buf = (uint8_t*) buf;
-  for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_BYTES) {
+  for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_SIZE) {
     uint8_t* int_rnd_key = int_buf + i;
     if (generate_random_key(int_rnd_key) == -1) {
       return -1;
@@ -69,19 +69,19 @@ int stego_gen_keys(void* buf, int count) {
     // Add to "rnd_key" all the keys before him which have scalar product 1 with
     // him.
     void* rnd_key = (void*) int_rnd_key;
-    for (size_t j = 0; j < i; j += STEGO_KEY_BYTES) {
-      int product = scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_BYTES);
+    for (size_t j = 0; j < i; j += STEGO_KEY_SIZE) {
+      int product = scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_SIZE);
       vector_linear_combination(rnd_key, rnd_key, (void*) (int_buf + j),
-                                STEGO_KEY_BYTES, product);
+                                STEGO_KEY_SIZE, product);
     }
 
     // If the norm of the key is 0, set the proper bit in the last two bytes.
-    if (!norm(int_rnd_key, STEGO_KEY_BYTES)) {
-      int key_num = i / STEGO_KEY_BYTES;
+    if (!norm(int_rnd_key, STEGO_KEY_SIZE)) {
+      int key_num = i / STEGO_KEY_SIZE;
       if (key_num < 8) {
-        int_rnd_key[STEGO_KEY_BYTES - 2] |= 1UL << key_num;
+        int_rnd_key[STEGO_KEY_SIZE - 2] |= 1UL << key_num;
       } else {
-        int_rnd_key[STEGO_KEY_BYTES - 1] |= 1UL << (key_num - 8);
+        int_rnd_key[STEGO_KEY_SIZE - 1] |= 1UL << (key_num - 8);
       }
     }
   }
@@ -89,7 +89,7 @@ int stego_gen_keys(void* buf, int count) {
 }
 
 size_t compute_level_size(size_t disk_size) {
-  return (disk_size - KEYTAB_SIZE) / STEGO_KEY_BITS;
+  return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
 static off_t cover_offset(bs_disk_t disk, int i) {

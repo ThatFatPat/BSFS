@@ -39,7 +39,7 @@ static bool norm(uint8_t* a, size_t size) {
  */
 static bool check_orthonormality(void* buf, int count) {
   uint8_t* int_buf = (uint8_t*) buf;
-  size_t key_size = STEGO_KEY_BITS / CHAR_BIT;
+  size_t key_size = COVER_FILE_COUNT / CHAR_BIT;
   size_t total_keys_size = count * (key_size);
   for (size_t i = 0; i < total_keys_size; i += key_size) {
     uint8_t* key_1 = int_buf + i;
@@ -57,7 +57,7 @@ static bool check_orthonormality(void* buf, int count) {
 }
 
 START_TEST(test_gen_keys) {
-  uint8_t buf[16 * (STEGO_KEY_BITS / CHAR_BIT)];
+  uint8_t buf[16 * (COVER_FILE_COUNT / CHAR_BIT)];
   for (int count = 12; count <= 16; count++) { // Check for 10 to 16 keys
     for (int i = 0; i < 15; i++) {
       stego_gen_keys(buf, count);

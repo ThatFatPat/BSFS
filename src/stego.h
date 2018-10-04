@@ -5,8 +5,8 @@
 #include "enc.h"
 #include <sys/types.h>
 
-#define STEGO_KEY_BITS 128
-#define STEGO_KEY_BYTES (STEGO_KEY_BITS / CHAR_BIT)
+#define COVER_FILE_COUNT 128
+#define STEGO_KEY_SIZE (COVER_FILE_COUNT / CHAR_BIT)
 
 size_t compute_level_size(size_t disk_size);
 
