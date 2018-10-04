@@ -2,7 +2,6 @@
 #include "keytab.h"
 #include <errno.h>
 #include <limits.h>
-#include <math.h>
 #include <openssl/rand.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -90,7 +89,7 @@ int stego_gen_keys(void* buf, int count) {
 }
 
 size_t compute_level_size(size_t disk_size) {
-  return floor((float) (disk_size - KEYTAB_SIZE) / STEGO_KEY_BITS);
+  return (disk_size - KEYTAB_SIZE) / STEGO_KEY_BITS;
 }
 
 static off_t cover_offset(bs_disk_t disk, int i) {

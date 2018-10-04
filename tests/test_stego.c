@@ -3,7 +3,6 @@
 #include "keytab.h"
 #include "stego.h"
 #include <limits.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,16 +110,16 @@ START_TEST(test_linear_combination) {
 END_TEST
 
 START_TEST(test_level_size_cover_offset) {
-  ck_assert_msg(compute_level_size(2560000000) == (2560000000 - 512) / 128.0,
+  ck_assert_msg(compute_level_size(2560000000) == (2560000000 - 512) / 128,
                 "Error in compute_level_size 1");
   bs_disk_t disk;
   if (disk_create(0, &disk) > 0) {
     ck_assert_msg(compute_level_size(disk_get_size(disk)) ==
-                      floor((disk_get_size(disk) - 512) / 128.0),
+                      ((disk_get_size(disk) - 512) / 128),
                   "Error in compute_level_size 2");
     ck_assert_msg(cover_offset(disk, 0) == 512, "Error in cover_offset 1");
     ck_assert_msg(cover_offset(disk, 27) ==
-                      27 * floor((disk_get_size(disk) - 512) / 128.0) + 512,
+                      27 * (disk_get_size(disk) - 512) / 128 + 512,
                   "Error in cover_offset 2");
   }
 }
