@@ -89,6 +89,9 @@ int stego_gen_keys(void* buf, int count) {
 }
 
 size_t compute_level_size(size_t disk_size) {
+  if (disk_size < KEYTAB_SIZE) {
+    return 0;
+  }
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 

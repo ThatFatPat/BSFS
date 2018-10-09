@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 static int count_bits(uint8_t a) {
   int ret = 0;
@@ -90,8 +92,11 @@ static int vector_linear_combination(void* linear_combination,
   return 0;
 }
 
-static off_t cover_offset(bs_disk_t disk, int i) {
-  return KEYTAB_SIZE + i * compute_level_size(disk_get_size(disk));
+static int open_tmp_file() {
+  int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
+  char content[] = "Hello, I'm the Doctor.\n Basically, Run.\n";
+  write(fptr, content, 5000);
+  return fptr;
 }
 
 START_TEST(test_linear_combination) {
@@ -103,25 +108,8 @@ START_TEST(test_linear_combination) {
                             (void*) &vector2, sizeof(int), 0);
   vector_linear_combination((void*) &linear_combination2, (void*) &vector1,
                             (void*) &vector2, sizeof(int), 1);
-  ck_assert_msg((linear_combination1 == vector1) &&
-                    (linear_combination2 == (vector1 ^ vector2)),
-                "Error in vector_linear_combination");
-}
-END_TEST
-
-START_TEST(test_level_size_cover_offset) {
-  ck_assert_msg(compute_level_size(2560000000) == (2560000000 - 512) / 128,
-                "Error in compute_level_size 1");
-  bs_disk_t disk;
-  if (disk_create(0, &disk) > 0) {
-    ck_assert_msg(compute_level_size(disk_get_size(disk)) ==
-                      ((disk_get_size(disk) - 512) / 128),
-                  "Error in compute_level_size 2");
-    ck_assert_msg(cover_offset(disk, 0) == 512, "Error in cover_offset 1");
-    ck_assert_msg(cover_offset(disk, 27) ==
-                      27 * (disk_get_size(disk) - 512) / 128 + 512,
-                  "Error in cover_offset 2");
-  }
+  ck_assert_uint_eq(linear_combination1, vector1);
+  ck_assert_uint_eq(linear_combination2, vector1 ^ vector2);
 }
 END_TEST
 
@@ -137,7 +125,6 @@ Suite* stego_suite(void) {
   suite_add_tcase(suite, stego_gen_keys_tcase);
 
   tcase_add_test(stego_read_write_tcase, test_linear_combination);
-  tcase_add_test(stego_read_write_tcase, test_level_size_cover_offset);
   suite_add_tcase(suite, stego_read_write_tcase);
 
   return suite;
