@@ -4,6 +4,7 @@
 #include "test_fuse_ops.h"
 #include "test_keytab.h"
 #include "test_stego.h"
+#include "test_vector.h"
 #include <check.h>
 #include <stdlib.h>
 
@@ -14,6 +15,7 @@ int main() {
   srunner_add_suite(runner, keytab_suite());
   srunner_add_suite(runner, stego_suite());
   srunner_add_suite(runner, disk_suite());
+  srunner_add_suite(runner, vector_suite());
 
   srunner_set_fork_status(runner, CK_NOFORK);
   srunner_run_all(runner, CK_NORMAL);
