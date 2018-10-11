@@ -1,6 +1,7 @@
 #include "keytab.h"
 
 #include "enc.h"
+#include <arpa/inet.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -47,6 +48,17 @@ static int get_key_index(const void* keytab_pointer, const void* password) {
   }
 
   return -1;
+}
+
+static uint32_t read_big_endian(const void* buf) {
+  uint32_t big_endian;
+  memcpy(&big_endian, buf, sizeof(uint32_t));
+  return ntohl(big_endian);
+}
+
+static void write_big_endian(void* buf, uint32_t host_endian) {
+  uint32_t big_endian = htonl(host_endian);
+  memcpy(buf, &big_endian, sizeof(uint32_t));
 }
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
