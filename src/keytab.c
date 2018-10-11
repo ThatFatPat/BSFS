@@ -9,8 +9,9 @@
 #include <string.h>
 
 #define KEYTAB_MAGIC 0xBEEFCAFE
-#define KEYTAB_KEY_SIZE 16
-#define KEYTAB_ACTUAL_ENTRY_SIZE KEYTAB_KEY_SIZE + sizeof(uint32_t)
+#define KEYTAB_KEY_SIZE 16 // TODO: use STEGO_KEY_SIZE
+#define KEYTAB_MAGIC_SIZE sizeof(uint32_t)
+#define KEYTAB_ACTUAL_ENTRY_SIZE (KEYTAB_KEY_SIZE + KEYTAB_MAGIC_SIZE)
 
 static uint32_t read_big_endian(const void* buf) {
   uint32_t big_endian;
@@ -57,7 +58,7 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
     }
 
     if (read_big_endian(ent) == KEYTAB_MAGIC) {
-      memcpy(key, (uint8_t*) ent + sizeof(uint32_t), KEYTAB_KEY_SIZE);
+      memcpy(key, (uint8_t*) ent + KEYTAB_MAGIC_SIZE, KEYTAB_KEY_SIZE);
       ret = 0;
       free(ent);
       break;
@@ -79,7 +80,7 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
 
   uint8_t ent[KEYTAB_ACTUAL_ENTRY_SIZE];
   write_big_endian(ent, KEYTAB_MAGIC);
-  memcpy(ent + sizeof(uint32_t), key, KEYTAB_KEY_SIZE);
+  memcpy(ent + KEYTAB_MAGIC_SIZE, key, KEYTAB_KEY_SIZE);
 
   void* encrypted_ent;
   size_t encrypted_size;
