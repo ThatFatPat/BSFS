@@ -19,6 +19,15 @@ START_TEST(test_read_big_endian) {
 }
 END_TEST
 
+START_TEST(test_set_bit) {
+  uint8_t buf[] = { 0xde, 0xad, 0xbe, 0xef };
+  set_bit(buf, 7, 1);
+  ck_assert_int_eq(memcmp(buf, "\xdf\xad\xbe\xef", sizeof(buf)), 0);
+  set_bit(buf, 27, 0);
+  ck_assert_int_eq(memcmp(buf, "\xdf\xad\xbe\xbf", sizeof(buf)), 0);
+}
+END_TEST
+
 Suite* bit_util_suite(void) {
   Suite* suite = suite_create("bit_util");
 
@@ -26,6 +35,10 @@ Suite* bit_util_suite(void) {
   tcase_add_test(endian_tcase, test_write_big_endian);
   tcase_add_test(endian_tcase, test_read_big_endian);
   suite_add_tcase(suite, endian_tcase);
+
+  TCase* bit_tcase = tcase_create("bits");
+  tcase_add_test(bit_tcase, test_set_bit);
+  suite_add_tcase(suite, bit_tcase);
 
   return suite;
 }
