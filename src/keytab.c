@@ -1,5 +1,21 @@
 #include "keytab.h"
 
+#include "enc.h"
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define KEYTAB_MAGIC 0xBEEFCAFE
+#define KEYTAB_MAGIC_SIZE (sizeof KEYTAB_MAGIC)
+#define KEYTAB_KEY_SIZE 1
+
+static const void* get_pointer_from_index(const void* keytab_pointer,
+                                          int key_index) {
+  return keytab_pointer + key_index * KEYTAB_ENTRY_SIZE; // check sizes
+}
+
 static bool is_key_matching_index(const void* keytab_pointer,
                                   const void* password, int index) {
 
@@ -24,7 +40,7 @@ static bool is_key_matching_index(const void* keytab_pointer,
 
 static int get_key_index(const void* keytab_pointer, const void* password) {
 
-  for (int i = 0; i < KEYTAB_LEN; i++) {
+  for (int i = 0; i < KEYTAB_MAX_LEVELS; i++) {
     if (is_key_matching_index(keytab_pointer, password, i)) {
       return i;
     }
@@ -33,12 +49,7 @@ static int get_key_index(const void* keytab_pointer, const void* password) {
   return -1;
 }
 
-static const void* get_pointer_from_index(const void* keytab_pointer,
-                                          int key_index) {
-  return keytab_pointer + key_index * KEYTAB_ENTRY_SIZE; // check sizes
-}
-
-int keytab_lookup(bs_disk_t disk, const void* password, void* key) {
+int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
 
   const void* keytab_pointer;
   disk_lock_read(disk, &keytab_pointer);
