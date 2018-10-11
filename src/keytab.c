@@ -62,35 +62,35 @@ static void write_big_endian(void* buf, uint32_t host_endian) {
 }
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
+  int ret = -ENOENT;
+  size_t password_len = strlen(password);
 
-  const void* keytab_pointer;
-  disk_lock_read(disk, &keytab_pointer);
+  const void* keytab;
+  disk_lock_read(disk, &keytab);
 
-  int key_index = get_key_index(keytab_pointer, password);
+  for (size_t i = 0; i < KEYTAB_MAX_LEVELS; i++) {
+    const uint8_t* raw_ent = (const uint8_t*) keytab + i * KEYTAB_ENTRY_SIZE;
 
-  if (key_index != -1) {
-    char* enc_entry = (char*) get_pointer_from_index(keytab_pointer, key_index);
-
-    void* buffer;
-    size_t buffer_size;
-
-    if (aes_decrypt(password, KEYTAB_KEY_SIZE, enc_entry, KEYTAB_ENTRY_SIZE,
-                    &buffer, &buffer_size) != 0) {
-      disk_unlock_read(disk);
-      return -1;
+    void* ent;
+    size_t ent_size;
+    int decrypt_status = aes_decrypt(password, password_len, raw_ent,
+                                     KEYTAB_ENTRY_SIZE, &ent, &ent_size);
+    if (decrypt_status < 0) {
+      ret = decrypt_status;
+      break;
     }
 
-    memcpy(key, buffer + KEYTAB_MAGIC_SIZE, KEYTAB_KEY_SIZE);
-
-    free(buffer);
-    disk_unlock_read(disk);
-
-    return 0;
+    if (read_big_endian(ent) == KEYTAB_MAGIC) {
+      memcpy(key, (uint8_t*) ent + sizeof(uint32_t), KEYTAB_KEY_SIZE);
+      ret = 0;
+      free(ent);
+      break;
+    }
+    free(ent);
   }
 
   disk_unlock_read(disk);
-
-  return -1;
+  return ret;
 }
 
 int keytab_store(bs_disk_t disk, off_t index, const char* password,
