@@ -43,12 +43,28 @@ START_TEST(test_keytab_store_lookup_roundtrip) {
 }
 END_TEST
 
+START_TEST(test_keytab_store_past_end) {
+  const uint8_t key[16] = { 0xde, 0xad, 0xbe, 0xef, 0xbe, 0xef, 0xca, 0xfe,
+                            0xde, 0xad, 0xde, 0xad, 0xde, 0xad, 0xc0, 0xde };
+
+  bs_disk_t disk = create_tmp_disk();
+  ck_assert_int_eq(keytab_store(disk, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS,
+                                "password", key),
+                   -EINVAL);
+  disk_free(disk);
+}
+END_TEST
+
 Suite* keytab_suite(void) {
   Suite* suite = suite_create("keytab");
 
   TCase* roundtrip_tcase = tcase_create("roundtrip");
   tcase_add_test(roundtrip_tcase, test_keytab_store_lookup_roundtrip);
   suite_add_tcase(suite, roundtrip_tcase);
+
+  TCase* store_tcase = tcase_create("store");
+  tcase_add_test(store_tcase, test_keytab_store_past_end);
+  suite_add_tcase(suite, store_tcase);
 
   return suite;
 }
