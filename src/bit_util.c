@@ -13,3 +13,13 @@ void write_big_endian(void* buf, uint32_t host_endian) {
   uint32_t big_endian = htonl(host_endian);
   memcpy(buf, &big_endian, sizeof(uint32_t));
 }
+
+bool get_bit(const void* buf, size_t bit) {
+  const uint8_t* buf_bytes = (const uint8_t*) buf;
+  return (buf_bytes[bit / 8] >> (7 - bit % 8)) & 1;
+}
+
+void set_bit(void* buf, size_t bit, bool val) {
+  uint8_t* buf_bytes = (uint8_t*) buf;
+  buf_bytes[bit / 8] |= (uint8_t) val << (7 - bit % 8);
+}
