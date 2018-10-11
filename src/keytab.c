@@ -66,7 +66,6 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
     free(ent);
   }
 
-  disk_unlock_read(disk);
   return ret;
 }
 
