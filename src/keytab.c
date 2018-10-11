@@ -29,9 +29,9 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
   {
     const void* disk_keytab;
     int lock_status = disk_lock_read(disk, &disk_keytab);
-  if (lock_status < 0) {
-    return lock_status;
-  }
+    if (lock_status < 0) {
+      return lock_status;
+    }
     memcpy(keytab, disk_keytab, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS);
     disk_unlock_read(disk);
   }
