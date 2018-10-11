@@ -12,44 +12,6 @@
 #define KEYTAB_KEY_SIZE 16
 #define KEYTAB_ACTUAL_ENTRY_SIZE KEYTAB_KEY_SIZE + sizeof(uint32_t)
 
-static const void* get_pointer_from_index(const void* keytab_pointer,
-                                          int key_index) {
-  return keytab_pointer + key_index * KEYTAB_ENTRY_SIZE; // check sizes
-}
-
-static bool is_key_matching_index(const void* keytab_pointer,
-                                  const void* password, int index) {
-
-  const void* entry_pointer = get_pointer_from_index(keytab_pointer, index);
-
-  void* buffer;
-  size_t buffer_size;
-
-  aes_decrypt(password, KEYTAB_KEY_SIZE, entry_pointer, KEYTAB_ENTRY_SIZE,
-              &buffer, &buffer_size);
-
-  for (int i = 0; i < KEYTAB_MAGIC_SIZE; i++) {
-    if (((char*) buffer)[i] != ((unsigned char*) KEYTAB_MAGIC)[i]) {
-      free(buffer);
-      return false;
-    }
-  }
-
-  free(buffer);
-  return true;
-}
-
-static int get_key_index(const void* keytab_pointer, const void* password) {
-
-  for (int i = 0; i < KEYTAB_MAX_LEVELS; i++) {
-    if (is_key_matching_index(keytab_pointer, password, i)) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
 static uint32_t read_big_endian(const void* buf) {
   uint32_t big_endian;
   memcpy(&big_endian, buf, sizeof(uint32_t));
