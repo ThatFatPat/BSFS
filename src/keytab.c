@@ -100,8 +100,9 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
   memcpy((uint8_t*) keytab + index * KEYTAB_ENTRY_SIZE, encrypted_ent,
          KEYTAB_ENTRY_SIZE);
 
+  disk_unlock_write(disk);
+
 cleanup:
   free(encrypted_ent);
-  disk_unlock_write(disk);
   return ret;
 }
