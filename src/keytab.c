@@ -9,8 +9,8 @@
 #include <string.h>
 
 #define KEYTAB_MAGIC 0xBEEFCAFE
-#define KEYTAB_MAGIC_SIZE (sizeof KEYTAB_MAGIC)
-#define KEYTAB_KEY_SIZE 1
+#define KEYTAB_KEY_SIZE 16
+#define KEYTAB_ACTUAL_ENTRY_SIZE KEYTAB_KEY_SIZE + sizeof(uint32_t)
 
 static const void* get_pointer_from_index(const void* keytab_pointer,
                                           int key_index) {
@@ -95,34 +95,36 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
 
 int keytab_store(bs_disk_t disk, off_t index, const char* password,
                  const void* key) {
+  if (index >= KEYTAB_MAX_LEVELS) {
+    return -EINVAL;
+  }
 
-  void* keytab_pointer;
-  disk_lock_write(disk, &keytab_pointer);
+  int ret = 0;
 
-  unsigned char* data =
-      (unsigned char*) malloc(KEYTAB_MAGIC_SIZE + KEYTAB_KEY_SIZE);
-  memcpy(data, (const unsigned char*) KEYTAB_MAGIC, KEYTAB_MAGIC_SIZE);
-  data += KEYTAB_MAGIC_SIZE;
-  memcpy(data, (const char*) key, KEYTAB_KEY_SIZE);
-  data -= KEYTAB_MAGIC_SIZE;
-  // CHECK if concatenation works correctly
+  uint8_t ent[KEYTAB_ACTUAL_ENTRY_SIZE];
+  write_big_endian(ent, KEYTAB_MAGIC);
+  memcpy(ent + sizeof(uint32_t), key, KEYTAB_KEY_SIZE);
 
-  void* buffer;
-  size_t buffer_size;
+  void* encrypted_ent;
+  size_t encrypted_size;
 
-  if (aes_encrypt(password, (size_t) KEYTAB_KEY_SIZE, data,
-                  (size_t) KEYTAB_ENTRY_SIZE, &buffer, &buffer_size) != 0) {
-    free(data);
-    disk_unlock_write(disk);
-    return -1;
-  };
+  ret = aes_encrypt(password, strlen(password), ent, KEYTAB_ACTUAL_ENTRY_SIZE,
+                  &encrypted_ent, &encrypted_size);
+  if (ret < 0) {
+    return ret;
+  }
 
-  memcpy((void*) get_pointer_from_index(keytab_pointer, index), buffer,
-         buffer_size);
+  void* keytab;
+  ret = disk_lock_write(disk, &keytab);
+  if (ret < 0) {
+    goto cleanup;
+  }
 
-  free(data);
-  free(buffer);
+  memcpy((uint8_t*) keytab + index * KEYTAB_ENTRY_SIZE, encrypted_ent,
+         KEYTAB_ENTRY_SIZE);
+
+cleanup:
+  free(encrypted_ent);
   disk_unlock_write(disk);
-
-  return 0;
+  return ret;
 }
