@@ -28,17 +28,26 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
   size_t password_len = strlen(password);
 
   const void* keytab;
-  disk_lock_read(disk, &keytab);
+  int lock_status = disk_lock_read(disk, &keytab);
+  if (lock_status < 0) {
+    return lock_status;
+  }
 
   for (size_t i = 0; i < KEYTAB_MAX_LEVELS; i++) {
-    const uint8_t* raw_ent = (const uint8_t*) keytab + i * KEYTAB_ENTRY_SIZE;
+    const uint8_t* encrypted_ent =
+        (const uint8_t*) keytab + i * KEYTAB_ENTRY_SIZE;
 
     void* ent;
     size_t ent_size;
-    int decrypt_status = aes_decrypt(password, password_len, raw_ent,
+    int decrypt_status = aes_decrypt(password, password_len, encrypted_ent,
                                      KEYTAB_ENTRY_SIZE, &ent, &ent_size);
     if (decrypt_status < 0) {
       ret = decrypt_status;
+      break;
+    }
+    if (ent_size != KEYTAB_ACTUAL_ENTRY_SIZE) {
+      ret = -EINVAL;
+      free(ent);
       break;
     }
 
@@ -48,6 +57,7 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
       free(ent);
       break;
     }
+
     free(ent);
   }
 
@@ -71,7 +81,7 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
   size_t encrypted_size;
 
   ret = aes_encrypt(password, strlen(password), ent, KEYTAB_ACTUAL_ENTRY_SIZE,
-                  &encrypted_ent, &encrypted_size);
+                    &encrypted_ent, &encrypted_size);
   if (ret < 0) {
     return ret;
   }
