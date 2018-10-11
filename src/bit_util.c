@@ -20,6 +20,10 @@ bool get_bit(const void* buf, size_t bit) {
 }
 
 void set_bit(void* buf, size_t bit, bool val) {
-  uint8_t* buf_bytes = (uint8_t*) buf;
-  buf_bytes[bit / 8] |= (uint8_t) val << (7 - bit % 8);
+  uint8_t* byte = (uint8_t*) buf + bit / 8;
+  if (val) {
+    *byte |= (uint8_t) 1 << (7 - bit % 8);
+  } else {
+    *byte &= ~((uint8_t) 1 << (7 - bit % 8));
+  }
 }
