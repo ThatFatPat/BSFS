@@ -24,18 +24,23 @@ static void write_big_endian(void* buf, uint32_t host_endian) {
 }
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
-  int ret = -ENOENT;
-  size_t password_len = strlen(password);
+  uint8_t keytab[KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS];
 
-  const void* keytab;
-  int lock_status = disk_lock_read(disk, &keytab);
+  {
+    const void* disk_keytab;
+    int lock_status = disk_lock_read(disk, &disk_keytab);
   if (lock_status < 0) {
     return lock_status;
   }
+    memcpy(keytab, disk_keytab, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS);
+    disk_unlock_read(disk);
+  }
+
+  int ret = -ENOENT;
+  size_t password_len = strlen(password);
 
   for (size_t i = 0; i < KEYTAB_MAX_LEVELS; i++) {
-    const uint8_t* encrypted_ent =
-        (const uint8_t*) keytab + i * KEYTAB_ENTRY_SIZE;
+    const void* encrypted_ent = keytab + i * KEYTAB_ENTRY_SIZE;
 
     void* ent;
     size_t ent_size;
