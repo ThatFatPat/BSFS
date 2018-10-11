@@ -23,8 +23,8 @@ START_TEST(test_set_bit) {
   uint8_t buf[] = { 0xde, 0xad, 0xbe, 0xef };
   set_bit(buf, 7, 1);
   ck_assert_int_eq(memcmp(buf, "\xdf\xad\xbe\xef", sizeof(buf)), 0);
-  set_bit(buf, 27, 0);
-  ck_assert_int_eq(memcmp(buf, "\xdf\xad\xbe\xbf", sizeof(buf)), 0);
+  set_bit(buf, 8, 0);
+  ck_assert_int_eq(memcmp(buf, "\xdf\x2d\xbe\xef", sizeof(buf)), 0);
 }
 END_TEST
 
