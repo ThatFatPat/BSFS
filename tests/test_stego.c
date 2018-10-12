@@ -2,39 +2,14 @@
 #include "disk.h"
 #include "keytab.h"
 #include "stego.h"
+#include "vector.h"
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-
-static int count_bits(uint8_t a) {
-  int ret = 0;
-  while (a) {
-    ret++;
-    a &= a - 1; // move to next bit
-  }
-  return ret;
-}
-
-/**
- * Computing the scalar product of a and b, with "size" bytes length.
- */
-static bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size) {
-  bool ret = 0;
-  for (size_t i = 0; i < size; i++) {
-    ret ^= count_bits(a[i] & b[i]) & 1;
-  }
-  return ret;
-}
-
-/**
- * Computing the norm of a, with "size" bytes length.
- */
-static bool norm(uint8_t* a, size_t size) {
-  return scalar_product(a, a, size);
-}
 
 /**
  * Don't check for linear independency
@@ -72,30 +47,12 @@ END_TEST
 
 /*-----------------------------------------------------------------------------------*/
 
-#define KEYTAB_SIZE (KEYTAB_ENTRY_SIZE * MAX_LEVELS)
-
-static int vector_linear_combination(void* linear_combination,
-                                     void* first_vector, void* second_vector,
-                                     size_t vector_size, bool coefficient) {
-
-  uint8_t* int_linear_combination = (uint8_t*) linear_combination;
-  uint8_t* int_first_vector = (uint8_t*) first_vector;
-  uint8_t* int_second_vector = (uint8_t*) second_vector;
-
-  for (size_t i = 0; i < vector_size; i++) {
-    int_linear_combination[i] = int_first_vector[i];
-    if (coefficient) {
-      int_linear_combination[i] ^= int_second_vector[i];
-    }
-  }
-
-  return 0;
-}
+#define TEST_STEGO_DISK_SIZE 512 + COVER_FILE_COUNT* STEGO_KEY_SIZE
 
 static int open_tmp_file() {
   int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
   char content[] = "Hello, I'm the Doctor.\n Basically, Run.\n";
-  write(fptr, content, 5000);
+  write(fptr, "", TEST_STEGO_DISK_SIZE);
   return fptr;
 }
 
@@ -113,6 +70,48 @@ START_TEST(test_linear_combination) {
 }
 END_TEST
 
+START_TEST(test_cover_linear_combination) {
+  bs_disk_t disk;
+  int fptr = open_tmp_file();
+  ck_assert_int_eq(disk_create(fptr, &disk), 0);
+  void* writable_disk;
+  if (!disk_lock_write(disk, &writable_disk)) {
+    memset(writable_disk, 0, disk_get_size(disk));
+    uint8_t* int_writable_disk = (uint8_t*) writable_disk;
+    for (int i = 0; i < CHAR_BIT; i++) {
+      int_writable_disk[cover_offset(disk, i)] = pow(2, CHAR_BIT - i - 1);
+    }
+    disk_unlock_write(disk);
+    uint8_t int_buf;
+    void* buf = (void*) &int_buf;
+    uint8_t key1[STEGO_KEY_SIZE];
+    key1[0] = pow(2, CHAR_BIT) - 1;
+    uint8_t key2[STEGO_KEY_SIZE];
+    key2[0] = pow(2, CHAR_BIT) - 2;
+    uint8_t key3[STEGO_KEY_SIZE];
+    key3[0] = 1;
+    uint8_t key4[STEGO_KEY_SIZE];
+    key4[0] = 0;
+    const void* const_key1 = (const void*) key1;
+    const void* const_key2 = (const void*) key2;
+    const void* const_key3 = (const void*) key3;
+    const void* const_key4 = (const void*) key4;
+    if (!ranged_covers_linear_combination(const_key1, disk, 0, CHAR_BIT, buf)) {
+      ck_assert_int_eq(int_buf, key1[0]);
+    }
+    if (!ranged_covers_linear_combination(const_key2, disk, 0, CHAR_BIT, buf)) {
+      ck_assert_int_eq(int_buf, key2[0]);
+    }
+    if (!ranged_covers_linear_combination(const_key3, disk, 0, CHAR_BIT, buf)) {
+      ck_assert_int_eq(int_buf, key3[0]);
+    }
+    if (!ranged_covers_linear_combination(const_key4, disk, 0, CHAR_BIT, buf)) {
+      ck_assert_int_eq(int_buf, key4[0]);
+    }
+  }
+}
+END_TEST
+
 /*-----------------------------------------------------------------------------------*/
 
 Suite* stego_suite(void) {
@@ -125,6 +124,7 @@ Suite* stego_suite(void) {
   suite_add_tcase(suite, stego_gen_keys_tcase);
 
   tcase_add_test(stego_read_write_tcase, test_linear_combination);
+  tcase_add_test(stego_read_write_tcase, test_cover_linear_combination);
   suite_add_tcase(suite, stego_read_write_tcase);
 
   return suite;

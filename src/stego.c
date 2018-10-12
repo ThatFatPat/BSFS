@@ -26,7 +26,7 @@ static int generate_random_key(uint8_t* buf) {
  * Uses special Gram-Schmidt to do so.
  */
 int stego_gen_keys(void* buf, int count) {
-  size_t total_keys_size = count * (STEGO_KEY_SIZE);
+  size_t total_keys_size = count * STEGO_KEY_SIZE;
   uint8_t* int_buf = (uint8_t*) buf;
   for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_SIZE) {
     uint8_t* int_rnd_key = int_buf + i;
@@ -63,7 +63,7 @@ size_t compute_level_size(size_t disk_size) {
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
-static off_t cover_offset(bs_disk_t disk, int i) {
+off_t cover_offset(bs_disk_t disk, int i) {
   return KEYTAB_SIZE + i * compute_level_size(disk_get_size(disk));
 }
 
@@ -73,9 +73,26 @@ static off_t cover_offset(bs_disk_t disk, int i) {
  * The result is also the multiplication of the key vector with
  * the cover files matrix.
  */
-static int ranged_covers_linear_combination(const void* key, bs_disk_t disk,
-                                            off_t off, size_t size, void* buf) {
-  return -ENOSYS;
+int ranged_covers_linear_combination(const void* key, bs_disk_t disk, off_t off,
+                                     size_t size, void* buf) {
+  const void* data;
+  int lock = disk_lock_read(disk, &data);
+  if (lock < 0) {
+    return lock;
+  }
+  uint8_t* int_data = (uint8_t*) data;
+
+  memset(buf, 0, size);
+  for (int i = 0; i < COVER_FILE_COUNT; i++) {
+    int byte = i / CHAR_BIT;
+    bool bit = (((uint8_t*) key)[byte] >> (CHAR_BIT - i % CHAR_BIT - 1)) &
+               1; // The i-th component in the key vector
+    off_t offset = cover_offset(disk, i) + off;
+    vector_linear_combination(buf, buf, int_data + offset, size, bit);
+  }
+
+  disk_unlock_read(disk);
+  return 0;
 }
 
 static int direct_read(bs_disk_t disk, off_t off, void* buf, size_t size) {

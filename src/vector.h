@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+int count_bits(uint8_t a);
+
 bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size);
 
 bool norm(uint8_t* a, size_t size);

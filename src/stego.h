@@ -12,6 +12,11 @@ int stego_gen_keys(void* buf, int count);
 
 size_t compute_level_size(size_t disk_size);
 
+off_t cover_offset(bs_disk_t disk, int i);
+
+int ranged_covers_linear_combination(const void* key, bs_disk_t disk, off_t off,
+                                     size_t size, void* buf);
+
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
                      size_t size);
 

@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-static int count_bits(uint8_t a) {
+int count_bits(uint8_t a) {
   int ret = 0;
   while (a) {
     ret++;
