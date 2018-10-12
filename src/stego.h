@@ -8,6 +8,8 @@
 #define COVER_FILE_COUNT 128
 #define STEGO_KEY_SIZE (COVER_FILE_COUNT / CHAR_BIT)
 
+int stego_gen_keys(void* buf, int count);
+
 size_t compute_level_size(size_t disk_size);
 
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
