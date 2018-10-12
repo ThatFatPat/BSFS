@@ -28,6 +28,14 @@ START_TEST(test_set_bit) {
 }
 END_TEST
 
+START_TEST(test_get_bit) {
+  uint8_t buf[] = { 0xde, 0xad, 0xbe, 0xef };
+  ck_assert(!get_bit(buf, 7));
+  ck_assert(get_bit(buf, 16));
+  ck_assert(get_bit(buf, 31));
+}
+END_TEST
+
 Suite* bit_util_suite(void) {
   Suite* suite = suite_create("bit_util");
 
@@ -38,6 +46,7 @@ Suite* bit_util_suite(void) {
 
   TCase* bit_tcase = tcase_create("bits");
   tcase_add_test(bit_tcase, test_set_bit);
+  tcase_add_test(bit_tcase, test_get_bit);
   suite_add_tcase(suite, bit_tcase);
 
   return suite;
