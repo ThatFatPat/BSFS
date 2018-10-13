@@ -33,9 +33,9 @@ bool norm(uint8_t* a, size_t size) {
  * Calculate the first_vector + coefficient * second_vector.
  * Put the result into linear_combination.
  */
-int vector_linear_combination(void* linear_combination, void* first_vector,
-                              void* second_vector, size_t vector_size,
-                              bool coefficient) {
+void vector_linear_combination(void* linear_combination, void* first_vector,
+                               void* second_vector, size_t vector_size,
+                               bool coefficient) {
 
   uint8_t* int_linear_combination = (uint8_t*) linear_combination;
   uint8_t* int_first_vector = (uint8_t*) first_vector;
@@ -47,6 +47,4 @@ int vector_linear_combination(void* linear_combination, void* first_vector,
       int_linear_combination[i] ^= int_second_vector[i];
     }
   }
-
-  return 0;
 }

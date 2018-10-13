@@ -63,8 +63,8 @@ size_t compute_level_size(size_t disk_size) {
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
-off_t cover_offset(bs_disk_t disk, int i) {
-  return KEYTAB_SIZE + i * compute_level_size(disk_get_size(disk));
+off_t cover_offset(size_t disk_size, int i) {
+  return KEYTAB_SIZE + i * compute_level_size(disk_size);
 }
 
 /**
@@ -73,34 +73,19 @@ off_t cover_offset(bs_disk_t disk, int i) {
  * The result is also the multiplication of the key vector with
  * the cover files matrix.
  */
-int ranged_covers_linear_combination(const void* key, bs_disk_t disk, off_t off,
-                                     size_t size, void* buf) {
-  const void* data;
-  int lock = disk_lock_read(disk, &data);
-  if (lock < 0) {
-    return lock;
-  }
-  uint8_t* int_data = (uint8_t*) data;
+void ranged_covers_linear_combination(const void* key, const void* disk_data,
+                                      size_t disk_size, off_t off, void* buf,
+                                      size_t read_size) {
+  uint8_t* int_data = (uint8_t*) disk_data;
 
-  memset(buf, 0, size);
+  memset(buf, 0, read_size);
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
     int byte = i / CHAR_BIT;
     bool bit = (((uint8_t*) key)[byte] >> (CHAR_BIT - i % CHAR_BIT - 1)) &
                1; // The i-th component in the key vector
-    off_t offset = cover_offset(disk, i) + off;
-    vector_linear_combination(buf, buf, int_data + offset, size, bit);
+    off_t offset = cover_offset(disk_size, i) + off;
+    vector_linear_combination(buf, buf, int_data + offset, read_size, bit);
   }
-
-  disk_unlock_read(disk);
-  return 0;
-}
-
-static int direct_read(bs_disk_t disk, off_t off, void* buf, size_t size) {
-  return -ENOSYS;
-}
-
-static int direct_write(bs_disk_t disk, off_t off, void* buf, size_t size) {
-  return -ENOSYS;
 }
 
 static int read_encrypted_level(const void* key, const void* disk,
