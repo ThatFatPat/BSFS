@@ -1,10 +1,10 @@
 #include "test_stego.h"
+#include "bit_util.h"
 #include "disk.h"
 #include "keytab.h"
 #include "stego.h"
 #include "vector.h"
 #include <limits.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ END_TEST
 static int open_tmp_file() {
   int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
   char content[] = "Hello, I'm the Doctor.\n Basically, Run.\n";
-  write(fptr, "", TEST_STEGO_DISK_SIZE);
+  write(fptr, content, sizeof(content));
   return fptr;
 }
 
@@ -71,44 +71,36 @@ START_TEST(test_linear_combination) {
 END_TEST
 
 START_TEST(test_cover_linear_combination) {
-  bs_disk_t disk;
-  int fptr = open_tmp_file();
-  ck_assert_int_eq(disk_create(fptr, &disk), 0);
-  void* writable_disk;
-  if (!disk_lock_write(disk, &writable_disk)) {
-    memset(writable_disk, 0, disk_get_size(disk));
-    uint8_t* int_writable_disk = (uint8_t*) writable_disk;
-    for (int i = 0; i < CHAR_BIT; i++) {
-      int_writable_disk[cover_offset(disk, i)] = pow(2, CHAR_BIT - i - 1);
-    }
-    disk_unlock_write(disk);
-    uint8_t int_buf;
-    void* buf = (void*) &int_buf;
-    uint8_t key1[STEGO_KEY_SIZE];
-    key1[0] = pow(2, CHAR_BIT) - 1;
-    uint8_t key2[STEGO_KEY_SIZE];
-    key2[0] = pow(2, CHAR_BIT) - 2;
-    uint8_t key3[STEGO_KEY_SIZE];
-    key3[0] = 1;
-    uint8_t key4[STEGO_KEY_SIZE];
-    key4[0] = 0;
-    const void* const_key1 = (const void*) key1;
-    const void* const_key2 = (const void*) key2;
-    const void* const_key3 = (const void*) key3;
-    const void* const_key4 = (const void*) key4;
-    if (!ranged_covers_linear_combination(const_key1, disk, 0, CHAR_BIT, buf)) {
-      ck_assert_int_eq(int_buf, key1[0]);
-    }
-    if (!ranged_covers_linear_combination(const_key2, disk, 0, CHAR_BIT, buf)) {
-      ck_assert_int_eq(int_buf, key2[0]);
-    }
-    if (!ranged_covers_linear_combination(const_key3, disk, 0, CHAR_BIT, buf)) {
-      ck_assert_int_eq(int_buf, key3[0]);
-    }
-    if (!ranged_covers_linear_combination(const_key4, disk, 0, CHAR_BIT, buf)) {
-      ck_assert_int_eq(int_buf, key4[0]);
-    }
+  uint8_t writable_disk[TEST_STEGO_DISK_SIZE] = { 0 };
+  for (int i = 0; i < CHAR_BIT; i++) {
+    set_bit(writable_disk + cover_offset(TEST_STEGO_DISK_SIZE, i), i, 1);
   }
+
+  uint8_t int_buf;
+  void* buf = (void*) &int_buf;
+  uint8_t key1[STEGO_KEY_SIZE];
+  key1[0] = -1;
+  uint8_t key2[STEGO_KEY_SIZE];
+  key2[0] = -2;
+  uint8_t key3[STEGO_KEY_SIZE];
+  key3[0] = 1;
+  uint8_t key4[STEGO_KEY_SIZE];
+  key4[0] = 0;
+  ranged_covers_linear_combination(key1, writable_disk, TEST_STEGO_DISK_SIZE, 0,
+                                   buf, CHAR_BIT);
+  ck_assert_int_eq(int_buf, key1[0]);
+
+  ranged_covers_linear_combination(key2, writable_disk, TEST_STEGO_DISK_SIZE, 0,
+                                   buf, CHAR_BIT);
+  ck_assert_int_eq(int_buf, key2[0]);
+
+  ranged_covers_linear_combination(key3, writable_disk, TEST_STEGO_DISK_SIZE, 0,
+                                   buf, CHAR_BIT);
+  ck_assert_int_eq(int_buf, key3[0]);
+
+  ranged_covers_linear_combination(key4, writable_disk, TEST_STEGO_DISK_SIZE, 0,
+                                   buf, CHAR_BIT);
+  ck_assert_int_eq(int_buf, key4[0]);
 }
 END_TEST
 

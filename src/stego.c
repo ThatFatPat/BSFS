@@ -1,4 +1,5 @@
 #include "stego.h"
+#include "bit_util.h"
 #include "keytab.h"
 #include "vector.h"
 #include <errno.h>
@@ -80,9 +81,7 @@ void ranged_covers_linear_combination(const void* key, const void* disk_data,
 
   memset(buf, 0, read_size);
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
-    int byte = i / CHAR_BIT;
-    bool bit = (((uint8_t*) key)[byte] >> (CHAR_BIT - i % CHAR_BIT - 1)) &
-               1; // The i-th component in the key vector
+    bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
     vector_linear_combination(buf, buf, int_data + offset, read_size, bit);
   }
