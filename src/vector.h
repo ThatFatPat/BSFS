@@ -5,14 +5,16 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-int count_bits(uint8_t a);
+typedef uint8_t* vector_t;
+typedef const uint8_t* const_vector_t;
 
-bool scalar_product(const uint8_t* a, const uint8_t* b, size_t size);
+bool scalar_product(const_vector_t a, const_vector_t b, size_t size);
 
-bool norm(uint8_t* a, size_t size);
+bool norm(const_vector_t a, size_t size);
 
-void vector_linear_combination(void* linear_combination, void* first_vector,
-                               void* second_vector, size_t vector_size,
+void vector_linear_combination(vector_t linear_combination,
+                               const_vector_t first_vector,
+                               const_vector_t second_vector, size_t vector_size,
                                bool coefficient);
 
 #endif // BS_VECTOR_H
