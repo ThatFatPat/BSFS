@@ -77,14 +77,14 @@ off_t cover_offset(size_t disk_size, int i) {
 void ranged_covers_linear_combination(const void* key, const void* disk_data,
                                       size_t disk_size, off_t off, void* buf,
                                       size_t read_size) {
-  const_vector_t int_data = (uint8_t*) disk_data;
+  const_vector_t data = (uint8_t*) disk_data;
 
   memset(buf, 0, read_size);
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
     vector_linear_combination((vector_t) buf, (const_vector_t) buf,
-                              int_data + offset, read_size, bit);
+                              data + offset, read_size, bit);
   }
 }
 
