@@ -88,20 +88,60 @@ void ranged_covers_linear_combination(const void* key, const void* disk_data,
   }
 }
 
-static int read_encrypted_level(const void* key, const void* disk,
-                                size_t level_size, void* buf, off_t off,
-                                size_t size) {
-  return -ENOSYS;
-}
-
 static int write_level_encrypted(const void* key, bs_disk_t disk,
                                  const void* buf, off_t off, size_t size) {
   return -ENOSYS;
 }
 
+static bool check_parameters(size_t disk_size, off_t off, size_t buf_size) {
+  return off < compute_level_size(disk_size) &&
+         off + buf_size < compute_level_size(disk_size) && buf_size % 16 == 0;
+}
+
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
                      size_t size) {
-  return -ENOSYS;
+  if (!check_parameters(disk_get_size(disk), off, size)) {
+    return -EINVAL;
+  }
+
+  int ret = 0;
+
+  void* data = malloc(size);
+  if (!data) {
+    return -ENOMEM;
+  }
+
+  const void* disk_data;
+  ret = disk_lock_read(disk, &disk_data);
+  if (ret < 0) {
+    goto cleanup_data;
+  }
+
+  ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
+                                   data, size);
+
+  disk_unlock_read(disk);
+
+  void* decrypted;
+  size_t decrypted_size;
+
+  ret =
+      aes_decrypt(key, STEGO_KEY_SIZE, data, size, &decrypted, &decrypted_size);
+  if (ret < 0) {
+    goto cleanup_data;
+  }
+  if (decrypted_size != size) {
+    ret = -EIO;
+    goto cleanup_decrypted;
+  }
+
+  memcpy(buf, decrypted, size);
+
+cleanup_decrypted:
+  free(decrypted);
+cleanup_data:
+  free(data);
+  return ret;
 }
 
 int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
