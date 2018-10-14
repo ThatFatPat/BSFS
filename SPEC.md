@@ -69,11 +69,17 @@ considered invalid.
 
 
 ## Stego:
+### Amount of Cover Files:
+```c
+#define COVER_FILE_COUNT 128
+```
+Number of cover files present on the system; also the number of bits in a key.
+
 ### Key Size:
 ```c
-#define STEGO_KEY_BITS 128
+#define STEGO_KEY_SIZE (COVER_FILE_COUNT/CHAR_BIT)
 ```
-Number of bits in a key; also the number of cover files present on the system.
+The size of a key, in bytes.
 
 ### compute_level_size:
 ```c
@@ -104,7 +110,7 @@ Write `size` bytes out of encrypted file specified by `key`, beginning at offset
 
 ### stego_gen_keys:
 ```c
-int stego_gen_keys(void* buf, int count);
+int stego_gen_keys(void* buf, size_t count);
 ```
 Generate the orthonormal extraction keys.
 
@@ -131,6 +137,14 @@ Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 **Note**: Make sure to free the buffer with `free` after use. 
 
 ## Key Table:
+
+### Key Table Entry Size:
+```c
+#define KEYTAB_ENTRY_SIZE 32
+```
+The size of a keytab entry in bytes.
+
+**Note**: This is the size of an entry on the disk (due to AES encryption limitations).
 
 ### Max Levels:
 ```c
@@ -236,13 +250,13 @@ Write the contents of `buf` to the bitmap in the level specified by `key`.
 
 ### fs_alloc_cluster:
 ```c
-int fs_alloc_cluster(void* bitmap, cluster_offset_t* new_cluster);
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t* new_cluster);
 ```
 Find the first empty cluster in `bitmap` and change its status bit to 1, meaning it is in use. 
 
 ### fs_dealloc_cluster:
 ```c
-int fs_dealloc_cluster(void* bitmap, cluster_offset_t cluster);
+int fs_dealloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t cluster);
 ```
 Deallocate the cluster specified by `cluster` and change its status bit to 0, meaning it is free. 
 
@@ -346,6 +360,7 @@ int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 Write `ent` to `bft` at offset `off`.
 
 **Note**: The previous content at offset `off`, if any exists, is overwritten.
+
 **Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
 
 ### bft_remove_table_entry:
