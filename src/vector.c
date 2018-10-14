@@ -2,13 +2,8 @@
 #include <errno.h>
 #include <stdint.h>
 
-static int count_bits(uint8_t a) {
-  int ret = 0;
-  while (a) {
-    ret++;
-    a &= a - 1; // move to next bit
-  }
-  return ret;
+static bool parity(uint8_t a) {
+  return __builtin_parity(a);
 }
 
 /**
@@ -17,7 +12,7 @@ static int count_bits(uint8_t a) {
 bool vector_scalar_product(const_vector_t a, const_vector_t b, size_t size) {
   bool ret = 0;
   for (size_t i = 0; i < size; i++) {
-    ret ^= count_bits(a[i] & b[i]) & 1;
+    ret ^= parity(a[i] & b[i]);
   }
   return ret;
 }
