@@ -3,6 +3,7 @@
 
 #include "disk.h"
 #include "enc.h"
+#include <limits.h>
 #include <sys/types.h>
 
 #define COVER_FILE_COUNT 128
