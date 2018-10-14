@@ -11,15 +11,21 @@
 
 #define KEYTAB_SIZE (KEYTAB_ENTRY_SIZE * MAX_LEVELS)
 
+// size of padding appended to every key, used to ensure orthonormality
+#define STEGO_KEY_PADDING_SIZE (MAX_LEVELS / CHAR_BIT)
+
+// size of the random part of the key
+#define STEGO_KEY_RND_SIZE (STEGO_KEY_SIZE - STEGO_KEY_PADDING_SIZE)
+
 /**
  * Generating a random key.
  * The 2 last bytes are filled with 0.
  */
 static int generate_random_key(uint8_t* buf) {
-  if (RAND_bytes((unsigned char*) buf, STEGO_KEY_SIZE - 2) == 0) {
+  if (!RAND_bytes(buf, STEGO_KEY_RND_SIZE)) {
     return -EIO;
   }
-  memset(buf + STEGO_KEY_SIZE - 2, 0, 2);
+  memset(buf + STEGO_KEY_RND_SIZE, 0, STEGO_KEY_PADDING_SIZE);
   return 0;
 }
 
@@ -48,9 +54,10 @@ int stego_gen_keys(void* buf, size_t count) {
           vector_scalar_product(key, other_key, STEGO_KEY_SIZE));
     }
 
-    // If the norm of the key is 0, set the proper bit in the last two bytes.
+    // If the norm of the key is 0, set the proper bit in the last padding
+    // bytes.
     if (!vector_norm(key, STEGO_KEY_SIZE)) {
-      set_bit(key + STEGO_KEY_SIZE - 2, i, 1);
+      set_bit(key + STEGO_KEY_RND_SIZE, i, 1);
     }
   }
 
