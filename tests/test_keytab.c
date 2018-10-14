@@ -8,7 +8,7 @@
 
 static bs_disk_t create_tmp_disk(void) {
   int fd = syscall(SYS_memfd_create, "keytab_test.bsf", 0);
-  ck_assert_int_ne(ftruncate(fd, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS), -1);
+  ck_assert_int_ne(ftruncate(fd, KEYTAB_ENTRY_SIZE * MAX_LEVELS), -1);
 
   bs_disk_t disk;
   ck_assert_int_eq(disk_create(fd, &disk), 0);
@@ -48,9 +48,9 @@ START_TEST(test_keytab_store_past_end) {
                             0xde, 0xad, 0xde, 0xad, 0xde, 0xad, 0xc0, 0xde };
 
   bs_disk_t disk = create_tmp_disk();
-  ck_assert_int_eq(keytab_store(disk, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS,
-                                "password", key),
-                   -EINVAL);
+  ck_assert_int_eq(
+      keytab_store(disk, KEYTAB_ENTRY_SIZE * MAX_LEVELS, "password", key),
+      -EINVAL);
   disk_free(disk);
 }
 END_TEST

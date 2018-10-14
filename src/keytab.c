@@ -14,7 +14,7 @@
 #define KEYTAB_ACTUAL_ENTRY_SIZE (KEYTAB_KEY_SIZE + KEYTAB_MAGIC_SIZE)
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
-  uint8_t keytab[KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS];
+  uint8_t keytab[KEYTAB_ENTRY_SIZE * MAX_LEVELS];
 
   {
     const void* disk_keytab;
@@ -22,14 +22,14 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
     if (lock_status < 0) {
       return lock_status;
     }
-    memcpy(keytab, disk_keytab, KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS);
+    memcpy(keytab, disk_keytab, KEYTAB_ENTRY_SIZE * MAX_LEVELS);
     disk_unlock_read(disk);
   }
 
   int ret = -ENOENT;
   size_t password_len = strlen(password);
 
-  for (size_t i = 0; i < KEYTAB_MAX_LEVELS; i++) {
+  for (size_t i = 0; i < MAX_LEVELS; i++) {
     const void* encrypted_ent = keytab + i * KEYTAB_ENTRY_SIZE;
 
     void* ent = NULL;
@@ -59,7 +59,7 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
 
 int keytab_store(bs_disk_t disk, off_t index, const char* password,
                  const void* key) {
-  if (index >= KEYTAB_MAX_LEVELS) {
+  if (index >= MAX_LEVELS) {
     return -EINVAL;
   }
 
