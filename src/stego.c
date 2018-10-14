@@ -30,28 +30,25 @@ int stego_gen_keys(void* buf, size_t count) {
   size_t total_keys_size = count * STEGO_KEY_SIZE;
   uint8_t* int_buf = (uint8_t*) buf;
   for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_SIZE) {
-    uint8_t* int_rnd_key = int_buf + i;
-    if (generate_random_key(int_rnd_key) == -1) {
+    uint8_t* key = int_buf + i;
+    if (generate_random_key(key) == -1) {
       return -1;
     }
 
-    // Add to "rnd_key" all the keys before him which have scalar product 1 with
+    // Add to "key" all the keys before him which have scalar product 1 with
     // him.
-    void* rnd_key = (void*) int_rnd_key;
     for (size_t j = 0; j < i; j += STEGO_KEY_SIZE) {
-      int product =
-          vector_scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_SIZE);
-      vector_linear_combination(rnd_key, rnd_key, (void*) (int_buf + j),
-                                STEGO_KEY_SIZE, product);
+      bool product = vector_scalar_product(key, int_buf + j, STEGO_KEY_SIZE);
+      vector_linear_combination(key, key, int_buf + j, STEGO_KEY_SIZE, product);
     }
 
     // If the norm of the key is 0, set the proper bit in the last two bytes.
-    if (!vector_norm(int_rnd_key, STEGO_KEY_SIZE)) {
+    if (!vector_norm(key, STEGO_KEY_SIZE)) {
       int key_num = i / STEGO_KEY_SIZE;
       if (key_num < 8) {
-        int_rnd_key[STEGO_KEY_SIZE - 2] |= 1UL << key_num;
+        key[STEGO_KEY_SIZE - 2] |= 1UL << key_num;
       } else {
-        int_rnd_key[STEGO_KEY_SIZE - 1] |= 1UL << (key_num - 8);
+        key[STEGO_KEY_SIZE - 1] |= 1UL << (key_num - 8);
       }
     }
   }
