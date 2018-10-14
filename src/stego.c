@@ -1,4 +1,5 @@
 #include "stego.h"
+
 #include "bit_util.h"
 #include "keytab.h"
 #include "vector.h"
@@ -16,7 +17,7 @@
  */
 static int generate_random_key(uint8_t* buf) {
   if (RAND_bytes((unsigned char*) buf, STEGO_KEY_SIZE - 2) == 0) {
-    return -1;
+    return -EIO;
   }
   memset(buf + STEGO_KEY_SIZE - 2, 0, 2);
   return 0;
@@ -31,8 +32,10 @@ int stego_gen_keys(void* buf, size_t count) {
   uint8_t* int_buf = (uint8_t*) buf;
   for (size_t i = 0; i < total_keys_size; i += STEGO_KEY_SIZE) {
     uint8_t* key = int_buf + i;
-    if (generate_random_key(key) == -1) {
-      return -1;
+
+    int rnd_status = generate_random_key(key);
+    if (rnd_status < 0) {
+      return rnd_status;
     }
 
     // Add to "key" all the keys before him which have scalar product 1 with
