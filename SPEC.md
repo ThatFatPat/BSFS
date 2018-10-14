@@ -148,7 +148,7 @@ The size of a keytab entry in bytes.
 
 ### Max Levels:
 ```c
-#define KEYTAB_MAX_LEVELS 16
+#define MAX_LEVELS 16
 ```
 The maximum number of security levels on the system (and hence the maximal size
 of the key table).
