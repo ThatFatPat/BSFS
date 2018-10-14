@@ -17,6 +17,16 @@ START_TEST(test_scalar_product) {
 }
 END_TEST
 
+START_TEST(test_norm) {
+  uint32_t vector = -1;
+  ck_assert(!vector_norm((const_vector_t) &vector, sizeof(uint32_t)));
+
+  vector &= ~((uint32_t) 1);
+
+  ck_assert(vector_norm((const_vector_t) &vector, sizeof(uint32_t)));
+}
+END_TEST
+
 START_TEST(test_linear_combination) {
   uint64_t vector1 = 0xdeadbeefdeadc0de;
   uint64_t vector2 = 0x8badf00dc0decafe;
@@ -38,6 +48,7 @@ Suite* vector_suite(void) {
 
   TCase* scalar_product_tcase = tcase_create("scalar_product");
   tcase_add_test(scalar_product_tcase, test_scalar_product);
+  tcase_add_test(scalar_product_tcase, test_norm);
   suite_add_tcase(suite, scalar_product_tcase);
 
   TCase* linear_combination_tcase = tcase_create("linear_combination");
