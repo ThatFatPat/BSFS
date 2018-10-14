@@ -77,7 +77,7 @@ Number of cover files present on the system; also the number of bits in a key.
 
 ### Key Size:
 ```c
-#define STEGO_KEY_SIZE (COVER_FILES_AMOUNT/CHAR_BIT)
+#define STEGO_KEY_SIZE (COVER_FILE_COUNT/CHAR_BIT)
 ```
 The size of a key, in bytes.
 
