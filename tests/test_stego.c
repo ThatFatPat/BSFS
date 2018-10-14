@@ -51,6 +51,21 @@ START_TEST(test_gen_keys_too_many) {
 }
 END_TEST
 
+START_TEST(test_compute_level_size) {
+  for (size_t disk_size = 0x400; disk_size <= 0x2000000; disk_size += 0x800) {
+    size_t level_size = compute_level_size(disk_size);
+    ck_assert_uint_le(MAX_LEVELS * KEYTAB_ENTRY_SIZE +
+                          COVER_FILE_COUNT * level_size,
+                      disk_size);
+  }
+}
+END_TEST
+
+START_TEST(test_compute_level_size_too_small) {
+  ck_assert_int_eq(compute_level_size(500), 0);
+}
+END_TEST
+
 /*-----------------------------------------------------------------------------------*/
 
 #define TEST_STEGO_DISK_SIZE (512 + COVER_FILE_COUNT * STEGO_KEY_SIZE)
@@ -95,6 +110,11 @@ Suite* stego_suite(void) {
   tcase_add_test(stego_gen_keys_tcase, test_gen_keys);
   tcase_add_test(stego_gen_keys_tcase, test_gen_keys_too_many);
   suite_add_tcase(suite, stego_gen_keys_tcase);
+
+  TCase* level_size_tcase = tcase_create("level_size");
+  tcase_add_test(level_size_tcase, test_compute_level_size);
+  tcase_add_test(level_size_tcase, test_compute_level_size_too_small);
+  suite_add_tcase(suite, level_size_tcase);
 
   TCase* stego_read_write_tcase = tcase_create("read_write");
   tcase_add_test(stego_read_write_tcase, test_cover_linear_combination);
