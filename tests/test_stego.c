@@ -14,40 +14,38 @@
 /**
  * Don't check for linear independency
  */
-static bool check_orthonormality(void* buf, int count) {
+static bool check_orthonormality(void* buf, size_t count) {
   uint8_t* int_buf = (uint8_t*) buf;
-  size_t key_size = COVER_FILE_COUNT / CHAR_BIT;
-  size_t total_keys_size = count * (key_size);
-  for (size_t i = 0; i < total_keys_size; i += key_size) {
-    uint8_t* key_1 = int_buf + i;
-    if (vector_norm(key_1, key_size) == 0) {
+  for (size_t i = 0; i < count; i++) {
+    uint8_t* key_1 = int_buf + i * STEGO_KEY_SIZE;
+
+    if (vector_norm(key_1, STEGO_KEY_SIZE) == 0) {
       return false;
     }
-    for (size_t j = 0; j < i; j += key_size) {
-      uint8_t* key_2 = int_buf + j;
-      if (vector_scalar_product(key_1, key_2, key_size) == 1) {
+
+    for (size_t j = 0; j < i; j++) {
+      uint8_t* key_2 = int_buf + j * STEGO_KEY_SIZE;
+      if (vector_scalar_product(key_1, key_2, STEGO_KEY_SIZE) == 1) {
         return false;
       }
     }
   }
+
   return true;
 }
 
 START_TEST(test_gen_keys) {
-  uint8_t buf[16 * (COVER_FILE_COUNT / CHAR_BIT)];
-  for (int count = 12; count <= 16; count++) { // Check for 10 to 16 keys
-    for (int i = 0; i < 15; i++) {
-      stego_gen_keys(buf, count);
-      ck_assert_msg(check_orthonormality(buf, count),
-                    "Error in stego_gen_keys");
-    }
+  uint8_t buf[16 * STEGO_KEY_SIZE];
+  for (size_t count = 1; count <= 16; count++) {
+    ck_assert_int_eq(stego_gen_keys(buf, count), 0);
+    ck_assert(check_orthonormality(buf, count));
   }
 }
 END_TEST
 
 /*-----------------------------------------------------------------------------------*/
 
-#define TEST_STEGO_DISK_SIZE 512 + COVER_FILE_COUNT* STEGO_KEY_SIZE
+#define TEST_STEGO_DISK_SIZE (512 + COVER_FILE_COUNT * STEGO_KEY_SIZE)
 
 static int open_tmp_file() {
   int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
