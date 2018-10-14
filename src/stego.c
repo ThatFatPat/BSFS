@@ -105,7 +105,7 @@ static int write_level_encrypted(const void* key, bs_disk_t disk,
 }
 
 static bool check_parameters(size_t disk_size, off_t off, size_t buf_size) {
-  return off < compute_level_size(disk_size) &&
+  return (size_t) off < compute_level_size(disk_size) &&
          off + buf_size < compute_level_size(disk_size) && buf_size % 16 == 0;
 }
 
