@@ -1,18 +1,21 @@
 #include "test_vector.h"
 
 #include "vector.h"
+#include <stdint.h>
 
 START_TEST(test_linear_combination) {
-  int vector1 = 38262900;
-  int vector2 = 93374014;
-  int linear_combination1;
-  int linear_combination2;
-  vector_linear_combination((void*) &linear_combination1, (void*) &vector1,
-                            (void*) &vector2, sizeof(int), 0);
-  vector_linear_combination((void*) &linear_combination2, (void*) &vector1,
-                            (void*) &vector2, sizeof(int), 1);
-  ck_assert_uint_eq(linear_combination1, vector1);
-  ck_assert_uint_eq(linear_combination2, vector1 ^ vector2);
+  uint64_t vector1 = 0xdeadbeefdeadc0de;
+  uint64_t vector2 = 0x8badf00dc0decafe;
+
+  uint64_t linear_combination;
+
+  vector_linear_combination((vector_t) &linear_combination, (vector_t) &vector1,
+                            (vector_t) &vector2, sizeof(uint64_t), 0);
+  ck_assert_uint_eq(linear_combination, vector1);
+
+  vector_linear_combination((vector_t) &linear_combination, (vector_t) &vector1,
+                            (vector_t) &vector2, sizeof(uint64_t), 1);
+  ck_assert_uint_eq(linear_combination, vector1 ^ vector2);
 }
 END_TEST
 
