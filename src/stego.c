@@ -34,6 +34,10 @@ static int generate_random_key(uint8_t* buf) {
  * Uses special Gram-Schmidt to do so.
  */
 int stego_gen_keys(void* buf, size_t count) {
+  if (count > MAX_LEVELS) {
+    return -EINVAL;
+  }
+
   uint8_t* int_buf = (uint8_t*) buf;
 
   for (size_t i = 0; i < count; i++) {
