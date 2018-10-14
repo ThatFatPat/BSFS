@@ -1,5 +1,6 @@
 #include "keytab.h"
 
+#include "bit_util.h"
 #include "enc.h"
 #include <arpa/inet.h>
 #include <errno.h>
@@ -12,17 +13,6 @@
 #define KEYTAB_KEY_SIZE 16 // TODO: use STEGO_KEY_SIZE
 #define KEYTAB_MAGIC_SIZE sizeof(uint32_t)
 #define KEYTAB_ACTUAL_ENTRY_SIZE (KEYTAB_KEY_SIZE + KEYTAB_MAGIC_SIZE)
-
-static uint32_t read_big_endian(const void* buf) {
-  uint32_t big_endian;
-  memcpy(&big_endian, buf, sizeof(uint32_t));
-  return ntohl(big_endian);
-}
-
-static void write_big_endian(void* buf, uint32_t host_endian) {
-  uint32_t big_endian = htonl(host_endian);
-  memcpy(buf, &big_endian, sizeof(uint32_t));
-}
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
   uint8_t keytab[KEYTAB_ENTRY_SIZE * KEYTAB_MAX_LEVELS];
