@@ -37,8 +37,8 @@ static bool check_orthonormality(void* buf, size_t count) {
 }
 
 START_TEST(test_gen_keys) {
-  uint8_t buf[16 * STEGO_KEY_SIZE];
-  for (size_t count = 1; count <= 16; count++) {
+  uint8_t buf[MAX_LEVELS * STEGO_KEY_SIZE];
+  for (size_t count = 1; count <= MAX_LEVELS; count++) {
     ck_assert_int_eq(stego_gen_keys(buf, count), 0);
     ck_assert(check_orthonormality(buf, count));
   }
