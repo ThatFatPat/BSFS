@@ -48,13 +48,6 @@ END_TEST
 
 #define TEST_STEGO_DISK_SIZE (512 + COVER_FILE_COUNT * STEGO_KEY_SIZE)
 
-static int open_tmp_file() {
-  int fptr = syscall(SYS_memfd_create, "data.bsf", 0);
-  char content[] = "Hello, I'm the Doctor.\n Basically, Run.\n";
-  write(fptr, content, sizeof(content));
-  return fptr;
-}
-
 START_TEST(test_linear_combination) {
   int vector1 = 38262900;
   int vector2 = 93374014;
