@@ -5,6 +5,7 @@
 #include "keytab.h"
 #include "stego.h"
 #include "vector.h"
+#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -41,6 +42,12 @@ START_TEST(test_gen_keys) {
     ck_assert_int_eq(stego_gen_keys(buf, count), 0);
     ck_assert(check_orthonormality(buf, count));
   }
+}
+END_TEST
+
+START_TEST(test_gen_keys_too_many) {
+  uint8_t buf[(MAX_LEVELS + 1) * STEGO_KEY_SIZE];
+  ck_assert_int_eq(stego_gen_keys(buf, MAX_LEVELS + 1), -EINVAL);
 }
 END_TEST
 
@@ -83,12 +90,13 @@ END_TEST
 Suite* stego_suite(void) {
 
   Suite* suite = suite_create("stego");
-  TCase* stego_gen_keys_tcase = tcase_create("stego_gen_keys");
-  TCase* stego_read_write_tcase = tcase_create("stego_read_write");
 
+  TCase* stego_gen_keys_tcase = tcase_create("gen_keys");
   tcase_add_test(stego_gen_keys_tcase, test_gen_keys);
+  tcase_add_test(stego_gen_keys_tcase, test_gen_keys_too_many);
   suite_add_tcase(suite, stego_gen_keys_tcase);
 
+  TCase* stego_read_write_tcase = tcase_create("read_write");
   tcase_add_test(stego_read_write_tcase, test_cover_linear_combination);
   suite_add_tcase(suite, stego_read_write_tcase);
 
