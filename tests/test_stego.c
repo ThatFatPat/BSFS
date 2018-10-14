@@ -48,20 +48,6 @@ END_TEST
 
 #define TEST_STEGO_DISK_SIZE (512 + COVER_FILE_COUNT * STEGO_KEY_SIZE)
 
-START_TEST(test_linear_combination) {
-  int vector1 = 38262900;
-  int vector2 = 93374014;
-  int linear_combination1;
-  int linear_combination2;
-  vector_linear_combination((void*) &linear_combination1, (void*) &vector1,
-                            (void*) &vector2, sizeof(int), 0);
-  vector_linear_combination((void*) &linear_combination2, (void*) &vector1,
-                            (void*) &vector2, sizeof(int), 1);
-  ck_assert_uint_eq(linear_combination1, vector1);
-  ck_assert_uint_eq(linear_combination2, vector1 ^ vector2);
-}
-END_TEST
-
 START_TEST(test_cover_linear_combination) {
   uint8_t writable_disk[TEST_STEGO_DISK_SIZE] = { 0 };
   for (int i = 0; i < CHAR_BIT; i++) {
@@ -103,7 +89,6 @@ Suite* stego_suite(void) {
   tcase_add_test(stego_gen_keys_tcase, test_gen_keys);
   suite_add_tcase(suite, stego_gen_keys_tcase);
 
-  tcase_add_test(stego_read_write_tcase, test_linear_combination);
   tcase_add_test(stego_read_write_tcase, test_cover_linear_combination);
   suite_add_tcase(suite, stego_read_write_tcase);
 
