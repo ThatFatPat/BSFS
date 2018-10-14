@@ -2,7 +2,6 @@
 
 #include "bit_util.h"
 #include "enc.h"
-#include <arpa/inet.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
