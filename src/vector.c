@@ -24,6 +24,10 @@ bool vector_norm(const_vector_t a, size_t size) {
   return vector_scalar_product(a, a, size);
 }
 
+static uint8_t make_mask(bool coefficient) {
+  return coefficient ? (uint8_t) -1 : 0;
+}
+
 /**
  * Calculate the first_vector + coefficient * second_vector.
  * Put the result into linear_combination.
@@ -34,9 +38,7 @@ void vector_linear_combination(vector_t linear_combination,
                                bool coefficient) {
 
   for (size_t i = 0; i < vector_size; i++) {
-    linear_combination[i] = first_vector[i];
-    if (coefficient) {
-      linear_combination[i] ^= second_vector[i];
-    }
+    linear_combination[i] =
+        first_vector[i] ^ (make_mask(coefficient) & second_vector[i]);
   }
 }
