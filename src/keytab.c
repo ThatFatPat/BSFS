@@ -78,6 +78,11 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
   if (ret < 0) {
     return ret;
   }
+  if (encrypted_size != KEYTAB_ENTRY_SIZE) {
+    // technically, this should be impossible
+    ret = -EIO;
+    goto cleanup;
+  }
 
   void* keytab;
   ret = disk_lock_write(disk, &keytab);
