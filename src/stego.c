@@ -50,12 +50,7 @@ int stego_gen_keys(void* buf, size_t count) {
 
     // If the norm of the key is 0, set the proper bit in the last two bytes.
     if (!vector_norm(key, STEGO_KEY_SIZE)) {
-      int key_num = i;
-      if (key_num < 8) {
-        key[STEGO_KEY_SIZE - 2] |= 1UL << key_num;
-      } else {
-        key[STEGO_KEY_SIZE - 1] |= 1UL << (key_num - 8);
-      }
+      set_bit(key + STEGO_KEY_SIZE - 2, i, 1);
     }
   }
 
