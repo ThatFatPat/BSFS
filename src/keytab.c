@@ -38,11 +38,16 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
     int decrypt_status = aes_decrypt(password, password_len, encrypted_ent,
                                      KEYTAB_ENTRY_SIZE, &ent, &ent_size);
 
-    // TODO: check against `EIO` specifically
     if (decrypt_status == 0 && ent_size == KEYTAB_ACTUAL_ENTRY_SIZE &&
         read_big_endian(ent) == KEYTAB_MAGIC) {
       memcpy(key, (uint8_t*) ent + KEYTAB_MAGIC_SIZE, KEYTAB_KEY_SIZE);
       ret = 0;
+      free(ent);
+      break;
+    }
+
+    if (decrypt_status < 0 && decrypt_status != -EIO) {
+      ret = decrypt_status;
       free(ent);
       break;
     }
