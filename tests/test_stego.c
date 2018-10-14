@@ -20,12 +20,12 @@ static bool check_orthonormality(void* buf, int count) {
   size_t total_keys_size = count * (key_size);
   for (size_t i = 0; i < total_keys_size; i += key_size) {
     uint8_t* key_1 = int_buf + i;
-    if (norm(key_1, key_size) == 0) {
+    if (vector_norm(key_1, key_size) == 0) {
       return false;
     }
     for (size_t j = 0; j < i; j += key_size) {
       uint8_t* key_2 = int_buf + j;
-      if (scalar_product(key_1, key_2, key_size) == 1) {
+      if (vector_scalar_product(key_1, key_2, key_size) == 1) {
         return false;
       }
     }

@@ -8,9 +8,9 @@
 typedef uint8_t* vector_t;
 typedef const uint8_t* const_vector_t;
 
-bool scalar_product(const_vector_t a, const_vector_t b, size_t size);
+bool vector_scalar_product(const_vector_t a, const_vector_t b, size_t size);
 
-bool norm(const_vector_t a, size_t size);
+bool vector_norm(const_vector_t a, size_t size);
 
 void vector_linear_combination(vector_t linear_combination,
                                const_vector_t first_vector,

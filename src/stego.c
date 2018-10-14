@@ -39,13 +39,14 @@ int stego_gen_keys(void* buf, int count) {
     // him.
     void* rnd_key = (void*) int_rnd_key;
     for (size_t j = 0; j < i; j += STEGO_KEY_SIZE) {
-      int product = scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_SIZE);
+      int product =
+          vector_scalar_product(int_rnd_key, int_buf + j, STEGO_KEY_SIZE);
       vector_linear_combination(rnd_key, rnd_key, (void*) (int_buf + j),
                                 STEGO_KEY_SIZE, product);
     }
 
     // If the norm of the key is 0, set the proper bit in the last two bytes.
-    if (!norm(int_rnd_key, STEGO_KEY_SIZE)) {
+    if (!vector_norm(int_rnd_key, STEGO_KEY_SIZE)) {
       int key_num = i / STEGO_KEY_SIZE;
       if (key_num < 8) {
         int_rnd_key[STEGO_KEY_SIZE - 2] |= 1UL << key_num;

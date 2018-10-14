@@ -14,7 +14,7 @@ static int count_bits(uint8_t a) {
 /**
  * Computing the scalar product of a and b, with "size" bytes length.
  */
-bool scalar_product(const_vector_t a, const_vector_t b, size_t size) {
+bool vector_scalar_product(const_vector_t a, const_vector_t b, size_t size) {
   bool ret = 0;
   for (size_t i = 0; i < size; i++) {
     ret ^= count_bits(a[i] & b[i]) & 1;
@@ -25,8 +25,8 @@ bool scalar_product(const_vector_t a, const_vector_t b, size_t size) {
 /**
  * Computing the norm of a, with "size" bytes length.
  */
-bool norm(const_vector_t a, size_t size) {
-  return scalar_product(a, a, size);
+bool vector_norm(const_vector_t a, size_t size) {
+  return vector_scalar_product(a, a, size);
 }
 
 /**
