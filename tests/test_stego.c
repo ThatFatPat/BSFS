@@ -1,4 +1,5 @@
 #include "test_stego.h"
+
 #include "bit_util.h"
 #include "disk.h"
 #include "keytab.h"
@@ -76,14 +77,10 @@ START_TEST(test_cover_linear_combination) {
 
   uint8_t int_buf;
   void* buf = (void*) &int_buf;
-  uint8_t key1[STEGO_KEY_SIZE];
-  key1[0] = -1;
-  uint8_t key2[STEGO_KEY_SIZE];
-  key2[0] = -2;
-  uint8_t key3[STEGO_KEY_SIZE];
-  key3[0] = 1;
-  uint8_t key4[STEGO_KEY_SIZE];
-  key4[0] = 0;
+  uint8_t key1[STEGO_KEY_SIZE] = { -1 };
+  uint8_t key2[STEGO_KEY_SIZE] = { -2 };
+  uint8_t key3[STEGO_KEY_SIZE] = { 1 };
+  uint8_t key4[STEGO_KEY_SIZE] = { 0 };
   ranged_covers_linear_combination(key1, writable_disk, TEST_STEGO_DISK_SIZE, 0,
                                    buf, CHAR_BIT);
   ck_assert_int_eq(int_buf, key1[0]);
