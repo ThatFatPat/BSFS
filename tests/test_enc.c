@@ -44,15 +44,23 @@ START_TEST(test_roundup_buffer) {
 }
 END_TEST
 
+START_TEST(test_get_encrypted_size) {
+  ck_assert_int_eq(aes_get_encrypted_size(8), 16);
+  ck_assert_int_eq(aes_get_encrypted_size(16), 32);
+}
+END_TEST
+
 Suite* enc_suite(void) {
   Suite* suite = suite_create("enc");
-  TCase* roundtrip_tcase = tcase_create("Round Trip");
-  TCase* roundup_buffer_tcase = tcase_create("Round Up Buffer");
 
+  TCase* roundtrip_tcase = tcase_create("roundtrip");
   tcase_add_test(roundtrip_tcase, test_roundtrip);
-  tcase_add_test(roundup_buffer_tcase, test_roundup_buffer);
   suite_add_tcase(suite, roundtrip_tcase);
-  suite_add_tcase(suite, roundup_buffer_tcase);
+
+  TCase* size_tcase = tcase_create("sizes");
+  tcase_add_test(size_tcase, test_roundup_buffer);
+  tcase_add_test(size_tcase, test_get_encrypted_size);
+  suite_add_tcase(suite, size_tcase);
 
   return suite;
 }

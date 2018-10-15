@@ -18,6 +18,10 @@ static int gen_key(const void* password, size_t password_size, void* key,
   return 0;
 }
 
+size_t aes_get_encrypted_size(size_t size) {
+  return size + AES_BLOCK_SIZE - (size % AES_BLOCK_SIZE);
+}
+
 int aes_encrypt(const void* password, size_t password_size, const void* data,
                 size_t size, void** buf_pointer, size_t* buf_size) {
   int ret = 0;
