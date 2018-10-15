@@ -8,20 +8,18 @@ START_TEST(test_roundtrip) {
   const char* password = "Doctor Who";
   const char plain[32] = "But what kind of Doctor?";
 
-  void* cipher = malloc(sizeof(plain));
+  char cipher[sizeof(plain)];
+  char decrypted[sizeof(plain)];
+
   int status =
       aes_encrypt(password, strlen(password), plain, cipher, sizeof(plain));
   ck_assert_int_eq(status, 0);
 
-  void* decrypted = malloc(sizeof(plain));
-  status =
-      aes_decrypt(password, strlen(password), cipher, decrypted, sizeof(plain));
+  status = aes_decrypt(password, strlen(password), cipher, decrypted,
+                       sizeof(cipher));
   ck_assert_int_eq(status, 0);
 
   ck_assert_str_eq(plain, (char*) decrypted);
-
-  free(decrypted);
-  free(cipher);
 }
 END_TEST
 
