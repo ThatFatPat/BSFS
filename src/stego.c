@@ -113,7 +113,7 @@ static void write_cover_files(const void* key, void* disk_data,
 
 static bool check_parameters(size_t disk_size, off_t off, size_t buf_size) {
   return (size_t) off < compute_level_size(disk_size) &&
-         off + buf_size < compute_level_size(disk_size) && buf_size % 16 == 0;
+         off + buf_size < compute_level_size(disk_size) && off % 16 == 0;
 }
 
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
