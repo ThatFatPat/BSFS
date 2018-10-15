@@ -90,7 +90,6 @@ void ranged_covers_linear_combination(const void* key, const void* disk_data,
                                       size_t read_size) {
   const_vector_t data = (uint8_t*) disk_data;
 
-  memset(buf, 0, read_size);
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
@@ -136,6 +135,7 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
     goto cleanup_data;
   }
 
+  memset(data, 0, size);
   ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
                                    data, size);
 

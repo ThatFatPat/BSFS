@@ -82,18 +82,23 @@ START_TEST(test_cover_linear_combination) {
   uint8_t key2[STEGO_KEY_SIZE] = { -2 };
   uint8_t key3[STEGO_KEY_SIZE] = { 1 };
   uint8_t key4[STEGO_KEY_SIZE] = { 0 };
+
+  memset(buf, 0, 1);
   ranged_covers_linear_combination(key1, writable_disk, TEST_STEGO_DISK_SIZE, 0,
                                    buf, 1);
   ck_assert_int_eq(int_buf, key1[0]);
 
+  memset(buf, 0, 1);
   ranged_covers_linear_combination(key2, writable_disk, TEST_STEGO_DISK_SIZE, 0,
                                    buf, 1);
   ck_assert_int_eq(int_buf, key2[0]);
 
+  memset(buf, 0, 1);
   ranged_covers_linear_combination(key3, writable_disk, TEST_STEGO_DISK_SIZE, 0,
                                    buf, 1);
   ck_assert_int_eq(int_buf, key3[0]);
 
+  memset(buf, 0, 1);
   ranged_covers_linear_combination(key4, writable_disk, TEST_STEGO_DISK_SIZE, 0,
                                    buf, 1);
   ck_assert_int_eq(int_buf, key4[0]);
