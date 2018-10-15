@@ -75,7 +75,7 @@ size_t compute_level_size(size_t disk_size) {
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
-static off_t cover_offset(size_t disk_size, int i) {
+static off_t cover_offset(size_t disk_size, size_t i) {
   return KEYTAB_SIZE + i * compute_level_size(disk_size);
 }
 
@@ -88,11 +88,12 @@ static off_t cover_offset(size_t disk_size, int i) {
 static void read_cover_file_delta(const void* key, const void* disk_data,
                                   size_t disk_size, off_t off, void* buf,
                                   size_t read_size) {
-  const_vector_t data = (uint8_t*) disk_data;
+  const_vector_t data = (const_vector_t) disk_data;
 
-  for (int i = 0; i < COVER_FILE_COUNT; i++) {
+  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
+
     vector_linear_combination((vector_t) buf, (const_vector_t) buf,
                               data + offset, read_size, bit);
   }
@@ -106,6 +107,7 @@ static void write_cover_file_delta(const void* key, void* disk_data,
   for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
+
     vector_linear_combination(data + offset, data + offset,
                               (const_vector_t) delta, buf_size, bit);
   }
