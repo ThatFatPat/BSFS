@@ -44,7 +44,7 @@ int aes_encrypt(const void* password, size_t password_size, const void* data,
   content_size = 0;
   final_size = 0;
 
-  ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE - 1);
+  ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE);
   if (!ciphertext) {
     ret = -ENOMEM;
     goto cleanup_ctx;
