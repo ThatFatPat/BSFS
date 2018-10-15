@@ -66,45 +66,6 @@ START_TEST(test_compute_level_size_too_small) {
 }
 END_TEST
 
-/*-----------------------------------------------------------------------------------*/
-
-#define TEST_STEGO_DISK_SIZE (512 + COVER_FILE_COUNT * STEGO_KEY_SIZE)
-
-START_TEST(test_cover_linear_combination) {
-  uint8_t writable_disk[TEST_STEGO_DISK_SIZE] = { 0 };
-  for (int i = 0; i < CHAR_BIT; i++) {
-    set_bit(writable_disk + cover_offset(TEST_STEGO_DISK_SIZE, i), i, 1);
-  }
-
-  uint8_t int_buf;
-  void* buf = (void*) &int_buf;
-  uint8_t key1[STEGO_KEY_SIZE] = { -1 };
-  uint8_t key2[STEGO_KEY_SIZE] = { -2 };
-  uint8_t key3[STEGO_KEY_SIZE] = { 1 };
-  uint8_t key4[STEGO_KEY_SIZE] = { 0 };
-
-  memset(buf, 0, 1);
-  ranged_covers_linear_combination(key1, writable_disk, TEST_STEGO_DISK_SIZE, 0,
-                                   buf, 1);
-  ck_assert_int_eq(int_buf, key1[0]);
-
-  memset(buf, 0, 1);
-  ranged_covers_linear_combination(key2, writable_disk, TEST_STEGO_DISK_SIZE, 0,
-                                   buf, 1);
-  ck_assert_int_eq(int_buf, key2[0]);
-
-  memset(buf, 0, 1);
-  ranged_covers_linear_combination(key3, writable_disk, TEST_STEGO_DISK_SIZE, 0,
-                                   buf, 1);
-  ck_assert_int_eq(int_buf, key3[0]);
-
-  memset(buf, 0, 1);
-  ranged_covers_linear_combination(key4, writable_disk, TEST_STEGO_DISK_SIZE, 0,
-                                   buf, 1);
-  ck_assert_int_eq(int_buf, key4[0]);
-}
-END_TEST
-
 static bs_disk_t create_tmp_disk() {
   int fd = syscall(SYS_memfd_create, "test_stego.bsf", 0);
   ck_assert_int_ne(ftruncate(fd, 0x200000), -1); // 2MiB

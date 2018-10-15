@@ -75,7 +75,7 @@ size_t compute_level_size(size_t disk_size) {
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
-off_t cover_offset(size_t disk_size, int i) {
+static off_t cover_offset(size_t disk_size, int i) {
   return KEYTAB_SIZE + i * compute_level_size(disk_size);
 }
 
@@ -85,9 +85,10 @@ off_t cover_offset(size_t disk_size, int i) {
  * The result is also the multiplication of the key vector with
  * the cover files matrix.
  */
-void ranged_covers_linear_combination(const void* key, const void* disk_data,
-                                      size_t disk_size, off_t off, void* buf,
-                                      size_t read_size) {
+static void ranged_covers_linear_combination(const void* key,
+                                             const void* disk_data,
+                                             size_t disk_size, off_t off,
+                                             void* buf, size_t read_size) {
   const_vector_t data = (uint8_t*) disk_data;
 
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
