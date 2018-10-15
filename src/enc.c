@@ -18,11 +18,14 @@ static int gen_key(const void* password, size_t password_size, void* key,
   return 0;
 }
 
-int aes_encrypt1(const void* password, size_t password_size, const void* data,
-                 size_t size, void** buf_pointer, size_t* buf_size) {
+int aes_encrypt(const void* password, size_t password_size, const void* plain,
+                void* enc, size_t size) {
+  if (size % AES_BLOCK_SIZE != 0) {
+    return -EINVAL;
+  }
+
   int ret = 0;
   int content_size, final_size;
-  uint8_t* ciphertext;
   EVP_CIPHER_CTX* e_ctx = EVP_CIPHER_CTX_new();
 
   if (!e_ctx) {
@@ -32,51 +35,47 @@ int aes_encrypt1(const void* password, size_t password_size, const void* data,
   uint8_t key[16], iv[16];
   ret = gen_key(password, password_size, key, iv);
 
-  if (ret != 0) {
-    goto cleanup_ctx;
+  if (ret < 0) {
+    goto cleanup;
   }
 
   if (!EVP_EncryptInit_ex(e_ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
     ret = -EIO;
-    goto cleanup_ctx;
+    goto cleanup;
   }
+  EVP_CIPHER_CTX_set_padding(e_ctx, 0);
 
   content_size = 0;
   final_size = 0;
 
-  ciphertext = (uint8_t*) malloc(size + AES_BLOCK_SIZE);
-  if (!ciphertext) {
-    ret = -ENOMEM;
-    goto cleanup_ctx;
-  }
-
-  if (!EVP_EncryptUpdate(e_ctx, ciphertext, &content_size,
-                         (const uint8_t*) data, size)) {
+  if (!EVP_EncryptUpdate(e_ctx, (uint8_t*) enc, &content_size,
+                         (const uint8_t*) plain, size)) {
     ret = -EIO;
-    free(ciphertext);
-    goto cleanup_ctx;
+    goto cleanup;
   }
 
-  if (!EVP_EncryptFinal_ex(e_ctx, ciphertext + content_size, &final_size)) {
+  if (!EVP_EncryptFinal_ex(e_ctx, (uint8_t*) enc + content_size, &final_size)) {
     ret = -EIO;
-    free(ciphertext);
-    goto cleanup_ctx;
+    goto cleanup;
   }
 
-  *buf_size = content_size + final_size;
-  *buf_pointer = ciphertext;
+  if (content_size + final_size != size) {
+    ret = -EIO;
+  }
 
-cleanup_ctx:
+cleanup:
   EVP_CIPHER_CTX_free(e_ctx);
-
   return ret;
 }
 
-int aes_decrypt1(const void* password, size_t password_size, const void* enc,
-                 size_t size, void** buf_pointer, size_t* buf_size) {
+int aes_decrypt(const void* password, size_t password_size, const void* enc,
+                void* plain, size_t size) {
+  if (size % AES_BLOCK_SIZE != 0) {
+    return -EINVAL;
+  }
+
   int ret = 0;
   int content_size, final_size;
-  uint8_t* plaintext;
   EVP_CIPHER_CTX* d_ctx = EVP_CIPHER_CTX_new();
 
   if (!d_ctx) {
@@ -86,41 +85,36 @@ int aes_decrypt1(const void* password, size_t password_size, const void* enc,
   uint8_t key[16], iv[16];
   ret = gen_key(password, password_size, key, iv);
 
-  if (ret != 0) {
-    goto cleanup_ctx;
+  if (ret < 0) {
+    goto cleanup;
   }
 
   if (!EVP_DecryptInit_ex(d_ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
     ret = -EIO;
-    goto cleanup_ctx;
+    goto cleanup;
   }
+  EVP_CIPHER_CTX_set_padding(d_ctx, 0);
 
   content_size = 0;
   final_size = 0;
-  plaintext = (uint8_t*) malloc(size);
-  if (!plaintext) {
-    ret = -ENOMEM;
-    goto cleanup_ctx;
-  }
 
-  if (!EVP_DecryptUpdate(d_ctx, plaintext, &content_size, (const uint8_t*) enc,
-                         size)) {
+  if (!EVP_DecryptUpdate(d_ctx, (uint8_t*) plain, &content_size,
+                         (const uint8_t*) enc, size)) {
     ret = -EIO;
-    free(plaintext);
-    goto cleanup_ctx;
+    goto cleanup;
   }
 
-  if (!EVP_DecryptFinal_ex(d_ctx, plaintext + content_size, &final_size)) {
+  if (!EVP_DecryptFinal_ex(d_ctx, (uint8_t*) plain + content_size,
+                           &final_size)) {
     ret = -EIO;
-    free(plaintext);
-    goto cleanup_ctx;
+    goto cleanup;
   }
 
-  *buf_size = content_size + final_size;
-  *buf_pointer = plaintext;
+  if (content_size + final_size != size) {
+    ret = -EIO;
+  }
 
-cleanup_ctx:
+cleanup:
   EVP_CIPHER_CTX_free(d_ctx);
-
   return ret;
 }
