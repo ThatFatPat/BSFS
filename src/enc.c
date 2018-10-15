@@ -59,7 +59,7 @@ int aes_encrypt(const void* password, size_t password_size, const void* plain,
     goto cleanup;
   }
 
-  if (content_size + final_size != size) {
+  if ((size_t)(content_size + final_size) != size) {
     ret = -EIO;
   }
 
@@ -110,7 +110,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc,
     goto cleanup;
   }
 
-  if (content_size + final_size != size) {
+  if ((size_t)(content_size + final_size) != size) {
     ret = -EIO;
   }
 
