@@ -99,9 +99,17 @@ void ranged_covers_linear_combination(const void* key, const void* disk_data,
   }
 }
 
-static int write_level_encrypted(const void* key, bs_disk_t disk,
-                                 const void* buf, off_t off, size_t size) {
-  return -ENOSYS;
+static void write_cover_files(const void* key, void* disk_data,
+                              size_t disk_size, off_t off, void* buf,
+                              size_t buf_size) {
+  vector_t data = (vector_t) disk_data;
+
+  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
+    bool bit = get_bit(key, i);
+    off_t offset = cover_offset(disk_size, i) + off;
+    vector_linear_combination(data + offset, data + offset,
+                              (const_vector_t) buf, buf_size, bit);
+  }
 }
 
 static bool check_parameters(size_t disk_size, off_t off, size_t buf_size) {
