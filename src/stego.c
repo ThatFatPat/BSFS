@@ -85,10 +85,9 @@ static off_t cover_offset(size_t disk_size, int i) {
  * The result is also the multiplication of the key vector with
  * the cover files matrix.
  */
-static void ranged_covers_linear_combination(const void* key,
-                                             const void* disk_data,
-                                             size_t disk_size, off_t off,
-                                             void* buf, size_t read_size) {
+static void read_cover_file_delta(const void* key, const void* disk_data,
+                                  size_t disk_size, off_t off, void* buf,
+                                  size_t read_size) {
   const_vector_t data = (uint8_t*) disk_data;
 
   for (int i = 0; i < COVER_FILE_COUNT; i++) {
@@ -99,9 +98,9 @@ static void ranged_covers_linear_combination(const void* key,
   }
 }
 
-static void write_cover_files(const void* key, void* disk_data,
-                              size_t disk_size, off_t off, void* delta,
-                              size_t buf_size) {
+static void write_cover_file_delta(const void* key, void* disk_data,
+                                   size_t disk_size, off_t off, void* delta,
+                                   size_t buf_size) {
   vector_t data = (vector_t) disk_data;
 
   for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
@@ -137,8 +136,8 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
   }
 
   memset(data, 0, encrypted_size);
-  ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
-                                   data, encrypted_size);
+  read_cover_file_delta(key, disk_data, disk_get_size(disk), off, data,
+                        encrypted_size);
 
   disk_unlock_read(disk);
 
@@ -187,12 +186,12 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   }
 
   // compute delta between existing disk contents and `encrypted`
-  ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
-                                   encrypted, encrypted_size);
+  read_cover_file_delta(key, disk_data, disk_get_size(disk), off, encrypted,
+                        encrypted_size);
 
   // write to disk
-  write_cover_files(key, disk_data, disk_get_size(disk), off, encrypted,
-                    encrypted_size);
+  write_cover_file_delta(key, disk_data, disk_get_size(disk), off, encrypted,
+                         encrypted_size);
 
   disk_unlock_write(disk);
 
