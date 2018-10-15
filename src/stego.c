@@ -122,30 +122,30 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
     return -EINVAL;
   }
 
-  int ret = 0;
+  size_t encrypted_size = aes_get_encrypted_size(size);
 
-  void* data = malloc(size);
+  void* data = malloc(encrypted_size);
   if (!data) {
     return -ENOMEM;
   }
 
   const void* disk_data;
-  ret = disk_lock_read(disk, &disk_data);
+  int ret = disk_lock_read(disk, &disk_data);
   if (ret < 0) {
     goto cleanup_data;
   }
 
-  memset(data, 0, size);
+  memset(data, 0, encrypted_size);
   ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
-                                   data, size);
+                                   data, encrypted_size);
 
   disk_unlock_read(disk);
 
   void* decrypted;
   size_t decrypted_size;
 
-  ret =
-      aes_decrypt(key, STEGO_KEY_SIZE, data, size, &decrypted, &decrypted_size);
+  ret = aes_decrypt(key, STEGO_KEY_SIZE, data, encrypted_size, &decrypted,
+                    &decrypted_size);
   if (ret < 0) {
     goto cleanup_data;
   }
