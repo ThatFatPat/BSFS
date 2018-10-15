@@ -99,7 +99,7 @@ void ranged_covers_linear_combination(const void* key, const void* disk_data,
 }
 
 static void write_cover_files(const void* key, void* disk_data,
-                              size_t disk_size, off_t off, void* buf,
+                              size_t disk_size, off_t off, void* delta,
                               size_t buf_size) {
   vector_t data = (vector_t) disk_data;
 
@@ -107,7 +107,7 @@ static void write_cover_files(const void* key, void* disk_data,
     bool bit = get_bit(key, i);
     off_t offset = cover_offset(disk_size, i) + off;
     vector_linear_combination(data + offset, data + offset,
-                              (const_vector_t) buf, buf_size, bit);
+                              (const_vector_t) delta, buf_size, bit);
   }
 }
 
@@ -165,5 +165,41 @@ cleanup_data:
 
 int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
-  return -ENOSYS;
+  if (!check_parameters(disk_get_size(disk), off, size)) {
+    return -EINVAL;
+  }
+
+  void* encrypted;
+  size_t encrypted_size;
+
+  void* disk_data;
+
+  int ret =
+      aes_encrypt(key, STEGO_KEY_SIZE, buf, size, &encrypted, &encrypted_size);
+  if (ret < 0) {
+    return ret;
+  }
+  if (encrypted_size != size) {
+    // technically, this should be impossible
+    ret = -EIO;
+    goto cleanup;
+  }
+
+  ret = disk_lock_write(disk, &disk_data);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  // compute delta between existing disk contents and `encrypted`
+  ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
+                                   encrypted, size);
+
+  // write to disk
+  write_cover_files(key, disk_data, disk_get_size(disk), off, encrypted, size);
+
+  disk_unlock_write(disk);
+
+cleanup:
+  free(encrypted);
+  return ret;
 }
