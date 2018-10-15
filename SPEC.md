@@ -120,21 +120,45 @@ Generate the orthonormal extraction keys.
 ## AES:
 ### aes_encrypt:
 ```c
-int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_encrypt(const void* password, size_t password_size
+  const void* plain, void* enc, size_t size);
 ```
-Encrpyt `size` bytes of `data` with 128-bit AES encryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`.<br>
+Places the encrypted result in `enc`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
 
 ### aes_decrypt:
 ```c
-int aes_decrypt(const void* password, size_t password_size, const void* enc, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_decrypt(const void* password, size_t password_size,
+  const void* enc, void* plain, size_t size);
 ```
 Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Places the decrypted result in `plain`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
+
+### aes_encrypt_auth:
+```c
+int aes_encrypt_auth(const void* password, size_t password_size,
+  const void* plain, void* enc, size_t size, void* tag,
+  size_t tag_size);
+```
+Authenticated encryption &mdash; encrypt `plain` with `password` in a manner similar to `aes_encrypt`, and generate a tag which can be used to verify the integrity of the data upon decryption.
+
+**Note**: This function will fail if `size` is not a multiple of 16.
+
+### aes_decrypt_auth
+```c
+int aes_decrypt_auth(const void* password, size_t password_size,
+  const void* enc, void* plain, size_t size, const void* tag,
+  size_t tag_size);
+```
+Authenticated decryption &mdash; decrypt `enc` with `password` in a manner similar to `aes_decrypt`, and verify the data against `tag`.
+
+**Note**: This function will fail if `size` is not a multiple of 16.
+
+**Note**: This function will fail if the tag does not match, indicating that the data is corrupted or may have been tampered with.
 
 ## Key Table:
 
