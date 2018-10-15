@@ -76,6 +76,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc,
                 size_t size, void** buf_pointer, size_t* buf_size) {
   int ret = 0;
   int content_size, final_size;
+  uint8_t* plaintext;
   EVP_CIPHER_CTX* d_ctx = EVP_CIPHER_CTX_new();
 
   if (!d_ctx) {
@@ -96,7 +97,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc,
 
   content_size = 0;
   final_size = 0;
-  uint8_t* plaintext = (uint8_t*) malloc(size);
+  plaintext = (uint8_t*) malloc(size);
   if (!plaintext) {
     ret = -ENOMEM;
     goto cleanup_ctx;
