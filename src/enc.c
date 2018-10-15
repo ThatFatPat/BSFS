@@ -4,17 +4,25 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <stdint.h>
+#include <string.h>
 
-#define NROUNDS 5
+#define NROUNDS 10000
 
-static int gen_key(const void* password, size_t password_size, void* key,
-                   void* iv) {
-  int res_size =
-      EVP_BytesToKey(EVP_aes_128_cbc(), EVP_sha1(), NULL, (uint8_t*) password,
-                     password_size, NROUNDS, (uint8_t*) key, (uint8_t*) iv);
-  if (res_size != 16) {
+static int gen_key(const EVP_CIPHER* cipher, const void* password,
+                   size_t password_size, void* key, void* iv) {
+  uint8_t key_iv[EVP_MAX_KEY_LENGTH + EVP_MAX_IV_LENGTH];
+
+  int keylen = EVP_CIPHER_key_length(cipher);
+  int ivlen = EVP_CIPHER_iv_length(cipher);
+
+  if (!PKCS5_PBKDF2_HMAC((const char*) password, password_size, NULL, 0,
+                         NROUNDS, EVP_sha256(), keylen + ivlen, key_iv)) {
     return -EIO;
   }
+
+  memcpy(key, key_iv, keylen);
+  memcpy(iv, key_iv + keylen, ivlen);
+
   return 0;
 }
 
@@ -33,7 +41,7 @@ int aes_encrypt(const void* password, size_t password_size, const void* plain,
   }
 
   uint8_t key[16], iv[16];
-  ret = gen_key(password, password_size, key, iv);
+  ret = gen_key(EVP_aes_128_cbc(), password, password_size, key, iv);
 
   if (ret < 0) {
     goto cleanup;
@@ -83,7 +91,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc,
   }
 
   uint8_t key[16], iv[16];
-  ret = gen_key(password, password_size, key, iv);
+  ret = gen_key(EVP_aes_128_cbc(), password, password_size, key, iv);
 
   if (ret < 0) {
     goto cleanup;
