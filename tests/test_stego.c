@@ -79,10 +79,11 @@ START_TEST(test_read_write_level_roundtrip) {
   uint8_t keys[2 * STEGO_KEY_SIZE];
   ck_assert_int_eq(stego_gen_keys(keys, 2), 0);
 
-  char data1[16] = "Hello, level 1";
-  char data2[16] = "Hello, level 2";
+  char data1[] = "Hello!!! This is level 1!";
+  char data2[] = "And this is level 2!";
 
-  char read[16] = { 0 };
+  char read1[sizeof(data1)] = { 0 };
+  char read2[sizeof(data2)] = { 0 };
 
   bs_disk_t disk = create_tmp_disk();
 
@@ -91,18 +92,17 @@ START_TEST(test_read_write_level_roundtrip) {
       stego_write_level(keys + STEGO_KEY_SIZE, disk, data2, 0, sizeof(data2)),
       0);
 
-  ck_assert_int_eq(stego_read_level(keys, disk, read, 0, sizeof(read)), 0);
-  ck_assert_int_eq(memcmp(read, data1, sizeof(data1)), 0);
+  ck_assert_int_eq(stego_read_level(keys, disk, read1, 0, sizeof(read1)), 0);
+  ck_assert_int_eq(memcmp(read1, data1, sizeof(data1)), 0);
 
   ck_assert_int_eq(
-      stego_read_level(keys + STEGO_KEY_SIZE, disk, read, 0, sizeof(read)), 0);
-  ck_assert_int_eq(memcmp(read, data2, sizeof(data1)), 0);
+      stego_read_level(keys + STEGO_KEY_SIZE, disk, read2, 0, sizeof(read2)),
+      0);
+  ck_assert_int_eq(memcmp(read2, data2, sizeof(data2)), 0);
 
   disk_free(disk);
 }
 END_TEST
-
-/*-----------------------------------------------------------------------------------*/
 
 Suite* stego_suite(void) {
 
@@ -119,7 +119,6 @@ Suite* stego_suite(void) {
   suite_add_tcase(suite, level_size_tcase);
 
   TCase* stego_read_write_tcase = tcase_create("read_write");
-  tcase_add_test(stego_read_write_tcase, test_cover_linear_combination);
   tcase_add_test(stego_read_write_tcase, test_read_write_level_roundtrip);
   suite_add_tcase(suite, stego_read_write_tcase);
 
