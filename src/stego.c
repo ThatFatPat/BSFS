@@ -75,8 +75,8 @@ size_t compute_level_size(size_t disk_size) {
   return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
 }
 
-static off_t cover_offset(size_t disk_size, size_t i) {
-  return KEYTAB_SIZE + i * compute_level_size(disk_size);
+static off_t cover_offset(size_t level_size, size_t i, off_t off) {
+  return KEYTAB_SIZE + i * level_size + off;
 }
 
 /**
@@ -86,41 +86,43 @@ static off_t cover_offset(size_t disk_size, size_t i) {
  * the cover files matrix.
  */
 static void read_cover_file_delta(const void* key, const void* disk_data,
-                                  size_t disk_size, off_t off, void* buf,
+                                  size_t level_size, off_t off, void* buf,
                                   size_t read_size) {
   const_vector_t data = (const_vector_t) disk_data;
 
   for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
-    off_t offset = cover_offset(disk_size, i) + off;
+    off_t cur_off = cover_offset(level_size, i, off);
 
     vector_linear_combination((vector_t) buf, (const_vector_t) buf,
-                              data + offset, read_size, bit);
+                              data + cur_off, read_size, bit);
   }
 }
 
 static void write_cover_file_delta(const void* key, void* disk_data,
-                                   size_t disk_size, off_t off, void* delta,
+                                   size_t level_size, off_t off, void* delta,
                                    size_t buf_size) {
   vector_t data = (vector_t) disk_data;
 
   for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
-    off_t offset = cover_offset(disk_size, i) + off;
+    off_t cur_off = cover_offset(level_size, i, off);
 
-    vector_linear_combination(data + offset, data + offset,
+    vector_linear_combination(data + cur_off, data + cur_off,
                               (const_vector_t) delta, buf_size, bit);
   }
 }
 
-static bool check_parameters(size_t disk_size, off_t off, size_t buf_size) {
-  return (size_t) off < compute_level_size(disk_size) &&
-         off + buf_size < compute_level_size(disk_size) && off % 16 == 0;
+static bool check_parameters(size_t level_size, off_t off, size_t buf_size) {
+  return (size_t) off < level_size && off + buf_size < level_size &&
+         off % 16 == 0;
 }
 
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
                      size_t size) {
-  if (!check_parameters(disk_get_size(disk), off, size)) {
+  size_t level_size = compute_level_size(disk_get_size(disk));
+
+  if (!check_parameters(level_size, off, size)) {
     return -EINVAL;
   }
 
@@ -138,8 +140,7 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
   }
 
   memset(data, 0, encrypted_size);
-  read_cover_file_delta(key, disk_data, disk_get_size(disk), off, data,
-                        encrypted_size);
+  read_cover_file_delta(key, disk_data, level_size, off, data, encrypted_size);
 
   disk_unlock_read(disk);
 
@@ -167,7 +168,9 @@ cleanup_data:
 
 int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
-  if (!check_parameters(disk_get_size(disk), off, size)) {
+  size_t level_size = compute_level_size(disk_get_size(disk));
+
+  if (!check_parameters(level_size, off, size)) {
     return -EINVAL;
   }
 
@@ -188,11 +191,11 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   }
 
   // compute delta between existing disk contents and `encrypted`
-  read_cover_file_delta(key, disk_data, disk_get_size(disk), off, encrypted,
+  read_cover_file_delta(key, disk_data, level_size, off, encrypted,
                         encrypted_size);
 
   // write to disk
-  write_cover_file_delta(key, disk_data, disk_get_size(disk), off, encrypted,
+  write_cover_file_delta(key, disk_data, level_size, off, encrypted,
                          encrypted_size);
 
   disk_unlock_write(disk);
