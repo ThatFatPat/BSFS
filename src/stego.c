@@ -179,11 +179,6 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   if (ret < 0) {
     return ret;
   }
-  if (encrypted_size != size) {
-    // technically, this should be impossible
-    ret = -EIO;
-    goto cleanup;
-  }
 
   ret = disk_lock_write(disk, &disk_data);
   if (ret < 0) {
@@ -192,10 +187,11 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
 
   // compute delta between existing disk contents and `encrypted`
   ranged_covers_linear_combination(key, disk_data, disk_get_size(disk), off,
-                                   encrypted, size);
+                                   encrypted, encrypted_size);
 
   // write to disk
-  write_cover_files(key, disk_data, disk_get_size(disk), off, encrypted, size);
+  write_cover_files(key, disk_data, disk_get_size(disk), off, encrypted,
+                    encrypted_size);
 
   disk_unlock_write(disk);
 
