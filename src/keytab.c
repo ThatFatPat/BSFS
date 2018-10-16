@@ -10,7 +10,7 @@
 
 #define KEYTAB_MAGIC 0xBEEFCAFE
 #define KEYTAB_KEY_SIZE 16 // TODO: use STEGO_KEY_SIZE
-#define KEYTAB_TAG_SIZE 16
+#define KEYTAB_TAG_SIZE (KEYTAB_ENTRY_SIZE - KEYTAB_KEY_SIZE)
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
   uint8_t keytab[KEYTAB_SIZE];
