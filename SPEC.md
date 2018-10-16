@@ -148,6 +148,9 @@ Authenticated encryption &mdash; encrypt `plain` with `password` in a manner sim
 
 **Note**: This function will fail if `size` is not a multiple of 16.
 
+**Warning**: Do not store several pieces of data encrypted with the same password in this mode.
+Doing so could allow the data to be recovered.
+
 ### aes_decrypt_auth
 ```c
 int aes_decrypt_auth(const void* password, size_t password_size,
