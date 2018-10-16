@@ -87,6 +87,7 @@ int aes_encrypt(const void* password, size_t password_size, const void* plain,
   }
 
   if ((size_t)(content_size + final_size) != size) {
+    // technically, this should be impossible
     ret = -EIO;
   }
 
@@ -124,6 +125,7 @@ int aes_decrypt(const void* password, size_t password_size, const void* enc,
   }
 
   if ((size_t)(content_size + final_size) != size) {
+    // technically, this should be impossible
     ret = -EIO;
   }
 
