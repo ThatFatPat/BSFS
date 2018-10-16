@@ -51,36 +51,26 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
     return -EINVAL;
   }
 
-  // Unlocking and re-locking the disk later is safe, as the salt shouldn't
-  // change anyway (other things would break if it did).
-  uint8_t salt[KEYTAB_SALT_SIZE];
-  {
-    const void* readable_keytab;
-    int lock_status = disk_lock_read(disk, &readable_keytab);
-    if (lock_status < 0) {
-      return lock_status;
-    }
-    memcpy(salt, readable_keytab, KEYTAB_SALT_SIZE);
-    disk_unlock_read(disk);
+  void* keytab;
+  int lock_status = disk_lock_write(disk, &keytab);
+  if (lock_status < 0) {
+    return lock_status;
   }
+
+  const void* salt = keytab;
+  uint8_t* keytab_data = (uint8_t*) keytab + KEYTAB_SALT_SIZE;
 
   uint8_t ent[KEYTAB_ENTRY_SIZE];
   int ret = aes_encrypt_auth(password, strlen(password), salt, KEYTAB_SALT_SIZE,
                              key, ent, KEYTAB_KEY_SIZE, ent + KEYTAB_KEY_SIZE,
                              KEYTAB_TAG_SIZE);
   if (ret < 0) {
-    return ret;
+    goto cleanup;
   }
 
-  void* keytab;
-  ret = disk_lock_write(disk, &keytab);
-  if (ret < 0) {
-    return ret;
-  }
+  memcpy(keytab_data + index * KEYTAB_ENTRY_SIZE, ent, KEYTAB_ENTRY_SIZE);
 
-  memcpy((uint8_t*) keytab + KEYTAB_SALT_SIZE + index * KEYTAB_ENTRY_SIZE, ent,
-         KEYTAB_ENTRY_SIZE);
-
+cleanup:
   disk_unlock_write(disk);
-  return 0;
+  return ret;
 }
