@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-START_TEST(test_roundtrip) {
+START_TEST(test_basic_roundtrip) {
   const char* password = "Doctor Who";
   const char plain[32] = "But what kind of Doctor?";
 
@@ -39,9 +39,9 @@ END_TEST
 Suite* enc_suite(void) {
   Suite* suite = suite_create("enc");
 
-  TCase* roundtrip_tcase = tcase_create("roundtrip");
-  tcase_add_test(roundtrip_tcase, test_roundtrip);
-  suite_add_tcase(suite, roundtrip_tcase);
+  TCase* basic_tcase = tcase_create("basic");
+  tcase_add_test(basic_tcase, test_basic_roundtrip);
+  suite_add_tcase(suite, basic_tcase);
 
   TCase* size_tcase = tcase_create("size");
   tcase_add_test(size_tcase, test_encrypt_wrong_size);
