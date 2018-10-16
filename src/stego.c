@@ -115,7 +115,7 @@ static void write_cover_file_delta(const void* key, void* disk_data,
 
 static bool check_parameters(size_t level_size, off_t off, size_t buf_size) {
   return (size_t) off < level_size && off + buf_size < level_size &&
-         off % 16 == 0;
+         buf_size % 16 == 0 && off % 16 == 0;
 }
 
 int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
@@ -126,9 +126,7 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
     return -EINVAL;
   }
 
-  size_t encrypted_size = aes_get_encrypted_size(size);
-
-  void* data = malloc(encrypted_size);
+  void* data = malloc(size);
   if (!data) {
     return -ENOMEM;
   }
@@ -139,28 +137,13 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
     goto cleanup_data;
   }
 
-  memset(data, 0, encrypted_size);
-  read_cover_file_delta(key, disk_data, level_size, off, data, encrypted_size);
+  memset(data, 0, size);
+  read_cover_file_delta(key, disk_data, level_size, off, data, size);
 
   disk_unlock_read(disk);
 
-  void* decrypted;
-  size_t decrypted_size;
+  ret = aes_decrypt(key, STEGO_KEY_SIZE, data, buf, size);
 
-  ret = aes_decrypt(key, STEGO_KEY_SIZE, data, encrypted_size, &decrypted,
-                    &decrypted_size);
-  if (ret < 0) {
-    goto cleanup_data;
-  }
-  if (decrypted_size != size) {
-    ret = -EIO;
-    goto cleanup_decrypted;
-  }
-
-  memcpy(buf, decrypted, size);
-
-cleanup_decrypted:
-  free(decrypted);
 cleanup_data:
   free(data);
   return ret;
@@ -174,15 +157,12 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
     return -EINVAL;
   }
 
-  void* encrypted;
-  size_t encrypted_size;
-
+  void* encrypted = malloc(size);
   void* disk_data;
 
-  int ret =
-      aes_encrypt(key, STEGO_KEY_SIZE, buf, size, &encrypted, &encrypted_size);
+  int ret = aes_encrypt(key, STEGO_KEY_SIZE, buf, encrypted, size);
   if (ret < 0) {
-    return ret;
+    goto cleanup;
   }
 
   ret = disk_lock_write(disk, &disk_data);
@@ -191,12 +171,10 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   }
 
   // compute delta between existing disk contents and `encrypted`
-  read_cover_file_delta(key, disk_data, level_size, off, encrypted,
-                        encrypted_size);
+  read_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
 
   // write to disk
-  write_cover_file_delta(key, disk_data, level_size, off, encrypted,
-                         encrypted_size);
+  write_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
 
   disk_unlock_write(disk);
 
