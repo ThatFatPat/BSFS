@@ -10,11 +10,10 @@
 
 #define KEYTAB_MAGIC 0xBEEFCAFE
 #define KEYTAB_KEY_SIZE 16 // TODO: use STEGO_KEY_SIZE
-#define KEYTAB_MAGIC_SIZE sizeof(uint32_t)
-#define KEYTAB_ACTUAL_ENTRY_SIZE (KEYTAB_KEY_SIZE + KEYTAB_MAGIC_SIZE)
+#define KEYTAB_TAG_SIZE 16
 
 int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
-  uint8_t keytab[KEYTAB_ENTRY_SIZE * MAX_LEVELS];
+  uint8_t keytab[KEYTAB_SIZE];
 
   {
     const void* disk_keytab;
@@ -22,39 +21,28 @@ int keytab_lookup(bs_disk_t disk, const char* password, void* key) {
     if (lock_status < 0) {
       return lock_status;
     }
-    memcpy(keytab, disk_keytab, KEYTAB_ENTRY_SIZE * MAX_LEVELS);
+    memcpy(keytab, disk_keytab, KEYTAB_SIZE);
     disk_unlock_read(disk);
   }
 
-  int ret = -ENOENT;
+  const uint8_t* salt = keytab;
+  const uint8_t* keytab_data = keytab + KEYTAB_SALT_SIZE;
+
   size_t password_len = strlen(password);
 
   for (size_t i = 0; i < MAX_LEVELS; i++) {
-    const void* encrypted_ent = keytab + i * KEYTAB_ENTRY_SIZE;
+    const uint8_t* encrypted_ent = keytab_data + i * KEYTAB_ENTRY_SIZE;
 
-    void* ent = NULL;
-    size_t ent_size;
-    int decrypt_status = aes_decrypt(password, password_len, encrypted_ent,
-                                     KEYTAB_ENTRY_SIZE, &ent, &ent_size);
+    int decrypt_status = aes_decrypt_auth(
+        password, password_len, salt, KEYTAB_SALT_SIZE, encrypted_ent, key,
+        KEYTAB_KEY_SIZE, encrypted_ent + KEYTAB_KEY_SIZE, KEYTAB_TAG_SIZE);
 
-    if (decrypt_status == 0 && ent_size == KEYTAB_ACTUAL_ENTRY_SIZE &&
-        read_big_endian(ent) == KEYTAB_MAGIC) {
-      memcpy(key, (uint8_t*) ent + KEYTAB_MAGIC_SIZE, KEYTAB_KEY_SIZE);
-      ret = 0;
-      free(ent);
-      break;
+    if (decrypt_status != -EBADMSG) {
+      return decrypt_status;
     }
-
-    if (decrypt_status < 0 && decrypt_status != -EIO) {
-      ret = decrypt_status;
-      free(ent);
-      break;
-    }
-
-    free(ent);
   }
 
-  return ret;
+  return -ENOENT;
 }
 
 int keytab_store(bs_disk_t disk, off_t index, const char* password,
@@ -63,38 +51,36 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
     return -EINVAL;
   }
 
-  int ret = 0;
+  // Unlocking and re-locking the disk later is safe, as the salt shouldn't
+  // change anyway (other things would break if it did).
+  uint8_t salt[KEYTAB_SALT_SIZE];
+  {
+    const void* readable_keytab;
+    int lock_status = disk_lock_read(disk, &readable_keytab);
+    if (lock_status < 0) {
+      return lock_status;
+    }
+    memcpy(salt, readable_keytab, KEYTAB_SALT_SIZE);
+    disk_unlock_read(disk);
+  }
 
-  uint8_t ent[KEYTAB_ACTUAL_ENTRY_SIZE];
-  write_big_endian(ent, KEYTAB_MAGIC);
-  memcpy(ent + KEYTAB_MAGIC_SIZE, key, KEYTAB_KEY_SIZE);
-
-  void* encrypted_ent;
-  size_t encrypted_size;
-
-  ret = aes_encrypt(password, strlen(password), ent, KEYTAB_ACTUAL_ENTRY_SIZE,
-                    &encrypted_ent, &encrypted_size);
+  uint8_t ent[KEYTAB_ENTRY_SIZE];
+  int ret = aes_encrypt_auth(password, strlen(password), salt, KEYTAB_SALT_SIZE,
+                             key, ent, KEYTAB_KEY_SIZE, ent + KEYTAB_KEY_SIZE,
+                             KEYTAB_TAG_SIZE);
   if (ret < 0) {
     return ret;
-  }
-  if (encrypted_size != KEYTAB_ENTRY_SIZE) {
-    // technically, this should be impossible
-    ret = -EIO;
-    goto cleanup;
   }
 
   void* keytab;
   ret = disk_lock_write(disk, &keytab);
   if (ret < 0) {
-    goto cleanup;
+    return ret;
   }
 
-  memcpy((uint8_t*) keytab + index * KEYTAB_ENTRY_SIZE, encrypted_ent,
+  memcpy((uint8_t*) keytab + KEYTAB_SALT_SIZE + index * KEYTAB_ENTRY_SIZE, ent,
          KEYTAB_ENTRY_SIZE);
 
   disk_unlock_write(disk);
-
-cleanup:
-  free(encrypted_ent);
-  return ret;
+  return 0;
 }
