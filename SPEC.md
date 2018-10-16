@@ -141,27 +141,24 @@ Places the decrypted result in `plain`.
 ### aes_encrypt_auth:
 ```c
 int aes_encrypt_auth(const void* password, size_t password_size,
-  const void* plain, void* enc, size_t size, void* tag,
-  size_t tag_size);
+  const void* salt, size_t salt_size, const void* plain,
+  void* enc, size_t size, void* tag, size_t tag_size);
 ```
-Authenticated encryption &mdash; encrypt `plain` with `password` in a manner similar to `aes_encrypt`, and generate a tag which can be used to verify the integrity of the data upon decryption.
+Authenticated encryption &mdash; encrypt `plain` with a key derived from `password` and `salt`, and generate a tag which can be used to verify the integrity of the data upon decryption. `salt` can be well-known (public) data (preferably random),
+which will be used to protect key generation.
 
-**Note**: This function will fail if `size` is not a multiple of 16.
-
-**Warning**: Do not store several pieces of data encrypted with the same password in this mode.
+**Warning**: Do not store several pieces of data encrypted with the same password/salt **pair** in this mode.
 Doing so could allow the data to be recovered.
 
 ### aes_decrypt_auth
 ```c
 int aes_decrypt_auth(const void* password, size_t password_size,
-  const void* enc, void* plain, size_t size, const void* tag,
-  size_t tag_size);
+  const void* salt, size_t salt_size, const void* enc, void* plain,
+  size_t size, const void* tag, size_t tag_size);
 ```
-Authenticated decryption &mdash; decrypt `enc` with `password` in a manner similar to `aes_decrypt`, and verify the data against `tag`.
+Authenticated decryption &mdash; decrypt `enc` with `password` and `salt` in a manner complemetary to `aes_encrypt_auth`, and verify the data against `tag`.
 
-**Note**: This function will fail if `size` is not a multiple of 16.
-
-**Note**: This function will fail if the tag does not match, indicating that the data is corrupted or may have been tampered with.
+**Note**: This function will fail with `EBADMSG` if the tag does not match, indicating that the data is corrupted or may have been tampered with.
 
 ## Key Table:
 
