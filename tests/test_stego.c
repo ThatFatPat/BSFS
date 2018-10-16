@@ -79,8 +79,8 @@ START_TEST(test_read_write_level_roundtrip) {
   uint8_t keys[2 * STEGO_KEY_SIZE];
   ck_assert_int_eq(stego_gen_keys(keys, 2), 0);
 
-  char data1[] = "Hello!!! This is level 1!";
-  char data2[] = "And this is level 2!";
+  char data1[32] = "Hello!!! This is level 1!";
+  char data2[32] = "And this is level 2!";
 
   char read1[sizeof(data1)] = { 0 };
   char read2[sizeof(data2)] = { 0 };
