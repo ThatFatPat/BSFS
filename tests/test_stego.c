@@ -104,6 +104,35 @@ START_TEST(test_read_write_level_roundtrip) {
 }
 END_TEST
 
+START_TEST(test_read_write_invalid) {
+  uint8_t key[STEGO_KEY_SIZE];
+  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+
+  char data[25] = "Incorrectly-sized data";
+  char correct_data[16] = "correctly-sized";
+
+  char read[25];
+
+  bs_disk_t disk = create_tmp_disk();
+
+  ck_assert_int_eq(stego_write_level(key, disk, data, 0, sizeof(data)),
+                   -EINVAL);
+
+  ck_assert_int_eq(
+      stego_write_level(key, disk, correct_data, 0, sizeof(correct_data)), 0);
+  ck_assert_int_eq(
+      stego_write_level(key, disk, correct_data, 5, sizeof(correct_data)),
+      -EINVAL);
+
+  ck_assert_int_eq(stego_read_level(key, disk, read, 0, sizeof(read)), -EINVAL);
+
+  ck_assert_int_eq(stego_read_level(key, disk, read, 0, 16), 0);
+  ck_assert_int_eq(stego_read_level(key, disk, read, 5, 16), -EINVAL);
+
+  disk_free(disk);
+}
+END_TEST
+
 Suite* stego_suite(void) {
 
   Suite* suite = suite_create("stego");
@@ -120,6 +149,7 @@ Suite* stego_suite(void) {
 
   TCase* stego_read_write_tcase = tcase_create("read_write");
   tcase_add_test(stego_read_write_tcase, test_read_write_level_roundtrip);
+  tcase_add_test(stego_read_write_tcase, test_read_write_invalid);
   suite_add_tcase(suite, stego_read_write_tcase);
 
   return suite;
