@@ -57,6 +57,27 @@ START_TEST(test_auth_roundtrip) {
 }
 END_TEST
 
+START_TEST(test_auth_corrupt) {
+  const char* password = "pass2";
+  const char plain[] = "This is plaintext!";
+
+  char cipher[sizeof(plain)];
+  char decrypted[sizeof(plain)];
+  char tag[16];
+
+  ck_assert_int_eq(aes_encrypt_auth(password, strlen(password), plain, cipher,
+                                    sizeof(plain), tag, sizeof(tag)),
+                   0);
+
+  memcpy(cipher, "blabla", 6);
+
+  ck_assert_int_eq(aes_decrypt_auth(password, strlen(password), cipher,
+                                    decrypted, sizeof(cipher), tag,
+                                    sizeof(tag)),
+                   -EBADMSG);
+}
+END_TEST
+
 Suite* enc_suite(void) {
   Suite* suite = suite_create("enc");
 
@@ -67,6 +88,7 @@ Suite* enc_suite(void) {
 
   TCase* auth_tcase = tcase_create("auth");
   tcase_add_test(auth_tcase, test_auth_roundtrip);
+  tcase_add_test(auth_tcase, test_auth_corrupt);
   suite_add_tcase(suite, auth_tcase);
 
   return suite;
