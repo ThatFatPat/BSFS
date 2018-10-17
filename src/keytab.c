@@ -1,6 +1,5 @@
 #include "keytab.h"
 
-#include "bit_util.h"
 #include "enc.h"
 #include <errno.h>
 #include <stdbool.h>
