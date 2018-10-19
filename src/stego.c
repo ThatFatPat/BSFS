@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#define KEYTAB_SIZE (KEYTAB_ENTRY_SIZE * MAX_LEVELS)
-
 // size of padding appended to every key, used to ensure orthonormality
 #define STEGO_KEY_PADDING_SIZE (MAX_LEVELS / CHAR_BIT)
 
