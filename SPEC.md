@@ -69,11 +69,17 @@ considered invalid.
 
 
 ## Stego:
+### Amount of Cover Files:
+```c
+#define COVER_FILE_COUNT 128
+```
+Number of cover files present on the system; also the number of bits in a key.
+
 ### Key Size:
 ```c
-#define STEGO_KEY_BITS 128
+#define STEGO_KEY_SIZE (COVER_FILE_COUNT/CHAR_BIT)
 ```
-Number of bits in a key; also the number of cover files present on the system.
+The size of a key, in bytes.
 
 ### compute_level_size:
 ```c
@@ -104,7 +110,7 @@ Write `size` bytes out of encrypted file specified by `key`, beginning at offset
 
 ### stego_gen_keys:
 ```c
-int stego_gen_keys(void* buf, int count);
+int stego_gen_keys(void* buf, size_t count);
 ```
 Generate the orthonormal extraction keys.
 
@@ -114,23 +120,53 @@ Generate the orthonormal extraction keys.
 ## AES:
 ### aes_encrypt:
 ```c
-int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_encrypt(const void* password, size_t password_size
+  const void* plain, void* enc, size_t size);
 ```
-Encrpyt `size` bytes of `data` with 128-bit AES encryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`.<br>
+Places the encrypted result in `enc`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
 
 ### aes_decrypt:
 ```c
-int aes_decrypt(const void* password, size_t password_size, const void* enc, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_decrypt(const void* password, size_t password_size,
+  const void* enc, void* plain, size_t size);
 ```
 Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Places the decrypted result in `plain`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
+
+### aes_encrypt_auth:
+```c
+int aes_encrypt_auth(const void* password, size_t password_size,
+  const void* salt, size_t salt_size, const void* plain,
+  void* enc, size_t size, void* tag, size_t tag_size);
+```
+Authenticated encryption &mdash; encrypt `plain` with a key derived from `password` and `salt`, and generate a tag which can be used to verify the integrity of the data upon decryption. `salt` can be well-known (public) data (preferably random),
+which will be used to protect key generation.
+
+**Warning**: Do not store several pieces of data encrypted with the same password/salt **pair** in this mode.
+Doing so could allow the data to be recovered.
+
+### aes_decrypt_auth
+```c
+int aes_decrypt_auth(const void* password, size_t password_size,
+  const void* salt, size_t salt_size, const void* enc, void* plain,
+  size_t size, const void* tag, size_t tag_size);
+```
+Authenticated decryption &mdash; decrypt `enc` with `password` and `salt` in a manner complemetary to `aes_encrypt_auth`, and verify the data against `tag`.
+
+**Note**: This function will fail with `EBADMSG` if the tag does not match, indicating that the data is corrupted or may have been tampered with.
 
 ## Key Table:
+
+### Key Table Entry Size:
+```c
+#define KEYTAB_ENTRY_SIZE 32
+```
+The size of a keytab entry in bytes.
 
 ### Max Levels:
 ```c
@@ -139,23 +175,30 @@ Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 The maximum number of security levels on the system (and hence the maximal size
 of the key table).
 
-### Magic Number:
+### Key Table Salt Size
 ```c
-#define KEYTAB_MAGIC 0xBEEFCAFE
+#define KEYTAB_SALT_SIZE 16
 ```
-This magic number appears at the beginning of every entry in the key table and is used to verify passwords.
+The size of the salt used by the key table, stored at the beginning of the disk.
+
+### Key Table Size
+```c
+#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * MAX_LEVELS)
+```
+The total size the keytable takes on disk.
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(bs_disk_t disk, const char* pass, void* key);
+int keytab_lookup(bs_disk_t disk, const char* password, void* key);
 ```
-Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.
+Look up `password` in the key table stored at the beginning of disk, and if found,
+return the matching key that was stored there.
 
 ### keytab_store:
 ```c
-int keytab_store(bs_disk_t disk, off_t index, const char* pass, const void* key);
+int keytab_store(bs_disk_t disk, off_t index, const char* password, const void* key);
 ```
-Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
+Store `key`, authenticated and encrypted with `password` at index `index` in the key table.
 
 <hr>
 
@@ -236,13 +279,13 @@ Write the contents of `buf` to the bitmap in the level specified by `key`.
 
 ### fs_alloc_cluster:
 ```c
-int fs_alloc_cluster(void* bitmap, cluster_offset_t* new_cluster);
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t* new_cluster);
 ```
 Find the first empty cluster in `bitmap` and change its status bit to 1, meaning it is in use. 
 
 ### fs_dealloc_cluster:
 ```c
-int fs_dealloc_cluster(void* bitmap, cluster_offset_t cluster);
+int fs_dealloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t cluster);
 ```
 Deallocate the cluster specified by `cluster` and change its status bit to 0, meaning it is free. 
 
@@ -265,6 +308,12 @@ Maximum number of entries in the BFT.
 #define BFT_ENTRY_SIZE 84
 ```
 Size of a BFT entry on disk, in bytes.
+
+### BFT_SIZE
+```c
+#define BFT_SIZE (BFT_ENTRY_SIZE * BFT_MAX_ENTRIES)
+```
+Total size of the BFT on disk.
 
 ### BFT_MAX_FILENAME:
 ```c
@@ -329,7 +378,7 @@ int bft_find_table_entry(const void* bft, const char* filename, bft_offset_t* of
 ```
 Look up the file specified by `filename` in `bft`. If found, set `off` to the offset of the relevant entry.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_read_table_entry:
 ```c
@@ -346,7 +395,8 @@ int bft_write_table_entry(void* bft, const bft_entry_t* ent, bft_offset_t off);
 Write `ent` to `bft` at offset `off`.
 
 **Note**: The previous content at offset `off`, if any exists, is overwritten.
-**Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+
+**Note**: Assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_remove_table_entry:
 ```c
@@ -354,7 +404,7 @@ int bft_remove_table_entry(void* bft, bft_offset_t off);
 ```
 Remove the entry at offset `off` from `bft`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_entry_iter_t:
 ```c
@@ -372,7 +422,7 @@ Iterate over all of the entries in `bft`, calling `iter` on each. If `iter`
 returns `false`, iteration stops. `ctx` will be passed directly to the function
 on every iteration and can be used to maintain application-specific data.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_read_table:
 ```c
@@ -380,7 +430,7 @@ int bft_read_table(const void* key, bs_disk_t disk, void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_write_table:
 ```c
@@ -388,4 +438,4 @@ int bft_write_table(const void* key, bs_disk_t disk, const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
