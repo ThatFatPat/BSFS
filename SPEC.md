@@ -120,21 +120,45 @@ Generate the orthonormal extraction keys.
 ## AES:
 ### aes_encrypt:
 ```c
-int aes_encrypt(const void* password, size_t password_size, const void* data, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_encrypt(const void* password, size_t password_size
+  const void* plain, void* enc, size_t size);
 ```
-Encrpyt `size` bytes of `data` with 128-bit AES encryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`.<br>
+Places the encrypted result in `enc`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
 
 ### aes_decrypt:
 ```c
-int aes_decrypt(const void* password, size_t password_size, const void* enc, size_t size, void** buf_pointer, size_t* buf_size);
+int aes_decrypt(const void* password, size_t password_size,
+  const void* enc, void* plain, size_t size);
 ```
 Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
-Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
+Places the decrypted result in `plain`.
 
-**Note**: Make sure to free the buffer with `free` after use. 
+**Note**: This function will fail if `size` is not a multiple of 16.
+
+### aes_encrypt_auth:
+```c
+int aes_encrypt_auth(const void* password, size_t password_size,
+  const void* salt, size_t salt_size, const void* plain,
+  void* enc, size_t size, void* tag, size_t tag_size);
+```
+Authenticated encryption &mdash; encrypt `plain` with a key derived from `password` and `salt`, and generate a tag which can be used to verify the integrity of the data upon decryption. `salt` can be well-known (public) data (preferably random),
+which will be used to protect key generation.
+
+**Warning**: Do not store several pieces of data encrypted with the same password/salt **pair** in this mode.
+Doing so could allow the data to be recovered.
+
+### aes_decrypt_auth
+```c
+int aes_decrypt_auth(const void* password, size_t password_size,
+  const void* salt, size_t salt_size, const void* enc, void* plain,
+  size_t size, const void* tag, size_t tag_size);
+```
+Authenticated decryption &mdash; decrypt `enc` with `password` and `salt` in a manner complemetary to `aes_encrypt_auth`, and verify the data against `tag`.
+
+**Note**: This function will fail with `EBADMSG` if the tag does not match, indicating that the data is corrupted or may have been tampered with.
 
 ## Key Table:
 
@@ -144,8 +168,6 @@ Places the alocated result buffer of size `*buf_size` in `buf_pointer`.
 ```
 The size of a keytab entry in bytes.
 
-**Note**: This is the size of an entry on the disk (due to AES encryption limitations).
-
 ### Max Levels:
 ```c
 #define MAX_LEVELS 16
@@ -153,23 +175,30 @@ The size of a keytab entry in bytes.
 The maximum number of security levels on the system (and hence the maximal size
 of the key table).
 
-### Magic Number:
+### Key Table Salt Size
 ```c
-#define KEYTAB_MAGIC 0xBEEFCAFE
+#define KEYTAB_SALT_SIZE 16
 ```
-This magic number appears at the beginning of every entry in the key table and is used to verify passwords.
+The size of the salt used by the key table, stored at the beginning of the disk.
+
+### Key Table Size
+```c
+#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * MAX_LEVELS)
+```
+The total size the keytable takes on disk.
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(bs_disk_t disk, const char* pass, void* key);
+int keytab_lookup(bs_disk_t disk, const char* password, void* key);
 ```
-Verify `pass` against keytable using `KEYTAB_MAGIC`, and on success places key to level in `key`.
+Look up `password` in the key table stored at the beginning of disk, and if found,
+return the matching key that was stored there.
 
 ### keytab_store:
 ```c
-int keytab_store(bs_disk_t disk, off_t index, const char* pass, const void* key);
+int keytab_store(bs_disk_t disk, off_t index, const char* password, const void* key);
 ```
-Store `key`, together with `KEYTAB_MAGIC`, encrypted with `pass` at index `index` in the key table.
+Store `key`, authenticated and encrypted with `password` at index `index` in the key table.
 
 <hr>
 
