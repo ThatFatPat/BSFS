@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define KEYTAB_MAGIC 0xBEEFCAFE
 #define KEYTAB_KEY_SIZE 16 // TODO: use STEGO_KEY_SIZE
 #define KEYTAB_TAG_SIZE (KEYTAB_ENTRY_SIZE - KEYTAB_KEY_SIZE)
 
