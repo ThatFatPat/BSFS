@@ -52,7 +52,7 @@ START_TEST(test_gen_keys_too_many) {
 END_TEST
 
 START_TEST(test_compute_level_size) {
-  for (size_t disk_size = 0x400; disk_size <= 0x2000000; disk_size += 0x800) {
+  for (size_t disk_size = 0x400; disk_size <= 0x200000; disk_size += 0x8000) {
     size_t level_size = compute_level_size(disk_size);
     ck_assert_uint_le(MAX_LEVELS * KEYTAB_ENTRY_SIZE +
                           COVER_FILE_COUNT * level_size,
