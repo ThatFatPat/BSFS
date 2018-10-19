@@ -13,6 +13,7 @@ set(SOURCE_FILES
   keytab.c
   stego.c
   disk.c
+  vector.c
 )
 
 add_library(bsfs-core ${SOURCE_FILES})

@@ -11,6 +11,7 @@ set(TEST_SOURCES
   test_keytab.c
   test_stego.c
   test_disk.c
+  test_vector.c
   main.c
 )
 
