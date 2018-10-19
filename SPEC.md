@@ -309,6 +309,12 @@ Maximum number of entries in the BFT.
 ```
 Size of a BFT entry on disk, in bytes.
 
+### BFT_SIZE
+```c
+#define BFT_SIZE (BFT_ENTRY_SIZE * BFT_MAX_ENTRIES)
+```
+Total size of the BFT on disk.
+
 ### BFT_MAX_FILENAME:
 ```c
 #define BFT_MAX_FILENAME 64
@@ -372,7 +378,7 @@ int bft_find_table_entry(const void* bft, const char* filename, bft_offset_t* of
 ```
 Look up the file specified by `filename` in `bft`. If found, set `off` to the offset of the relevant entry.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_read_table_entry:
 ```c
@@ -390,7 +396,7 @@ Write `ent` to `bft` at offset `off`.
 
 **Note**: The previous content at offset `off`, if any exists, is overwritten.
 
-**Note**: Assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: Assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_remove_table_entry:
 ```c
@@ -398,7 +404,7 @@ int bft_remove_table_entry(void* bft, bft_offset_t off);
 ```
 Remove the entry at offset `off` from `bft`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_entry_iter_t:
 ```c
@@ -416,7 +422,7 @@ Iterate over all of the entries in `bft`, calling `iter` on each. If `iter`
 returns `false`, iteration stops. `ctx` will be passed directly to the function
 on every iteration and can be used to maintain application-specific data.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_read_table:
 ```c
@@ -424,7 +430,7 @@ int bft_read_table(const void* key, bs_disk_t disk, void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
 
 ### bft_write_table:
 ```c
@@ -432,4 +438,4 @@ int bft_write_table(const void* key, bs_disk_t disk, const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
 
-**Note**: assumes that `bft` is a buffer of size `BFT_ENTRY_SIZE * BFT_MAX_ENTRIES`.
+**Note**: assumes that `bft` is a buffer of size `BFT_SIZE`.
