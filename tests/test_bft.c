@@ -30,7 +30,7 @@ START_TEST(test_bft_init_deep_copy) {
 END_TEST
 
 START_TEST(test_bft_find_free_entry) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = { 0 };
+  uint8_t bft[BFT_SIZE] = { 0 };
 
   bft_offset_t first_off;
   int first_status = bft_find_free_table_entry(bft, &first_off);
@@ -47,7 +47,7 @@ START_TEST(test_bft_find_free_entry) {
 END_TEST
 
 START_TEST(test_bft_find_free_entry_nospace) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
   memset(bft, 'a', sizeof(bft)); // 'fill' BFT
 
   bft_offset_t off;
@@ -57,7 +57,7 @@ START_TEST(test_bft_find_free_entry_nospace) {
 END_TEST
 
 START_TEST(test_bft_entry_roundtrip) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
 
   bft_entry_t original;
   ck_assert_int_eq(bft_entry_init(&original, "file", 1024, 0, 1, 0, 0), 0);
@@ -82,7 +82,7 @@ START_TEST(test_bft_entry_roundtrip) {
 END_TEST
 
 START_TEST(test_bft_read_entry_past_end) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
 
   bft_entry_t ent;
   ck_assert_int_eq(bft_read_table_entry(bft, &ent, BFT_MAX_ENTRIES), -EINVAL);
@@ -90,7 +90,7 @@ START_TEST(test_bft_read_entry_past_end) {
 END_TEST
 
 START_TEST(test_bft_write_entry_past_end) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
 
   bft_entry_t ent;
   ck_assert_int_eq(bft_entry_init(&ent, "file", 0, 0, 0, 0, 0), 0);
@@ -100,7 +100,7 @@ START_TEST(test_bft_write_entry_past_end) {
 END_TEST
 
 START_TEST(test_bft_read_entry_corrupt) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
   memset(bft, 'a', sizeof(bft));
 
   bft_entry_t ent;
@@ -130,7 +130,7 @@ START_TEST(test_bft_read_entry_deep_copy) {
 END_TEST
 
 START_TEST(test_bft_write_entry_name_too_long) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
 
   bft_entry_t ent;
   ck_assert_int_eq(
@@ -145,7 +145,7 @@ START_TEST(test_bft_write_entry_name_too_long) {
 END_TEST
 
 START_TEST(test_bft_remove_entry) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = { 0 };
+  uint8_t bft[BFT_SIZE] = { 0 };
 
   bft_offset_t free_off;
   ck_assert_int_eq(bft_find_free_table_entry(bft, &free_off), 0);
@@ -167,7 +167,7 @@ START_TEST(test_bft_remove_entry) {
 END_TEST
 
 START_TEST(test_bft_remove_entry_past_end) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES];
+  uint8_t bft[BFT_SIZE];
   ck_assert_int_eq(bft_remove_table_entry(bft, BFT_MAX_ENTRIES), -EINVAL);
 }
 END_TEST
@@ -189,7 +189,7 @@ static bool test_bft_iter_entries_iter(bft_offset_t off, const bft_entry_t* ent,
 }
 
 START_TEST(test_bft_iter_entries) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = { 0 };
+  uint8_t bft[BFT_SIZE] = { 0 };
 
   bft_entry_t entries[2];
   ck_assert_int_eq(bft_entry_init(&entries[0], "file1", 12, 0, 0, 567, 560), 0);
@@ -227,7 +227,7 @@ static bool test_bft_iter_bailout_iter(bft_offset_t off, const bft_entry_t* ent,
 }
 
 START_TEST(test_bft_iter_bailout) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = { 0 };
+  uint8_t bft[BFT_SIZE] = { 0 };
   bft_entry_t ent;
 
   ck_assert_int_eq(bft_entry_init(&ent, "file1", 10, 0, 0, 0, 0), 0);
@@ -255,7 +255,7 @@ START_TEST(test_bft_iter_bailout) {
 END_TEST
 
 START_TEST(test_bft_find_entry) {
-  uint8_t bft[BFT_ENTRY_SIZE * BFT_MAX_ENTRIES] = { 0 };
+  uint8_t bft[BFT_SIZE] = { 0 };
   bft_entry_t ent;
 
   ck_assert_int_eq(bft_entry_init(&ent, "file1", 10, 0, 0, 0, 0), 0);

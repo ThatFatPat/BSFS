@@ -10,6 +10,7 @@
 #define BFT_MAX_FILENAME 64
 #define BFT_ENTRY_SIZE 84 // 64B + 5 * 4B
 #define BFT_MAX_ENTRIES 8192
+#define BFT_SIZE (BFT_ENTRY_SIZE * BFT_MAX_ENTRIES)
 
 typedef uint32_t bft_timestamp_t;
 typedef int16_t bft_offset_t;
