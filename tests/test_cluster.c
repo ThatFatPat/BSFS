@@ -6,7 +6,7 @@ START_TEST(test_example)
 }
 END_TEST
 
-Suite* stego_suite(void) {
+Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
   TCase* example_tcase = tcase_create("example");
 

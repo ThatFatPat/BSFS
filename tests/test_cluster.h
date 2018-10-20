@@ -5,4 +5,4 @@
 
 Suite* cluster_suite(void);
 
-#endif //TEST_CLUSTER_H
+#endif // TEST_CLUSTER_H
