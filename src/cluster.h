@@ -22,12 +22,12 @@ int fs_write_cluster(const void* key, bs_disk_t disk, const void* buf,
 cluster_offset_t fs_next_cluster(const void* cluster);
 void fs_set_next_cluster(void* cluster, cluster_offset_t next);
 
-int fs_read_bitmap(const void* key, bs_disk_t disk, void* buf,
-                   size_t bitmap_size);
-int fs_write_bitmap(const void* key, bs_disk_t disk, const void* buf,
-                    size_t bitmap_size);
+int fs_read_bitmap(const void* key, bs_disk_t disk, void* buf);
+int fs_write_bitmap(const void* key, bs_disk_t disk, const void* buf);
 
-int fs_alloc_cluster(void* bitmap, cluster_offset_t* new_cluster);
-int fs_dealloc_cluster(void* bitmap, cluster_offset_t cluster);
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits,
+                     cluster_offset_t* new_cluster);
+int fs_dealloc_cluster(void* bitmap, size_t bitmap_bits,
+                       cluster_offset_t cluster);
 
 #endif // BS_CLUSTER_H
