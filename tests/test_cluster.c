@@ -9,6 +9,7 @@ START_TEST(test_compute_bitmap_size) {
     size_t bitmap_size = fs_compute_bitmap_size(clusters);
     ck_assert_uint_eq(bitmap_size % 16, 0);
     ck_assert_uint_le(clusters, bitmap_size * CHAR_BIT);
+    ck_assert_uint_lt(bitmap_size * CHAR_BIT - clusters, 128);
   }
 }
 END_TEST
