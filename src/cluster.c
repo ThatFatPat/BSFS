@@ -16,7 +16,11 @@ size_t fs_count_clusters(size_t level_size) {
   if (level_size <= BFT_SIZE) {
     return 0;
   }
-  return (128 * (level_size - BFT_SIZE) - 127) / (128 * CLUSTER_SIZE + 1);
+  size_t after_bft = 8 * (level_size - BFT_SIZE);
+  if (after_bft < 127) {
+    return 0;
+  }
+  return (after_bft - 127) / (8 * CLUSTER_SIZE + 1);
 }
 
 size_t fs_compute_bitmap_size(size_t clusters) {
