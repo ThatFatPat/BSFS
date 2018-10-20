@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define BITS_PER_BLOCK (16 * CHAR_BIT)
+
 static size_t compute_bitmap_size_from_disk(bs_disk_t disk) {
   return fs_compute_bitmap_size(
       fs_count_clusters(compute_level_size(disk_get_size(disk))));
@@ -16,15 +18,17 @@ size_t fs_count_clusters(size_t level_size) {
   if (level_size <= BFT_SIZE) {
     return 0;
   }
-  size_t after_bft = 8 * (level_size - BFT_SIZE);
-  if (after_bft < 127) {
+
+  size_t bits_after_bft = CHAR_BIT * (level_size - BFT_SIZE);
+  if (bits_after_bft < BITS_PER_BLOCK - 1) {
     return 0;
   }
-  return (after_bft - 127) / (8 * CLUSTER_SIZE + 1);
+
+  return (bits_after_bft - BITS_PER_BLOCK + 1) / (CHAR_BIT * CLUSTER_SIZE + 1);
 }
 
 size_t fs_compute_bitmap_size(size_t clusters) {
-  return 16 * (((clusters + 7) / 8 + 15) / 16);
+  return 16 * (((clusters + CHAR_BIT - 1) / CHAR_BIT + 15) / 16);
 }
 
 int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
