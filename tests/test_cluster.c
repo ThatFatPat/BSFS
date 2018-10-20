@@ -2,7 +2,12 @@
 
 #include "bft.h"
 #include "cluster.h"
+#include "disk.h"
+#include "stego.h"
 #include <limits.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 START_TEST(test_compute_bitmap_size) {
   for (size_t clusters = 0; clusters < 512; clusters++) {
@@ -26,6 +31,38 @@ START_TEST(test_count_clusters) {
 }
 END_TEST
 
+static bs_disk_t create_tmp_disk(void) {
+  int fd = syscall(SYS_memfd_create, "test_cluster.bsf", 0);
+  ck_assert_int_ne(ftruncate(fd, 0x8000000), -1); // 128MiB
+
+  bs_disk_t disk;
+  ck_assert_int_eq(disk_create(fd, &disk), 0);
+  return disk;
+}
+
+START_TEST(test_read_write_cluster_roundtrip) {
+  uint8_t cluster1[CLUSTER_SIZE];
+  uint8_t cluster2[CLUSTER_SIZE];
+  uint8_t read_cluster[CLUSTER_SIZE];
+
+  uint8_t key[STEGO_KEY_SIZE];
+  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+
+  bs_disk_t disk = create_tmp_disk();
+
+  ck_assert_int_eq(fs_write_cluster(key, disk, cluster1, 0), 0);
+  ck_assert_int_eq(fs_write_cluster(key, disk, cluster2, 1), 0);
+
+  ck_assert_int_eq(fs_read_cluster(key, disk, read_cluster, 0), 0);
+  ck_assert_int_eq(memcmp(read_cluster, cluster1, CLUSTER_SIZE), 0);
+
+  ck_assert_int_eq(fs_read_cluster(key, disk, read_cluster, 1), 0);
+  ck_assert_int_eq(memcmp(read_cluster, cluster2, CLUSTER_SIZE), 0);
+
+  disk_free(disk);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -33,6 +70,10 @@ Suite* cluster_suite(void) {
   tcase_add_test(count_tcase, test_compute_bitmap_size);
   tcase_add_test(count_tcase, test_count_clusters);
   suite_add_tcase(suite, count_tcase);
+
+  TCase* read_write_tcase = tcase_create("read_write");
+  tcase_add_test(read_write_tcase, test_read_write_cluster_roundtrip);
+  suite_add_tcase(suite, read_write_tcase);
 
   return suite;
 }
