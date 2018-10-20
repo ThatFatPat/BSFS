@@ -8,7 +8,8 @@
 #include <stdint.h>
 
 static size_t compute_bitmap_size_from_disk(bs_disk_t disk) {
-  return fs_compute_bitmap_size(compute_level_size(disk_get_size(disk)));
+  return fs_compute_bitmap_size(
+      fs_count_clusters(compute_level_size(disk_get_size(disk))));
 }
 
 size_t fs_count_clusters(size_t level_size) {
@@ -18,8 +19,8 @@ size_t fs_count_clusters(size_t level_size) {
   return (128 * (level_size - BFT_SIZE) - 127) / (128 * CLUSTER_SIZE + 1);
 }
 
-size_t fs_compute_bitmap_size(size_t level_size) {
-  return ((fs_count_clusters(level_size) + CHAR_BIT - 1) / CHAR_BIT + 15) / 16;
+size_t fs_compute_bitmap_size(size_t clusters) {
+  return 16 * (((clusters + 7) / 8 + 15) / 16);
 }
 
 int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,

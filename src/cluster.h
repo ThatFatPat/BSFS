@@ -12,7 +12,7 @@ typedef uint32_t cluster_offset_t;
 #define CLUSTER_DATA_SIZE (CLUSTER_SIZE - sizeof(cluster_offset_t))
 
 size_t fs_count_clusters(size_t level_size);
-size_t fs_compute_bitmap_size(size_t level_size);
+size_t fs_compute_bitmap_size(size_t clusters);
 
 int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
                     cluster_offset_t cluster);
