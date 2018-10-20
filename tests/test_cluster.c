@@ -1,17 +1,25 @@
 #include "test_cluster.h"
 
-START_TEST(test_example)
-{
-  ck_assert_int_eq(3, 3);
+#include "bft.h"
+#include "cluster.h"
+
+START_TEST(test_count_clusters) {
+  for (size_t level_size = BFT_SIZE; level_size < 0x200000;
+       level_size += 0x8000) {
+    size_t clusters = fs_count_clusters(level_size);
+    ck_assert_uint_le(BFT_SIZE + ((clusters + 7) / 8 + 15) / 16 +
+                          clusters * CLUSTER_SIZE,
+                      level_size);
+  }
 }
 END_TEST
 
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
-  TCase* example_tcase = tcase_create("example");
 
-  tcase_add_test(example_tcase, test_example);
-  suite_add_tcase(suite, example_tcase);
+  TCase* count_tcase = tcase_create("count");
+  tcase_add_test(count_tcase, test_count_clusters);
+  suite_add_tcase(suite, count_tcase);
 
   return suite;
 }
