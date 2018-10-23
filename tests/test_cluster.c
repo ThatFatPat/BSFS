@@ -63,6 +63,16 @@ START_TEST(test_read_write_cluster_roundtrip) {
 }
 END_TEST
 
+START_TEST(test_get_set_next_cluster_roundtrip) {
+  static uint8_t expected_data[CLUSTER_DATA_SIZE] = { 0 };
+
+  uint8_t cluster[CLUSTER_SIZE] = { 0 };
+  fs_set_next_cluster(cluster, 0xdeadbeef);
+  ck_assert_int_eq(memcmp(cluster, expected_data, CLUSTER_DATA_SIZE), 0);
+  ck_assert_uint_eq(fs_next_cluster(cluster), 0xdeadbeef);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -74,6 +84,10 @@ Suite* cluster_suite(void) {
   TCase* read_write_tcase = tcase_create("read_write");
   tcase_add_test(read_write_tcase, test_read_write_cluster_roundtrip);
   suite_add_tcase(suite, read_write_tcase);
+
+  TCase* next_tcase = tcase_create("next");
+  tcase_add_test(next_tcase, test_get_set_next_cluster_roundtrip);
+  suite_add_tcase(suite, next_tcase);
 
   return suite;
 }
