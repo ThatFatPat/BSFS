@@ -5,6 +5,7 @@
 #include "disk.h"
 #include "stego.h"
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -73,6 +74,31 @@ START_TEST(test_get_set_next_cluster_roundtrip) {
 }
 END_TEST
 
+START_TEST(test_read_write_bitmap_roundtrip) {
+  uint8_t key[STEGO_KEY_SIZE];
+  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+
+  bs_disk_t disk = create_tmp_disk();
+  size_t bitmap_size = fs_compute_bitmap_size(
+      fs_count_clusters(compute_level_size(disk_get_size(disk))));
+
+  void* bitmap = malloc(bitmap_size);
+  void* read_bitmap = malloc(bitmap_size);
+
+  memset(bitmap, 0, bitmap_size);
+  strcpy((char*) bitmap, "abcdefghijklmnopqrstuvwxyz");
+
+  ck_assert_int_eq(fs_write_bitmap(key, disk, bitmap), 0);
+  ck_assert_int_eq(fs_read_bitmap(key, disk, read_bitmap), 0);
+
+  ck_assert_int_eq(memcmp(read_bitmap, bitmap, bitmap_size), 0);
+
+  free(read_bitmap);
+  free(bitmap);
+  disk_free(disk);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -88,6 +114,10 @@ Suite* cluster_suite(void) {
   TCase* next_tcase = tcase_create("next");
   tcase_add_test(next_tcase, test_get_set_next_cluster_roundtrip);
   suite_add_tcase(suite, next_tcase);
+
+  TCase* bitmap_tcase = tcase_create("bitmap");
+  tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
+  suite_add_tcase(suite, bitmap_tcase);
 
   return suite;
 }
