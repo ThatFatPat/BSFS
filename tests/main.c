@@ -1,5 +1,6 @@
 #include "test_bft.h"
 #include "test_bit_util.h"
+#include "test_cluster.h"
 #include "test_disk.h"
 #include "test_enc.h"
 #include "test_fuse_ops.h"
@@ -12,6 +13,7 @@
 int main() {
   SRunner* runner = srunner_create(bft_suite());
   srunner_add_suite(runner, bit_util_suite());
+  srunner_add_suite(runner, cluster_suite());
   srunner_add_suite(runner, enc_suite());
   srunner_add_suite(runner, fuse_ops_suite());
   srunner_add_suite(runner, keytab_suite());

@@ -8,6 +8,7 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR} ${FUSE3_INCLUDE_DIR})
 set(SOURCE_FILES
   bft.c
   bit_util.c
+  cluster.c
   enc.c
   fuse_ops.c
   keytab.c
