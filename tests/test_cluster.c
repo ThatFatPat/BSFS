@@ -125,6 +125,19 @@ START_TEST(test_bitmap_alloc_cluster_nospace) {
 }
 END_TEST
 
+START_TEST(test_bitmap_dealloc_cluster) {
+  uint8_t bitmap[fs_compute_bitmap_size(CLUSTERS)];
+  memset(bitmap, -1, sizeof(bitmap)); // all bits 1 => full
+
+  cluster_offset_t clus;
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), -ENOSPC);
+
+  ck_assert_int_eq(fs_dealloc_cluster(bitmap, CLUSTERS, 5), 0);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), 0);
+  ck_assert_uint_eq(clus, 5);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -145,6 +158,7 @@ Suite* cluster_suite(void) {
   tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_basic);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_nospace);
+  tcase_add_test(bitmap_tcase, test_bitmap_dealloc_cluster);
   suite_add_tcase(suite, bitmap_tcase);
 
   return suite;
