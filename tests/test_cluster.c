@@ -102,7 +102,7 @@ END_TEST
 
 #define CLUSTERS 16
 
-START_TEST(test_bitmap_alloc_cluster_basic) {
+START_TEST(test_bitmap_alloc_cluster) {
   uint8_t bitmap[fs_compute_bitmap_size(CLUSTERS)];
   memset(bitmap, 0, sizeof(bitmap));
 
@@ -156,7 +156,7 @@ Suite* cluster_suite(void) {
 
   TCase* bitmap_tcase = tcase_create("bitmap");
   tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
-  tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_basic);
+  tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_nospace);
   tcase_add_test(bitmap_tcase, test_bitmap_dealloc_cluster);
   suite_add_tcase(suite, bitmap_tcase);
