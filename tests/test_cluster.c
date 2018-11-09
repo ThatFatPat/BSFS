@@ -99,6 +99,22 @@ START_TEST(test_read_write_bitmap_roundtrip) {
 }
 END_TEST
 
+#define CLUSTERS 16
+
+START_TEST(test_bitmap_alloc_cluster_basic) {
+  uint8_t bitmap[fs_compute_bitmap_size(CLUSTERS)];
+  memset(bitmap, 0, sizeof(bitmap));
+
+  cluster_offset_t first;
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &first), 0);
+
+  cluster_offset_t second;
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &second), 0);
+
+  ck_assert_uint_ne(first, second);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -117,6 +133,7 @@ Suite* cluster_suite(void) {
 
   TCase* bitmap_tcase = tcase_create("bitmap");
   tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
+  tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_basic);
   suite_add_tcase(suite, bitmap_tcase);
 
   return suite;
