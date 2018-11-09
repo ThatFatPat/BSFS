@@ -4,6 +4,7 @@
 #include "cluster.h"
 #include "disk.h"
 #include "stego.h"
+#include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,6 +116,15 @@ START_TEST(test_bitmap_alloc_cluster_basic) {
 }
 END_TEST
 
+START_TEST(test_bitmap_alloc_cluster_nospace) {
+  uint8_t bitmap[fs_compute_bitmap_size(CLUSTERS)];
+  memset(bitmap, -1, sizeof(bitmap)); // all bits 1 => full
+
+  cluster_offset_t clus;
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), -ENOSPC);
+}
+END_TEST
+
 Suite* cluster_suite(void) {
   Suite* suite = suite_create("cluster");
 
@@ -134,6 +144,7 @@ Suite* cluster_suite(void) {
   TCase* bitmap_tcase = tcase_create("bitmap");
   tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_basic);
+  tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_nospace);
   suite_add_tcase(suite, bitmap_tcase);
 
   return suite;
