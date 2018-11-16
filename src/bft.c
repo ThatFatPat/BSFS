@@ -7,7 +7,7 @@
 #include <string.h>
 
 int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
-                   uint32_t initial_cluster, bft_timestamp_t atim,
+                   cluster_offset_t initial_cluster, bft_timestamp_t atim,
                    bft_timestamp_t mtim) {
   ent->name = strdup(name);
   if (!ent->name) {

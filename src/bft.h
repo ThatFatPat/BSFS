@@ -1,6 +1,7 @@
 #ifndef BS_BFT_H
 #define BS_BFT_H
 
+#include "cluster.h"
 #include "disk.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -17,7 +18,7 @@ typedef int16_t bft_offset_t;
 
 typedef struct bft_entry {
   const char* name;
-  uint32_t initial_cluster; // TODO: use cluster_offset_t
+  cluster_offset_t initial_cluster;
   size_t size;
   mode_t mode;
   bft_timestamp_t atim;
@@ -26,9 +27,8 @@ typedef struct bft_entry {
 
 typedef bool (*bft_entry_iter_t)(bft_offset_t, const bft_entry_t*, void*);
 
-// TODO: use cluster_offset_t
 int bft_entry_init(bft_entry_t* ent, const char* name, size_t size, mode_t mode,
-                   uint32_t initial_cluster, bft_timestamp_t atim,
+                   cluster_offset_t initial_cluster, bft_timestamp_t atim,
                    bft_timestamp_t mtim);
 void bft_entry_destroy(bft_entry_t* ent);
 
