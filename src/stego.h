@@ -22,9 +22,9 @@ typedef struct {
 
 size_t stego_compute_user_level_size(size_t disk_size);
 
-int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
-                     size_t size);
-int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
+int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
+                     off_t off, size_t size);
+int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size);
 
 #endif // BS_STEGO_H

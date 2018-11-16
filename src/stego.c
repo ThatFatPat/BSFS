@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
+}
+
 static size_t compute_level_size(size_t disk_size) {
   if (disk_size < KEYTAB_SIZE) {
     return 0;
@@ -57,16 +61,55 @@ static void write_cover_file_delta(const void* key, void* disk_data,
   }
 }
 
-static bool check_parameters(size_t level_size, off_t off, size_t buf_size) {
-  return (size_t) off < level_size && off + buf_size < level_size &&
+static void read_merged_cover_file_delta(const stego_key_t* key,
+                                         const void* disk_data,
+                                         size_t level_size, off_t off,
+                                         void* buf, size_t size) {
+  size_t level_idx = off / level_size;
+  size_t bytes_read = 0;
+  off_t cur_off = off % level_size;
+
+  while (bytes_read < size) {
+    size_t read_size = min(size, level_size - cur_off);
+    read_cover_file_delta(key->read_keys[level_idx], disk_data, level_size,
+                          cur_off, buf, read_size);
+    cur_off = 0; // Reset cur_off after first iteration.
+    bytes_read += read_size;
+    level_idx++;
+  }
+}
+
+static void write_merged_cover_file_delta(const stego_key_t* key,
+                                          void* disk_data, size_t level_size,
+                                          off_t off, void* delta, size_t size) {
+
+  size_t level_idx = off / level_size;
+  size_t bytes_written = 0;
+  off_t cur_off = off % level_size;
+
+  while (bytes_written < size) {
+    size_t write_size = min(size, level_size - cur_off);
+    write_cover_file_delta(key->write_keys[level_idx], disk_data, level_size,
+                           cur_off, delta, write_size);
+    cur_off = 0; // Reset cur_off after first iteration.
+    bytes_written += write_size;
+    level_idx++;
+  }
+}
+
+static bool check_parameters(size_t user_level_size, off_t off,
+                             size_t buf_size) {
+  return (size_t) off < user_level_size && off + buf_size < user_level_size &&
          buf_size % 16 == 0 && off % 16 == 0;
 }
 
-int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
-                     size_t size) {
-  size_t level_size = compute_level_size(disk_get_size(disk));
+int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
+                     off_t off, size_t size) {
+  size_t disk_size = disk_get_size(disk);
+  size_t user_level_size = stego_compute_user_level_size(disk_size);
+  size_t level_size = compute_level_size(disk_size);
 
-  if (!check_parameters(level_size, off, size)) {
+  if (!check_parameters(user_level_size, off, size)) {
     return -EINVAL;
   }
 
@@ -82,18 +125,19 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
   }
 
   memset(data, 0, size);
-  read_cover_file_delta(key, disk_data, level_size, off, data, size);
+
+  read_merged_cover_file_delta(key, disk_data, level_size, off, data, size);
 
   disk_unlock_read(disk);
 
-  ret = aes_decrypt(key, STEGO_KEY_SIZE, data, buf, size);
+  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, data, buf, size);
 
 cleanup_data:
   free(data);
   return ret;
 }
 
-int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
+int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
   size_t level_size = compute_level_size(disk_get_size(disk));
 
@@ -104,7 +148,7 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   void* encrypted = malloc(size);
   void* disk_data;
 
-  int ret = aes_encrypt(key, STEGO_KEY_SIZE, buf, encrypted, size);
+  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, buf, encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }
@@ -115,10 +159,12 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   }
 
   // compute delta between existing disk contents and `encrypted`
-  read_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
+  read_merged_cover_file_delta(key, disk_data, level_size, off, encrypted,
+                               size);
 
   // write to disk
-  write_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
+  write_merged_cover_file_delta(key, disk_data, level_size, off, encrypted,
+                                size);
 
   disk_unlock_write(disk);
 
