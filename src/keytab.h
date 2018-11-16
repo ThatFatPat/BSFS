@@ -2,16 +2,20 @@
 #define BS_KEYTAB_H
 
 #include "disk.h"
+#include "stego.h"
 #include <sys/types.h>
 
-#define MAX_LEVELS 16
-#define KEYTAB_ENTRY_SIZE 32
+#define KEYTAB_TAG_SIZE 16
+#define KEYTAB_ENTRY_SIZE                                                      \
+  (STEGO_AES_KEY_SIZE + STEGO_LEVELS_PER_PASSWORD * STEGO_KEY_SIZE * 2 +       \
+   KEYTAB_TAG_SIZE)
 #define KEYTAB_SALT_SIZE 16
 
-#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * MAX_LEVELS)
+#define KEYTAB_SIZE                                                            \
+  (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * STEGO_USER_LEVEL_COUNT)
 
-int keytab_lookup(bs_disk_t disk, const char* password, void* key);
+int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key);
 int keytab_store(bs_disk_t disk, off_t index, const char* password,
-                 const void* key);
+                 const stego_key_t* key);
 
 #endif // BS_KEYTAB_H
