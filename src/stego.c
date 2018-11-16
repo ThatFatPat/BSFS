@@ -6,71 +6,17 @@
 #include <errno.h>
 #include <openssl/rand.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
-// size of padding appended to every key, used to ensure orthonormality
-#define STEGO_KEY_PADDING_SIZE (MAX_LEVELS / CHAR_BIT)
-
-// size of the random part of the key
-#define STEGO_KEY_RND_SIZE (STEGO_KEY_SIZE - STEGO_KEY_PADDING_SIZE)
-
-/**
- * Generating a random key.
- * The 2 last bytes are filled with 0.
- */
-static int generate_random_key(uint8_t* buf) {
-  if (!RAND_bytes(buf, STEGO_KEY_RND_SIZE)) {
-    return -EIO;
-  }
-  memset(buf + STEGO_KEY_RND_SIZE, 0, STEGO_KEY_PADDING_SIZE);
-  return 0;
-}
-
-/**
- * Generating "count" orthonormal keys.
- * Uses special Gram-Schmidt to do so.
- */
-int stego_gen_keys(void* buf, size_t count) {
-  if (count > MAX_LEVELS) {
-    return -EINVAL;
-  }
-
-  uint8_t* int_buf = (uint8_t*) buf;
-
-  for (size_t i = 0; i < count; i++) {
-    vector_t key = int_buf + i * STEGO_KEY_SIZE;
-
-    int rnd_status = generate_random_key(key);
-    if (rnd_status < 0) {
-      return rnd_status;
-    }
-
-    // Add to "key" all the keys before him which have scalar product 1 with
-    // him.
-    for (size_t j = 0; j < i; j++) {
-      vector_t other_key = int_buf + j * STEGO_KEY_SIZE;
-
-      vector_linear_combination(
-          key, key, other_key, STEGO_KEY_SIZE,
-          vector_scalar_product(key, other_key, STEGO_KEY_SIZE));
-    }
-
-    // If the norm of the key is 0, set the proper bit in the last padding
-    // bytes.
-    if (!vector_norm(key, STEGO_KEY_SIZE)) {
-      set_bit(key + STEGO_KEY_RND_SIZE, i, 1);
-    }
-  }
-
-  return 0;
-}
-
-size_t compute_level_size(size_t disk_size) {
+static size_t compute_level_size(size_t disk_size) {
   if (disk_size < KEYTAB_SIZE) {
     return 0;
   }
-  return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
+  return (disk_size - KEYTAB_SIZE) / STEGO_COVER_FILE_COUNT;
+}
+
+size_t stego_compute_user_level_size(size_t disk_size) {
+  return STEGO_LEVELS_PER_PASSWORD * compute_level_size(disk_size);
 }
 
 static off_t cover_offset(size_t level_size, size_t i, off_t off) {
@@ -88,7 +34,7 @@ static void read_cover_file_delta(const void* key, const void* disk_data,
                                   size_t read_size) {
   const_vector_t data = (const_vector_t) disk_data;
 
-  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
+  for (size_t i = 0; i < STEGO_COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t cur_off = cover_offset(level_size, i, off);
 
@@ -102,7 +48,7 @@ static void write_cover_file_delta(const void* key, void* disk_data,
                                    size_t buf_size) {
   vector_t data = (vector_t) disk_data;
 
-  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
+  for (size_t i = 0; i < STEGO_COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t cur_off = cover_offset(level_size, i, off);
 
