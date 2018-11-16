@@ -109,6 +109,12 @@ typedef struct {
 ```
 Represents a user level key.
 
+#### Structure on Disk
+
+1. `aes_key`
+1. `read_keys`
+1. `write_keys`
+
 ### stego_compute_user_level_size:
 ```c
 size_t stego_compute_user_level_size(size_t disk_size);
