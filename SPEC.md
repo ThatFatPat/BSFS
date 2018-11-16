@@ -193,18 +193,19 @@ Authenticated decryption &mdash; decrypt `enc` with `password` and `salt` in a m
 
 ## Key Table:
 
+### Key Table Tag Size
+```c
+#define KEYTAB_TAG_SIZE 16
+```
+The size of a key table authentication tag.
+
 ### Key Table Entry Size:
 ```c
-#define KEYTAB_ENTRY_SIZE 32
+#define KEYTAB_ENTRY_SIZE                                                     \ 
+  (STEGO_AES_KEY_SIZE + STEGO_LEVELS_PER_PASSWORD * STEGO_KEY_SIZE * 2 +          \
+   KEYTAB_TAG_SIZE)
 ```
 The size of a keytab entry in bytes.
-
-### Max Levels:
-```c
-#define MAX_LEVELS 16
-```
-The maximum number of security levels on the system (and hence the maximal size
-of the key table).
 
 ### Key Table Salt Size
 ```c
@@ -214,7 +215,7 @@ The size of the salt used by the key table, stored at the beginning of the disk.
 
 ### Key Table Size
 ```c
-#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * MAX_LEVELS)
+#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * STEGO_USER_LEVEL_COUNT)
 ```
 The total size the keytable takes on disk.
 
