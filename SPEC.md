@@ -135,14 +135,11 @@ Write `size` bytes out of encrypted file specified by `key`, beginning at offset
 
 **Note:** Since the AES encryption is done cluster-wise, we have to make sure to write in clusters while using this function.
 
-
-### stego_gen_keys:
+### stego_gen_user_keys
 ```c
-int stego_gen_keys(void* buf, size_t count);
+int stego_gen_user_keys(stego_key_t* keys);
 ```
-Generate the orthonormal extraction keys.
-
-**Note**: This function is used only on initialization.
+Generate `STEGO_USER_LEVEL_COUNT` user keys, placing the result in `keys`.
 
 
 ## AES:
@@ -217,14 +214,14 @@ The total size the keytable takes on disk.
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(bs_disk_t disk, const char* password, void* key);
+int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key);
 ```
 Look up `password` in the key table stored at the beginning of disk, and if found,
 return the matching key that was stored there.
 
 ### keytab_store:
 ```c
-int keytab_store(bs_disk_t disk, off_t index, const char* password, const void* key);
+int keytab_store(bs_disk_t disk, off_t index, const char* password, const stego_key_t* key);
 ```
 Store `key`, authenticated and encrypted with `password` at index `index` in the key table.
 
