@@ -264,7 +264,7 @@ Determine how many clusters would fit into a level of size `level_size`, taking 
 
 ### fs_read_cluster:
 ```c
-int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
+int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,
   cluster_offset_t cluster);
 ```
 Read the `cluster_index` cluster from the file matching `key` and places its contents in `buf`.
@@ -273,7 +273,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, bs_disk_t disk,
+int fs_write_cluster(const stego_key_t* key, bs_disk_t disk,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
@@ -290,14 +290,14 @@ Find the index of the next cluster in the cluster chain (file).
 
 ### fs_read_bitmap:
 ```c
-int fs_read_bitmap(const void* key, bs_disk_t disk,
+int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk,
   void* buf, size_t bitmap_size);
 ```
 Read the bitmap of the level matching `key` to `buf`.
 
 ### fs_write_bitmap:
 ```c
-int fs_write_bitmap(const void* key, bs_disk_t disk,
+int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk,
   const void* buf, size_t bitmap_size);
 ```
 Write the contents of `buf` to the bitmap in the level specified by `key`.
@@ -451,7 +451,7 @@ on every iteration and can be used to maintain application-specific data.
 
 ### bft_read_table:
 ```c
-int bft_read_table(const void* key, bs_disk_t disk, void* bft);
+int bft_read_table(const stego_key_t* key, bs_disk_t disk, void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
@@ -459,7 +459,7 @@ Read the BFT written at the beginning of the level specified by `key` into `bft`
 
 ### bft_write_table:
 ```c
-int bft_write_table(const void* key, bs_disk_t disk, const void* bft);
+int bft_write_table(const stego_key_t* key, bs_disk_t disk, const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
 
