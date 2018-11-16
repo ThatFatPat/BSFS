@@ -71,25 +71,53 @@ considered invalid.
 ## Stego:
 ### Amount of Cover Files:
 ```c
-#define COVER_FILE_COUNT 128
+#define STEGO_COVER_FILE_COUNT 128
 ```
 Number of cover files present on the system; also the number of bits in a key.
+
+### Levels per Password
+```c
+#define STEGO_LEVELS_PER_PASSWORD 8
+```
+The number of internal stego levels per user password.
+
+### Number of User Levels
+```c
+#define STEGO_USER_LEVEL_COUNT (STEGO_COVER_FILE_COUNT / STEGO_LEVELS_PER_PASSWORD)
+```
+Number of user levels per disk.
 
 ### Key Size:
 ```c
 #define STEGO_KEY_SIZE (COVER_FILE_COUNT/CHAR_BIT)
 ```
-The size of a key, in bytes.
+The size of a level key, in bytes.
 
-### compute_level_size:
+### AES Key Size
 ```c
-size_t compute_level_size(size_t disk_size);
+#define STEGO_AES_KEY_SIZE 16
 ```
-Calculate the size of a single level given the size of the disk.
+The size of a stego AES key.
+
+### Stego Key
+```c
+typedef struct {
+  uint8_t aes_key[STEGO_AES_KEY_SIZE];
+  uint8_t read_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+  uint8_t write_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+} stego_key_t;
+```
+Represents a user level key.
+
+### stego_compute_user_level_size:
+```c
+size_t stego_compute_user_level_size(size_t disk_size);
+```
+Calculate the size of a user level given the size of the disk.
 
 ### stego_read_level:
 ```c
-int stego_read_level(const void* key, bs_disk_t disk,
+int stego_read_level(const stego_key_t* key, bs_disk_t disk,
   void* buf, off_t off, size_t size);
 ```
 Read `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -100,7 +128,7 @@ Read `size` bytes out of encrypted file specified by `key`, beginning at offset 
 
 ### stego_write_level:
 ```c
-int stego_write_level(const void* key, bs_disk_t disk,
+int stego_write_level(const stego_key_t* key, bs_disk_t disk,
   const void* buf, off_t off, size_t size);
 ```
 Write `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
