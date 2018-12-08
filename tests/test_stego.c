@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 START_TEST(test_compute_level_size) {
-  for (size_t disk_size = 0x2000; disk_size <= 0x200000; disk_size += 0x10000) {
+  for (size_t disk_size = 0x2000; disk_size <= 0x200000; disk_size += 0x8000) {
     size_t level_size = stego_compute_user_level_size(disk_size);
     ck_assert_uint_le(KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * level_size,
                       disk_size);
