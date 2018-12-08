@@ -19,6 +19,8 @@ START_TEST(test_compute_level_size) {
     ck_assert_uint_le(KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * level_size,
                       disk_size);
 
+    ck_assert_uint_eq(level_size % STEGO_LEVELS_PER_PASSWORD, 0);
+
     // Don't be tempted to just use `STEGO_USER_LEVEL_COUNT * (level_size + 1)`,
     // as there will most likely be wasted space to ensure that `level_size` is
     // a multiple of `STEGO_LEVELS_PER_PASSWORD`.
