@@ -36,7 +36,8 @@ int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key) {
 
     int decrypt_status = aes_decrypt_auth(
         password, password_len, salt, KEYTAB_SALT_SIZE, encrypted_ent, key_buf,
-        STEGO_KEY_SIZE, encrypted_ent + KEYTAB_KEY_ENTRY_SIZE, KEYTAB_TAG_SIZE);
+        KEYTAB_KEY_ENTRY_SIZE, encrypted_ent + KEYTAB_KEY_ENTRY_SIZE,
+        KEYTAB_TAG_SIZE);
 
     if (decrypt_status == 0) {
       // Deserialize the key
@@ -86,8 +87,8 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
   // Store the key in the key table
   uint8_t ent[KEYTAB_ENTRY_SIZE];
   int ret = aes_encrypt_auth(password, strlen(password), salt, KEYTAB_SALT_SIZE,
-                             key_buf, ent, STEGO_KEY_SIZE,
-                             ent + KEYTAB_KEY_ENTRY_SIZE, KEYTAB_TAG_SIZE);
+                             key_buf, ent, KEYTAB_KEY_ENTRY_SIZE,
+                             ent + KEYTAB_ENTRY_SIZE, KEYTAB_TAG_SIZE);
   if (ret < 0) {
     goto cleanup;
   }
