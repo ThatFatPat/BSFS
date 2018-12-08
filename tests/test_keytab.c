@@ -3,6 +3,7 @@
 #include "keytab.h"
 #include "stego.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -90,6 +91,12 @@ static bs_disk_t create_tmp_disk(void) {
   return disk;
 }
 
+static bool stego_key_eq(const stego_key_t* lhs, const stego_key_t* rhs) {
+  return !memcmp(lhs->aes_key, rhs->aes_key, sizeof(lhs->aes_key)) &&
+         !memcmp(lhs->read_keys, rhs->read_keys, sizeof(lhs->read_keys)) &&
+         !memcmp(lhs->write_keys, rhs->write_keys, sizeof(lhs->write_keys));
+}
+
 START_TEST(test_keytab_store_lookup_roundtrip) {
   const char* pass1 = "pass1";
   const char* pass2 = "pass2";
@@ -102,10 +109,10 @@ START_TEST(test_keytab_store_lookup_roundtrip) {
   stego_key_t recovered_key = { { 0 } };
 
   ck_assert_int_eq(keytab_lookup(disk, pass1, &recovered_key), 0);
-  ck_assert_int_eq(memcmp(&recovered_key, &key1, 16), 0);
+  ck_assert(stego_key_eq(&recovered_key, &key1));
 
   ck_assert_int_eq(keytab_lookup(disk, pass2, &recovered_key), 0);
-  ck_assert_int_eq(memcmp(&recovered_key, &key2, 16), 0);
+  ck_assert(stego_key_eq(&recovered_key, &key2));
 
   ck_assert_int_eq(keytab_lookup(disk, "pass3", &recovered_key), -ENOENT);
 
