@@ -14,12 +14,18 @@
 #include <unistd.h>
 
 START_TEST(test_compute_level_size) {
-  for (size_t disk_size = 0x400; disk_size <= 0x200000; disk_size += 0x8000) {
+  for (size_t disk_size = 0x2000; disk_size <= 0x200000; disk_size += 0x10000) {
     size_t level_size = stego_compute_user_level_size(disk_size);
-    ck_assert_uint_le(KEYTAB_SIZE + STEGO_COVER_FILE_COUNT * level_size,
+    ck_assert_uint_le(KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * level_size,
                       disk_size);
+
+    // Don't be tempted to just use `STEGO_USER_LEVEL_COUNT * (level_size + 1)`,
+    // as there will most likely be wasted space to ensure that `level_size` is
+    // a multiple of `STEGO_LEVELS_PER_PASSWORD`.
     ck_assert_uint_le(disk_size,
-                      KEYTAB_SIZE + STEGO_COVER_FILE_COUNT * (level_size + 1));
+                      KEYTAB_SIZE +
+                          STEGO_COVER_FILE_COUNT *
+                              (level_size / STEGO_LEVELS_PER_PASSWORD + 1));
   }
 }
 END_TEST
