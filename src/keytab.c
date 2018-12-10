@@ -88,7 +88,7 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
   uint8_t ent[KEYTAB_ENTRY_SIZE];
   int ret = aes_encrypt_auth(password, strlen(password), salt, KEYTAB_SALT_SIZE,
                              key_buf, ent, KEYTAB_KEY_ENTRY_SIZE,
-                             ent + KEYTAB_ENTRY_SIZE, KEYTAB_TAG_SIZE);
+                             ent + KEYTAB_KEY_ENTRY_SIZE, KEYTAB_TAG_SIZE);
   if (ret < 0) {
     goto cleanup;
   }
