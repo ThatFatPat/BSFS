@@ -73,7 +73,7 @@ static void merged_cover_file_op(cover_file_op_t op,
     size_t level_remaining = level_size - cur_off;
     size_t cur_size = min(total_remaining, level_remaining);
 
-    op(keys[level_idx], disk, level_size, cur_off, buf + processed, size);
+    op(keys[level_idx], disk, level_size, cur_off, buf + processed, cur_size);
 
     cur_off = 0; // We always operate from offset 0 after the first iteration.
     processed += cur_size;
