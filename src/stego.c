@@ -70,7 +70,7 @@ static void read_merged_cover_file_delta(const stego_key_t* key,
   off_t cur_off = off % level_size;
 
   while (bytes_read < size) {
-    size_t read_size = min(size, level_size - cur_off);
+    size_t read_size = min(size - bytes_read, level_size - cur_off);
     read_cover_file_delta(key->read_keys[level_idx], disk_data, level_size,
                           cur_off, (uint8_t*) buf + bytes_read, read_size);
     cur_off = 0; // Reset cur_off after first iteration.
@@ -89,7 +89,7 @@ static void write_merged_cover_file_delta(const stego_key_t* key,
   off_t cur_off = off % level_size;
 
   while (bytes_written < size) {
-    size_t write_size = min(size, level_size - cur_off);
+    size_t write_size = min(size - bytes_written, level_size - cur_off);
     write_cover_file_delta(key->write_keys[level_idx], disk_data, level_size,
                            cur_off, (const uint8_t*) delta + bytes_written,
                            write_size);
