@@ -23,14 +23,13 @@ int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key) {
     disk_unlock_read(disk);
   }
 
-  // Use salt for decryption
   const uint8_t* salt = keytab;
   const uint8_t* keytab_data = keytab + KEYTAB_SALT_SIZE;
 
-  // Look for the key in the key table
   size_t password_len = strlen(password);
-  uint8_t key_buf[KEYTAB_KEY_ENTRY_SIZE]; // The key in the actual disk
+  uint8_t key_buf[KEYTAB_KEY_ENTRY_SIZE]; // Will hold serialized key
 
+  // Search for key in table
   for (size_t i = 0; i < STEGO_USER_LEVEL_COUNT; i++) {
     const uint8_t* encrypted_ent = keytab_data + i * KEYTAB_ENTRY_SIZE;
 
@@ -50,7 +49,7 @@ int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key) {
     }
 
     if (decrypt_status != -EBADMSG) {
-      // The key was found, or there was an unknown error
+      // Either the key was found or there was an unknown error
       return decrypt_status;
     }
   }
@@ -71,11 +70,10 @@ int keytab_store(bs_disk_t disk, off_t index, const char* password,
     return lock_status;
   }
 
-  // Use salt for decryption
   const void* salt = keytab;
   uint8_t* keytab_data = (uint8_t*) keytab + KEYTAB_SALT_SIZE;
 
-  uint8_t key_buf[KEYTAB_KEY_ENTRY_SIZE]; // The key in the actual disk
+  uint8_t key_buf[KEYTAB_KEY_ENTRY_SIZE]; // Will hold serialized key
 
   // Serialize the key
   memcpy(key_buf, key->aes_key, sizeof(key->aes_key));
