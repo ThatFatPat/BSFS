@@ -72,7 +72,7 @@ START_TEST(test_matrix_gen_nonsing){
   uint8_t mat[8];
   uint8_t inv[8];
   uint8_t mul[8];
-  uint8_t expected_mul = {0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1};
+  uint8_t expected_mul[8] = {0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1};
   
   ck_assert_uint_eq(matrix_gen_nonsing(mat, inv, 8), 0);
   
