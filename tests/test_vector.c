@@ -43,6 +43,29 @@ START_TEST(test_linear_combination) {
 }
 END_TEST
 
+START_TEST(test_matrix_multiplication){
+  uint8_t mat1[8] = {0xe2, 0xf2, 0xc1, 0x77, 0x19, 0x4e, 0x8b, 0xe1};
+  uint8_t mat2[8] = {0xe1, 0x91,0 0x76, 0x8, 0xad, 0xc6, 0xe0, 0x4c};
+  uint8_t expected_mul[8] = {0xe6, 0xee, 0x63, 0x85, 0xe9, 0x1a, 0xee, 0x4a};
+  uint8_t mul[8];
+  
+  matrix_multiply(mul, mat1, mat2, 8);
+  
+  ck_assert_uint_ne(memcmp(mul, expected_mul, 8), 0);
+  
+}
+END_TEST
+
+START_TEST(test_matrix_transpose){
+  
+}
+END_TEST
+
+START_TEST(test_matrix_gen_nonsing){
+  
+}
+END_TEST
+
 Suite* vector_suite(void) {
   Suite* suite = suite_create("vector");
 
