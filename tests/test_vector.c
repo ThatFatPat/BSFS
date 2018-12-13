@@ -77,6 +77,10 @@ Suite* vector_suite(void) {
   TCase* linear_combination_tcase = tcase_create("linear_combination");
   tcase_add_test(linear_combination_tcase, test_linear_combination);
   suite_add_tcase(suite, linear_combination_tcase);
+  
+  TCase* matrix_multiply_tcase = tcase_create("matrix_multiply");
+  tcase_add_test(matrix_multiply_tcase, test_matrix_multiplication);
+  suite_add_tcase(suite, matrix_multiply_tcase);
 
   return suite;
 }
