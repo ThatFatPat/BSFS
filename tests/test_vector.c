@@ -57,6 +57,15 @@ START_TEST(test_matrix_multiplication){
 END_TEST
 
 START_TEST(test_matrix_transpose){
+  uint8_t mat[8] = {0xe2, 0xf2, 0xc1, 0x77, 0x19, 0x4e, 0x8b, 0xe1};
+  uint8_t expected_transpose[8] = {0xc1, 0xd7, 0xd3, 0x7a, 0x2e, 0x34, 0xd6, 0x1b};
+  uint8_t transpose[8];
+  
+  matrix_transpose(transpose, mat, 8);
+  matrix_transpose(mat, mat, 8);
+  
+  ck_assert_uint_ne(memcmp(transpose, mat, 8), 0);
+  ck_assert_uint_ne(memcmp(transpose, expected_transpose, 8), 0);
   
 }
 END_TEST
@@ -81,6 +90,10 @@ Suite* vector_suite(void) {
   TCase* matrix_multiply_tcase = tcase_create("matrix_multiply");
   tcase_add_test(matrix_multiply_tcase, test_matrix_multiplication);
   suite_add_tcase(suite, matrix_multiply_tcase);
+  
+  TCase* matrix_transpose_tcase = tcase_create("matrix_transpose");
+  tcase_add_test(matrix_transpose_tcase, test_matrix_transpose);
+  suite_add_tcase(suite, matrix_transpose_tcase);
 
   return suite;
 }
