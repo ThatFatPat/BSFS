@@ -51,7 +51,7 @@ START_TEST(test_matrix_multiplication){
   
   matrix_multiply(mul, mat1, mat2, 8);
   
-  ck_assert_uint_ne(memcmp(mul, expected_mul, 8), 0);
+  ck_assert_uint_eq(memcmp(mul, expected_mul, 8), 0);
   
 }
 END_TEST
@@ -64,8 +64,8 @@ START_TEST(test_matrix_transpose){
   matrix_transpose(transpose, mat, 8);
   matrix_transpose(mat, mat, 8);
   
-  ck_assert_uint_ne(memcmp(transpose, mat, 8), 0);
-  ck_assert_uint_ne(memcmp(transpose, expected_transpose, 8), 0);
+  ck_assert_uint_eq(memcmp(transpose, expected_transpose, 8), 0);
+  ck_assert_uint_eq(memcmp(transpose, mat, 8), 0);
   
 }
 END_TEST
