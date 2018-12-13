@@ -66,7 +66,7 @@ static size_t matrix_permutation_index_by_bmp(bool bmp[], size_t index, size_t s
 static bool rand_bit();
 
 static matrix_t matrix_create(size_t dim){
-  return malloc((dim * dim + CHAR_BIT - 1) / CHAR_BIT);
+  return calloc(1, (dim * dim + CHAR_BIT - 1) / CHAR_BIT);
 }
 
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim){
