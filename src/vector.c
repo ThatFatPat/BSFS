@@ -142,8 +142,8 @@ static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a, const_matr
 }
 
 static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular, bool side, size_t dim){
-  for(int i = 0; i < dim; i++){
-    for(int j = 0; j < dim; j++){
+  for(size_t i = 0; i < dim; i++){
+    for(size_t j = 0; j < dim; j++){
       if(i == j){
         matrix_set(dest, i, j, 1, dim);
       } else {
@@ -168,7 +168,7 @@ static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular, 
 }
 
 static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim){
-  for(int i = 0; i < dim; i++){
+  for(size_t i = 0; i < dim; i++){
     bool to_val = matrix_get(mat, to, i, dim);
     bool from_val = matrix_get(mat, from, i, dim);
     matrix_set(mat, to, i, to_val ^ from_val, dim);
@@ -181,12 +181,12 @@ static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim){
 
   bool bmp[dim];
 
-  for(int i = 0; i < dim; i++){
+  for(size_t i = 0; i < dim; i++){
     bmp[i] = 0;
   }
 
-  for(int i = 0; i < dim; i++){
-    for(int j = 0; j <= i; j++){
+  for(size_t i = 0; i < dim; i++){
+    for(size_t j = 0; j <= i; j++){
       if(i == j){
         matrix_set(L, i, j, 1, dim);
         matrix_set(U, i, j, 1, dim);
@@ -195,7 +195,7 @@ static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim){
         matrix_set(U, j, i, rand_bit(), dim);
       }
     }
-    int pIdx = matrix_permutation_index_by_bmp(bmp, rand() % (dim - i), dim);
+    size_t pIdx = matrix_permutation_index_by_bmp(bmp, rand() % (dim - i), dim);
 
     bmp[pIdx] = 1;
     matrix_set(P, i, pIdx, 1, dim);
@@ -203,7 +203,7 @@ static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim){
 }
 
 static size_t matrix_permutation_index_by_bmp(bool bmp[], size_t index, size_t size){
-  int count = 0;
+  size_t count = 0;
   for(size_t idx = 0; idx < size; idx++){
     if(bmp[idx] == 0){
       if(index == count){
