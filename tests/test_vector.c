@@ -52,7 +52,6 @@ START_TEST(test_matrix_multiplication){
   matrix_multiply(mul, mat1, mat2, 8);
   
   ck_assert_uint_eq(memcmp(mul, expected_mul, 8), 0);
-  
 }
 END_TEST
 
@@ -66,12 +65,19 @@ START_TEST(test_matrix_transpose){
   
   ck_assert_uint_eq(memcmp(transpose, expected_transpose, 8), 0);
   ck_assert_uint_eq(memcmp(transpose, mat, 8), 0);
-  
 }
 END_TEST
 
 START_TEST(test_matrix_gen_nonsing){
+  uint8_t mat[8];
+  uint8_t inv[8];
+  uint8_t mul[8];
+  uint8_t expected_mul = {0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1};
   
+  ck_assert_uint_eq(matrix_gen_nonsing(mat, inv, 8), 0);
+  
+  matrix_multiply(mul, mat, inv, 8);
+  ck_assert_uint_eq(memcmp(mul, expected_mul, 8), 0);
 }
 END_TEST
 
@@ -94,6 +100,10 @@ Suite* vector_suite(void) {
   TCase* matrix_transpose_tcase = tcase_create("matrix_transpose");
   tcase_add_test(matrix_transpose_tcase, test_matrix_transpose);
   suite_add_tcase(suite, matrix_transpose_tcase);
+  
+  TCase* matrix_gen_nonsing_tcase = tcase_create("matrix_gen_nonsing");
+  tcase_add_test(matrix_gen_nonsing_tcase, test_matrix_gen_nonsing);
+  suite_add_tcase(suite, matrix_gen_nonsing_tcase);
 
   return suite;
 }
