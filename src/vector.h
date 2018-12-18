@@ -11,10 +11,6 @@ typedef const uint8_t* const_vector_t;
 typedef vector_t matrix_t;
 typedef const_vector_t const_matrix_t;
 
-// having the side of a triangular matrix conveniently
-#define Lower false
-#define Upper true
-
 // Vector API
 
 bool vector_scalar_product(const_vector_t a, const_vector_t b, size_t size);

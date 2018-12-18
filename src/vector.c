@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define Lower false
+#define Upper true
+
 // Vector implementation
 
 static bool parity(uint8_t a) {
