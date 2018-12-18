@@ -66,6 +66,8 @@ static void matrix_set(matrix_t mat, size_t row, size_t col, bool val,
 }
 
 static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
+  // Note: can't use `vector_linear_combination` as the row boundaries may not
+  // always fall on byte boundaries.
   for (size_t i = 0; i < dim; i++) {
     bool to_val = matrix_get(mat, to, i, dim);
     bool from_val = matrix_get(mat, from, i, dim);
@@ -148,12 +150,14 @@ static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
     for (size_t j = 0; j < i; j++) {
       bool bit;
 
+      // place random bits below diagonal of L
       ret = rand_bit(&bit);
       if (ret < 0) {
         goto cleanup;
       }
       matrix_set(L, i, j, bit, dim);
 
+      // place random bits above diagonal of U
       ret = rand_bit(&bit);
       if (ret < 0) {
         goto cleanup;
@@ -234,6 +238,8 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
 
   matrix_inverse_triangular(Linv, L, true, dim);
   matrix_inverse_triangular(Uinv, U, false, dim);
+
+  // P is a permutation matrix, so its inverse is its transpose.
   matrix_transpose(Pinv, P, dim);
 
   // mat = L*U*P
