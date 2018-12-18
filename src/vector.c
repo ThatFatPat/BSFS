@@ -229,19 +229,23 @@ void matrix_transpose(matrix_t dest, const_matrix_t mat, size_t dim) {
 }
 
 int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
-  matrix_t L = matrix_create(dim);
-  matrix_t U = matrix_create(dim);
-  matrix_t P = matrix_create(dim);
-  matrix_t Linv = matrix_create(dim);
-  matrix_t Uinv = matrix_create(dim);
-  matrix_t Pinv = matrix_create(dim);
+  size_t matrix_storage_size = round_to_bytes(dim * dim);
+
+  // Allocate space for: L, U, P, Linv, Uinv, Pinv, temp
+  matrix_t storage = (matrix_t) calloc(7, matrix_storage_size);
+  if (!storage) {
+    return -ENOMEM;
+  }
+
+  matrix_t L = storage;
+  matrix_t U = L + matrix_storage_size;
+  matrix_t P = U + matrix_storage_size;
+  matrix_t Linv = P + matrix_storage_size;
+  matrix_t Uinv = Linv + matrix_storage_size;
+  matrix_t Pinv = Uinv + matrix_storage_size;
+  matrix_t temp = Pinv + matrix_storage_size;
 
   int ret = 0;
-
-  if (!L || !U || !P || !Linv || !Uinv || !Pinv) {
-    ret = -ENOMEM;
-    goto cleanup;
-  }
 
   ret = matrix_gen_LUP(L, U, P, dim);
   if (ret < 0) {
@@ -252,22 +256,15 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
   matrix_inverse_triangular(Uinv, U, false, dim);
   matrix_transpose(Pinv, P, dim);
 
-  ret = matrix_multiply3(mat, L, U, P, dim);
-  if (ret < 0) {
-    goto cleanup;
-  }
+  // mat = L*U*P
+  matrix_multiply(temp, L, U, dim);
+  matrix_multiply(mat, temp, P, dim);
 
-  ret = matrix_multiply3(inv, Pinv, Uinv, Linv, dim);
-  if (ret < 0) {
-    goto cleanup;
-  }
+  // inv = Pinv*Uinv*Linv
+  matrix_multiply(temp, Pinv, Uinv, dim);
+  matrix_multiply(inv, temp, Linv, dim);
 
 cleanup:
-  free(L);
-  free(U);
-  free(P);
-  free(Linv);
-  free(Uinv);
-  free(Pinv);
+  free(storage);
   return ret;
 }
