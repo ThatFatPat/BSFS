@@ -3,6 +3,7 @@
 #include "bit_util.h"
 #include <errno.h>
 #include <limits.h>
+#include <openssl/rand.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -50,10 +51,6 @@ void vector_linear_combination(vector_t linear_combination,
 }
 
 // Matrix implementation
-
-static bool rand_bit() {
-  return random() % 2;
-}
 
 static size_t round_to_bytes(size_t bits) {
   return (bits + CHAR_BIT - 1) / CHAR_BIT;
@@ -119,10 +116,30 @@ static size_t nth_free_space(void* bmp, size_t n, size_t size) {
   return -1;
 }
 
+static int rand_bit(bool* bit) {
+  uint8_t byte;
+  if (!RAND_bytes(&byte, 1)) {
+    return -EIO;
+  }
+  *bit = byte & 1;
+}
+
+// Generate an unbiased random integer in [0, n)
+static int rand_index(size_t n, size_t* out) {
+  size_t threshold = SIZE_MAX - SIZE_MAX % n;
+
+  size_t raw_rnd;
+  do {
+    if (!RAND_bytes((uint8_t*) &raw_rnd, sizeof(raw_rnd))) {
+      return -EIO;
+    }
+  } while (raw_rnd >= threshold);
+
+  *out = raw_rnd % n;
+  return 0;
+}
+
 static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
-
-  srand(time(NULL));
-
   void* bmp = calloc(1, round_to_bytes(dim));
   if (!bmp) {
     return -ENOMEM;
@@ -136,16 +153,34 @@ static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
         matrix_set(L, i, j, 1, dim);
         matrix_set(U, i, j, 1, dim);
       } else {
-        matrix_set(L, i, j, rand_bit(), dim);
-        matrix_set(U, j, i, rand_bit(), dim);
+        bool bit;
+
+        ret = rand_bit(&bit);
+        if (ret < 0) {
+          goto cleanup;
+        }
+        matrix_set(L, i, j, bit, dim);
+
+        ret = rand_bit(&bit);
+        if (ret < 0) {
+          goto cleanup;
+        }
+        matrix_set(U, j, i, bit, dim);
       }
     }
-    size_t pIdx = nth_free_space(bmp, rand() % (dim - i), dim);
 
-    set_bit(bmp, pIdx, 1);
-    matrix_set(P, i, pIdx, 1, dim);
+    size_t bmp_idx;
+    ret = rand_index(dim - i, &bmp_idx);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+    size_t perm_idx = nth_free_space(bmp, bmp_idx, dim);
+    set_bit(bmp, perm_idx, 1);
+    matrix_set(P, i, perm_idx, 1, dim);
   }
 
+cleanup:
   free(bmp);
   return ret;
 }
