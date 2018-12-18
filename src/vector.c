@@ -56,10 +56,6 @@ static size_t round_to_bytes(size_t bits) {
   return (bits + CHAR_BIT - 1) / CHAR_BIT;
 }
 
-static matrix_t matrix_create(size_t dim) {
-  return calloc(1, round_to_bytes(dim * dim));
-}
-
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
   return get_bit(mat, row * dim + col);
 }
@@ -184,21 +180,6 @@ static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
 cleanup:
   free(bmp);
   return ret;
-}
-
-static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
-                            const_matrix_t b, const_matrix_t c, size_t dim) {
-  matrix_t mid = matrix_create(dim);
-
-  if (!mid) {
-    return -ENOMEM;
-  }
-
-  matrix_multiply(mid, a, b, dim);
-  matrix_multiply(dest, mid, c, dim);
-
-  free(mid);
-  return 0;
 }
 
 void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
