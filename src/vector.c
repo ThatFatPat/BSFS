@@ -145,26 +145,25 @@ static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
   int ret = 0;
 
   for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j <= i; j++) {
-      if (i == j) {
-        matrix_set(L, i, j, 1, dim);
-        matrix_set(U, i, j, 1, dim);
-      } else {
-        bool bit;
+    for (size_t j = 0; j < i; j++) {
+      bool bit;
 
-        ret = rand_bit(&bit);
-        if (ret < 0) {
-          goto cleanup;
-        }
-        matrix_set(L, i, j, bit, dim);
-
-        ret = rand_bit(&bit);
-        if (ret < 0) {
-          goto cleanup;
-        }
-        matrix_set(U, j, i, bit, dim);
+      ret = rand_bit(&bit);
+      if (ret < 0) {
+        goto cleanup;
       }
+      matrix_set(L, i, j, bit, dim);
+
+      ret = rand_bit(&bit);
+      if (ret < 0) {
+        goto cleanup;
+      }
+      matrix_set(U, j, i, bit, dim);
     }
+
+    // guarantee 1s along the diagonal
+    matrix_set(L, i, i, 1, dim);
+    matrix_set(U, i, i, 1, dim);
 
     size_t bmp_idx;
     ret = rand_index(dim - i, &bmp_idx);
