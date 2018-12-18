@@ -119,11 +119,16 @@ static size_t nth_free_space(void* bmp, size_t n, size_t size) {
   return -1;
 }
 
-static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
+static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
 
   srand(time(NULL));
 
   void* bmp = calloc(1, round_to_bytes(dim));
+  if (!bmp) {
+    return -ENOMEM;
+  }
+
+  int ret = 0;
 
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j <= i; j++) {
@@ -142,6 +147,7 @@ static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
   }
 
   free(bmp);
+  return ret;
 }
 
 static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
@@ -201,7 +207,10 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
     goto cleanup;
   }
 
-  matrix_gen_LUP(L, U, P, dim);
+  ret = matrix_gen_LUP(L, U, P, dim);
+  if (ret < 0) {
+    goto cleanup;
+  }
 
   matrix_inverse_triangular(Linv, L, true, dim);
   matrix_inverse_triangular(Uinv, U, false, dim);
