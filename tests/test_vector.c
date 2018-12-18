@@ -51,7 +51,7 @@ START_TEST(test_matrix_multiplication) {
 
   matrix_multiply(mul, mat1, mat2, 8);
 
-  ck_assert_uint_eq(memcmp(mul, expected_mul, 8), 0);
+  ck_assert_int_eq(memcmp(mul, expected_mul, 8), 0);
 }
 END_TEST
 
@@ -64,8 +64,8 @@ START_TEST(test_matrix_transpose) {
   matrix_transpose(transpose, mat, 8);
   matrix_transpose(mat, mat, 8);
 
-  ck_assert_uint_eq(memcmp(transpose, expected_transpose, 8), 0);
-  ck_assert_uint_eq(memcmp(transpose, mat, 8), 0);
+  ck_assert_int_eq(memcmp(transpose, expected_transpose, 8), 0);
+  ck_assert_int_eq(memcmp(transpose, mat, 8), 0);
 }
 END_TEST
 
@@ -76,13 +76,13 @@ START_TEST(test_matrix_gen_nonsing) {
   uint8_t mul2[8];
   uint8_t expected_mul[8] = { 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
 
-  ck_assert_uint_eq(matrix_gen_nonsing(mat, inv, 8), 0);
+  ck_assert_int_eq(matrix_gen_nonsing(mat, inv, 8), 0);
 
   matrix_multiply(mul1, inv, mat, 8);
   matrix_multiply(mul2, mat, inv, 8);
 
-  ck_assert_uint_eq(memcmp(mul1, expected_mul, 8), 0);
-  ck_assert_uint_eq(memcmp(mul2, expected_mul, 8), 0);
+  ck_assert_int_eq(memcmp(mul1, expected_mul, 8), 0);
+  ck_assert_int_eq(memcmp(mul2, expected_mul, 8), 0);
 }
 END_TEST
 
