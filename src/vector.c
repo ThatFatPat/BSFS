@@ -196,9 +196,11 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
   matrix_t Uinv = matrix_create(dim);
   matrix_t Pinv = matrix_create(dim);
 
-  if (L == NULL || U == NULL || P == NULL || Linv == NULL || Uinv == NULL ||
-      Pinv == NULL) {
-    return -ENOMEM;
+  int ret = 0;
+
+  if (!L || !U || !P || !Linv || !Uinv || !Pinv) {
+    ret = -ENOMEM;
+    goto cleanup;
   }
 
   matrix_gen_LUP(L, U, P, dim);
@@ -207,10 +209,22 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
   matrix_inverse_triangular(Uinv, U, false, dim);
   matrix_transpose(Pinv, P, dim);
 
-  if (matrix_multiply3(mat, L, U, P, dim) != 0 ||
-      matrix_multiply3(inv, Pinv, Uinv, Linv, dim) != 0) {
-    return -1;
+  ret = matrix_multiply3(mat, L, U, P, dim);
+  if (ret < 0) {
+    goto cleanup;
   }
 
-  return 0;
+  ret = matrix_multiply3(inv, Pinv, Uinv, Linv, dim);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+cleanup:
+  free(L);
+  free(U);
+  free(P);
+  free(Linv);
+  free(Uinv);
+  free(Pinv);
+  return ret;
 }
