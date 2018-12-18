@@ -1,6 +1,7 @@
 #include "bit_util.h"
 
 #include <arpa/inet.h>
+#include <limits.h>
 #include <string.h>
 
 uint32_t read_big_endian(const void* buf) {
@@ -34,4 +35,8 @@ void set_bit(void* buf, size_t bit, bool val) {
   } else {
     *byte &= ~((uint8_t) 1 << bit_rem_from_bit(bit));
   }
+}
+
+size_t round_to_bytes(size_t bits) {
+  return (bits + CHAR_BIT - 1) / CHAR_BIT;
 }
