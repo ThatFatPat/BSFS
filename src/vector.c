@@ -52,10 +52,6 @@ void vector_linear_combination(vector_t linear_combination,
 
 // Matrix implementation
 
-static size_t round_to_bytes(size_t bits) {
-  return (bits + CHAR_BIT - 1) / CHAR_BIT;
-}
-
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
   return get_bit(mat, row * dim + col);
 }
