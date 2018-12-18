@@ -105,13 +105,12 @@ static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
   }
 }
 
-static size_t matrix_permutation_index_by_bmp(void* bmp, size_t index,
-                                              size_t size) {
+static size_t nth_free_space(void* bmp, size_t n, size_t size) {
   size_t count = 0;
-  for (size_t idx = 0; idx < size; idx++) {
-    if (!get_bit(bmp, idx)) {
-      if (index == count) {
-        return idx;
+  for (size_t i = 0; i < size; i++) {
+    if (!get_bit(bmp, i)) {
+      if (n == count) {
+        return i;
       }
       count++;
     }
@@ -136,7 +135,7 @@ static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
         matrix_set(U, j, i, rand_bit(), dim);
       }
     }
-    size_t pIdx = matrix_permutation_index_by_bmp(bmp, rand() % (dim - i), dim);
+    size_t pIdx = nth_free_space(bmp, rand() % (dim - i), dim);
 
     set_bit(bmp, pIdx, 1);
     matrix_set(P, i, pIdx, 1, dim);
