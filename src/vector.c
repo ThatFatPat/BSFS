@@ -54,24 +54,9 @@ void vector_linear_combination(vector_t linear_combination,
 
 // Matrix implementation
 
-static matrix_t matrix_create(size_t dim);
-
-static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim);
-static void matrix_set(matrix_t mat, size_t i, size_t j, bool value,
-                       size_t dim);
-
-static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
-                            const_matrix_t b, const_matrix_t c, size_t dim);
-static void matrix_add_row(matrix_t mat, size_t row, size_t col, size_t dim);
-
-static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim);
-static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
-                                      bool side, size_t dim);
-
-static size_t matrix_permutation_index_by_bmp(bool bmp[], size_t index,
-                                              size_t size);
-
-static bool rand_bit();
+static bool rand_bit() {
+  return random() % 2;
+}
 
 static matrix_t matrix_create(size_t dim) {
   return calloc(1, (dim * dim + CHAR_BIT - 1) / CHAR_BIT);
@@ -80,9 +65,101 @@ static matrix_t matrix_create(size_t dim) {
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
   return get_bit(mat, row * dim + col);
 }
+
 static void matrix_set(matrix_t mat, size_t row, size_t col, bool val,
                        size_t dim) {
   set_bit(mat, row * dim + col, val);
+}
+
+static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
+  for (size_t i = 0; i < dim; i++) {
+    bool to_val = matrix_get(mat, to, i, dim);
+    bool from_val = matrix_get(mat, from, i, dim);
+    matrix_set(mat, to, i, to_val ^ from_val, dim);
+  }
+}
+
+static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
+                                      bool side, size_t dim) {
+  for (size_t i = 0; i < dim; i++) {
+    for (size_t j = 0; j < dim; j++) {
+      if (i == j) {
+        matrix_set(dest, i, j, 1, dim);
+      } else {
+        matrix_set(dest, i, j, 0, dim);
+      }
+    }
+  }
+
+  for (size_t i = 0; i < dim; i++) {
+    for (size_t j = 0; j < i; j++) {
+      if (side == Lower) {
+        if (matrix_get(triangular, i, j, dim) == 1) {
+          matrix_add_row(dest, i, j, dim);
+        }
+      } else {
+        if (matrix_get(triangular, dim - i - 1, dim - j - 1, dim) == 1) {
+          matrix_add_row(dest, dim - i - 1, dim - j - 1, dim);
+        }
+      }
+    }
+  }
+}
+
+static size_t matrix_permutation_index_by_bmp(bool bmp[], size_t index,
+                                              size_t size) {
+  size_t count = 0;
+  for (size_t idx = 0; idx < size; idx++) {
+    if (bmp[idx] == 0) {
+      if (index == count) {
+        return idx;
+      }
+      count++;
+    }
+  }
+  return -1;
+}
+
+static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
+
+  srand(time(NULL));
+
+  bool bmp[dim];
+
+  for (size_t i = 0; i < dim; i++) {
+    bmp[i] = 0;
+  }
+
+  for (size_t i = 0; i < dim; i++) {
+    for (size_t j = 0; j <= i; j++) {
+      if (i == j) {
+        matrix_set(L, i, j, 1, dim);
+        matrix_set(U, i, j, 1, dim);
+      } else {
+        matrix_set(L, i, j, rand_bit(), dim);
+        matrix_set(U, j, i, rand_bit(), dim);
+      }
+    }
+    size_t pIdx = matrix_permutation_index_by_bmp(bmp, rand() % (dim - i), dim);
+
+    bmp[pIdx] = 1;
+    matrix_set(P, i, pIdx, 1, dim);
+  }
+}
+
+static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
+                            const_matrix_t b, const_matrix_t c, size_t dim) {
+  matrix_t mid = matrix_create(dim);
+
+  if (mid == NULL) {
+    return -1;
+  }
+
+  matrix_multiply(mid, a, b, dim);
+  matrix_multiply(dest, mid, c, dim);
+
+  free(mid);
+  return 0;
 }
 
 void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
@@ -137,99 +214,4 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
   }
 
   return 0;
-}
-
-static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
-                            const_matrix_t b, const_matrix_t c, size_t dim) {
-  matrix_t mid = matrix_create(dim);
-
-  if (mid == NULL) {
-    return -1;
-  }
-
-  matrix_multiply(mid, a, b, dim);
-  matrix_multiply(dest, mid, c, dim);
-
-  free(mid);
-  return 0;
-}
-
-static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
-                                      bool side, size_t dim) {
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j < dim; j++) {
-      if (i == j) {
-        matrix_set(dest, i, j, 1, dim);
-      } else {
-        matrix_set(dest, i, j, 0, dim);
-      }
-    }
-  }
-
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j < i; j++) {
-      if (side == Lower) {
-        if (matrix_get(triangular, i, j, dim) == 1) {
-          matrix_add_row(dest, i, j, dim);
-        }
-      } else {
-        if (matrix_get(triangular, dim - i - 1, dim - j - 1, dim) == 1) {
-          matrix_add_row(dest, dim - i - 1, dim - j - 1, dim);
-        }
-      }
-    }
-  }
-}
-
-static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
-  for (size_t i = 0; i < dim; i++) {
-    bool to_val = matrix_get(mat, to, i, dim);
-    bool from_val = matrix_get(mat, from, i, dim);
-    matrix_set(mat, to, i, to_val ^ from_val, dim);
-  }
-}
-
-static void matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
-
-  srand(time(NULL));
-
-  bool bmp[dim];
-
-  for (size_t i = 0; i < dim; i++) {
-    bmp[i] = 0;
-  }
-
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j <= i; j++) {
-      if (i == j) {
-        matrix_set(L, i, j, 1, dim);
-        matrix_set(U, i, j, 1, dim);
-      } else {
-        matrix_set(L, i, j, rand_bit(), dim);
-        matrix_set(U, j, i, rand_bit(), dim);
-      }
-    }
-    size_t pIdx = matrix_permutation_index_by_bmp(bmp, rand() % (dim - i), dim);
-
-    bmp[pIdx] = 1;
-    matrix_set(P, i, pIdx, 1, dim);
-  }
-}
-
-static size_t matrix_permutation_index_by_bmp(bool bmp[], size_t index,
-                                              size_t size) {
-  size_t count = 0;
-  for (size_t idx = 0; idx < size; idx++) {
-    if (bmp[idx] == 0) {
-      if (index == count) {
-        return idx;
-      }
-      count++;
-    }
-  }
-  return -1;
-}
-
-static bool rand_bit() {
-  return random() % 2;
 }
