@@ -122,6 +122,7 @@ static int rand_bit(bool* bit) {
     return -EIO;
   }
   *bit = byte & 1;
+  return 0;
 }
 
 // Generate an unbiased random integer in [0, n)
