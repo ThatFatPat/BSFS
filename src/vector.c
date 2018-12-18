@@ -150,8 +150,8 @@ static int matrix_multiply3(matrix_t restrict dest, const_matrix_t a,
                             const_matrix_t b, const_matrix_t c, size_t dim) {
   matrix_t mid = matrix_create(dim);
 
-  if (mid == NULL) {
-    return -1;
+  if (!mid) {
+    return -ENOMEM;
   }
 
   matrix_multiply(mid, a, b, dim);
@@ -198,7 +198,7 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
 
   if (L == NULL || U == NULL || P == NULL || Linv == NULL || Uinv == NULL ||
       Pinv == NULL) {
-    return -1;
+    return -ENOMEM;
   }
 
   matrix_gen_LUP(L, U, P, dim);
