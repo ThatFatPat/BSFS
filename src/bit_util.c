@@ -16,11 +16,11 @@ void write_big_endian(void* buf, uint32_t host_endian) {
 }
 
 static size_t byte_from_bit(size_t bit) {
-  return bit / 8;
+  return bit / CHAR_BIT;
 }
 
 static size_t bit_rem_from_bit(size_t bit) {
-  return 7 - bit % 8;
+  return CHAR_BIT - 1 - bit % CHAR_BIT;
 }
 
 bool get_bit(const void* buf, size_t bit) {
