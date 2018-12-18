@@ -8,9 +8,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define Lower false
-#define Upper true
-
 // Vector implementation
 
 static bool parity(uint8_t a) {
@@ -80,25 +77,23 @@ static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
 }
 
 static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
-                                      bool side, size_t dim) {
+                                      bool lower_triangular, size_t dim) {
+  // initialize to identity
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j < dim; j++) {
-      if (i == j) {
-        matrix_set(dest, i, j, 1, dim);
-      } else {
-        matrix_set(dest, i, j, 0, dim);
-      }
+      matrix_set(dest, i, j, i == j, dim);
     }
   }
 
+  // perform row operations
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j < i; j++) {
-      if (side == Lower) {
-        if (matrix_get(triangular, i, j, dim) == 1) {
+      if (lower_triangular) {
+        if (matrix_get(triangular, i, j, dim)) {
           matrix_add_row(dest, i, j, dim);
         }
       } else {
-        if (matrix_get(triangular, dim - i - 1, dim - j - 1, dim) == 1) {
+        if (matrix_get(triangular, dim - i - 1, dim - j - 1, dim)) {
           matrix_add_row(dest, dim - i - 1, dim - j - 1, dim);
         }
       }
@@ -204,8 +199,8 @@ int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
 
   matrix_gen_LUP(L, U, P, dim);
 
-  matrix_inverse_triangular(Linv, L, Lower, dim);
-  matrix_inverse_triangular(Uinv, U, Upper, dim);
+  matrix_inverse_triangular(Linv, L, true, dim);
+  matrix_inverse_triangular(Uinv, U, false, dim);
   matrix_transpose(Pinv, P, dim);
 
   if (matrix_multiply3(mat, L, U, P, dim) != 0 ||
