@@ -55,8 +55,12 @@ static bool rand_bit() {
   return random() % 2;
 }
 
+static size_t round_to_bytes(size_t bits) {
+  return (bits + CHAR_BIT - 1) / CHAR_BIT;
+}
+
 static matrix_t matrix_create(size_t dim) {
-  return calloc(1, (dim * dim + CHAR_BIT - 1) / CHAR_BIT);
+  return calloc(1, round_to_bytes(dim * dim));
 }
 
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
