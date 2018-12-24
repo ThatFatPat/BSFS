@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_USER_LEVEL_COUNT)
+#define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_LEVELS_PER_PASSWORD)
 
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
