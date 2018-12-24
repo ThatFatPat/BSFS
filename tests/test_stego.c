@@ -99,16 +99,14 @@ START_TEST(test_read_write_level_roundtrip) {
   bs_disk_t disk = create_tmp_disk(0x200000); // 2MiB
 
   ck_assert_int_eq(stego_write_level(keys, disk, data1, 0, sizeof(data1)), 0);
-  ck_assert_int_eq(
-      stego_write_level(keys + STEGO_KEY_SIZE, disk, data2, 0, sizeof(data2)),
-      0);
+  ck_assert_int_eq(stego_write_level(keys + 1, disk, data2, 0, sizeof(data2)),
+                   0);
 
   ck_assert_int_eq(stego_read_level(keys, disk, read1, 0, sizeof(read1)), 0);
   ck_assert_int_eq(memcmp(read1, data1, sizeof(data1)), 0);
 
-  ck_assert_int_eq(
-      stego_read_level(keys + STEGO_KEY_SIZE, disk, read2, 0, sizeof(read2)),
-      0);
+  ck_assert_int_eq(stego_read_level(keys + 1, disk, read2, 0, sizeof(read2)),
+                   0);
   ck_assert_int_eq(memcmp(read2, data2, sizeof(data2)), 0);
 
   disk_free(disk);
