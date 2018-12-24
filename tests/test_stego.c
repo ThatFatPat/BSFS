@@ -46,6 +46,13 @@ START_TEST(test_gen_keys) {
 }
 END_TEST
 
+START_TEST(test_gen_keys_too_many) {
+  stego_key_t keys[STEGO_USER_LEVEL_COUNT + 1];
+  ck_assert_int_eq(stego_gen_user_keys(keys, STEGO_USER_LEVEL_COUNT + 1),
+                   -EINVAL);
+}
+END_TEST
+
 START_TEST(test_compute_level_size) {
   for (size_t disk_size = 0x2000; disk_size <= 0x200000; disk_size += 0x8000) {
     size_t level_size = stego_compute_user_level_size(disk_size);
@@ -75,6 +82,7 @@ Suite* stego_suite(void) {
 
   TCase* gen_keys_tcase = tcase_create("gen_keys");
   tcase_add_test(gen_keys_tcase, test_gen_keys);
+  tcase_add_test(gen_keys_tcase, test_gen_keys_too_many);
   suite_add_tcase(suite, gen_keys_tcase);
 
   TCase* level_size_tcase = tcase_create("level_size");
