@@ -143,9 +143,9 @@ Write `size` bytes out of encrypted file specified by `key`, beginning at offset
 
 ### stego_gen_user_keys
 ```c
-int stego_gen_user_keys(stego_key_t* keys);
+int stego_gen_user_keys(stego_key_t* keys, size_t count);
 ```
-Generate `STEGO_USER_LEVEL_COUNT` user keys, placing the result in `keys`.
+Generate `count` user keys, placing the result in `keys`.
 
 
 ## AES:
