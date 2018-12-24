@@ -30,11 +30,7 @@ bool get_bit(const void* buf, size_t bit) {
 
 void set_bit(void* buf, size_t bit, bool val) {
   uint8_t* byte = (uint8_t*) buf + byte_from_bit(bit);
-  if (val) {
-    *byte |= (uint8_t) 1 << bit_rem_from_bit(bit);
-  } else {
-    *byte &= ~((uint8_t) 1 << bit_rem_from_bit(bit));
-  }
+  *byte ^= (-(uint8_t) val ^ *byte) & (1 << bit_rem_from_bit(bit));
 }
 
 size_t round_to_bytes(size_t bits) {
