@@ -1,7 +1,6 @@
 #include "bft.h"
 
 #include "bit_util.h"
-#include "stego.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,10 +173,10 @@ int bft_find_table_entry(const void* bft, const char* filename,
   return 0;
 }
 
-int bft_read_table(const void* key, bs_disk_t disk, void* bft) {
+int bft_read_table(const stego_key_t* key, bs_disk_t disk, void* bft) {
   return stego_read_level(key, disk, bft, 0, BFT_SIZE);
 }
 
-int bft_write_table(const void* key, bs_disk_t disk, void* bft) {
+int bft_write_table(const stego_key_t* key, bs_disk_t disk, void* bft) {
   return stego_write_level(key, disk, bft, 0, BFT_SIZE);
 }
