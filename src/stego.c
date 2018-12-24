@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_USER_LEVEL_COUNT)
+
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
 }
@@ -22,6 +24,37 @@ static size_t compute_level_size(size_t disk_size) {
 size_t stego_compute_user_level_size(size_t disk_size) {
   return STEGO_LEVELS_PER_PASSWORD * compute_level_size(disk_size);
 }
+
+int stego_gen_user_keys(stego_key_t* keys, size_t count) {
+  if (count > STEGO_USER_LEVEL_COUNT) {
+    return -EINVAL;
+  }
+
+  uint8_t read_keys[round_to_bytes(STEGO_COVER_FILE_COUNT *
+                                   STEGO_COVER_FILE_COUNT)];
+  uint8_t write_keys[sizeof(read_keys)];
+
+  int ret = matrix_gen_nonsing(read_keys, write_keys, STEGO_COVER_FILE_COUNT);
+  if (ret < 0) {
+    return ret;
+  }
+
+  matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
+
+  for (size_t i = 0; i < count; i++) {
+    if (!RAND_bytes(keys[i].aes_key, STEGO_AES_KEY_SIZE)) {
+      return -EIO;
+    }
+    memcpy(keys[i].read_keys, read_keys + i * STEGO_USER_KEY_SIZE,
+           STEGO_USER_KEY_SIZE);
+    memcpy(keys[i].write_keys, write_keys + i * STEGO_USER_KEY_SIZE,
+           STEGO_USER_KEY_SIZE);
+  }
+
+  return 0;
+}
+
+/// READ/WRITE IMPLEMENTATION
 
 static off_t cover_offset(size_t level_size, size_t i, off_t off) {
   return KEYTAB_SIZE + i * level_size + off;

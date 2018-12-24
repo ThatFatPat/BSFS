@@ -22,6 +22,8 @@ typedef struct {
 
 size_t stego_compute_user_level_size(size_t disk_size);
 
+int stego_gen_user_keys(stego_key_t* keys, size_t count);
+
 int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
                      off_t off, size_t size);
 int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
