@@ -27,7 +27,7 @@ size_t fs_count_clusters(size_t level_size) {
 }
 
 size_t fs_compute_bitmap_size(size_t clusters) {
-  return 16 * (((clusters + CHAR_BIT - 1) / CHAR_BIT + 15) / 16);
+  return 16 * ((round_to_bytes(clusters) + 15) / 16);
 }
 
 int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,

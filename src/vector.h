@@ -11,10 +11,6 @@ typedef const uint8_t* const_vector_t;
 typedef vector_t matrix_t;
 typedef const_vector_t const_matrix_t;
 
-// having the side of a triangular matrix conveniently
-#define Lower false
-#define Upper true
-
 // Vector API
 
 bool vector_scalar_product(const_vector_t a, const_vector_t b, size_t size);
@@ -28,7 +24,8 @@ void vector_linear_combination(vector_t linear_combination,
 
 // Matrix API
 
-void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b, size_t dim);
+void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
+                     size_t dim);
 
 void matrix_transpose(matrix_t dest, const_matrix_t matrix, size_t dim);
 
