@@ -28,13 +28,9 @@ static void validate_keys(const stego_key_t* keys, size_t count) {
 
           // A read key and a write key should have an inner product of 1 iff
           // they correspond to one another.
-          // ck_assert_int_eq(
-          //     vector_scalar_product(read_key, write_key, STEGO_KEY_SIZE),
-          //     i1 == i2 && j1 == j2);
-          if (vector_scalar_product(read_key, write_key, STEGO_KEY_SIZE) !=
-              (i1 == i2 && j1 == j2)) {
-            ck_assert(false);
-          }
+          ck_assert_int_eq(
+              vector_scalar_product(read_key, write_key, STEGO_KEY_SIZE),
+              i1 == i2 && j1 == j2);
         }
       }
     }
