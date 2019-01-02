@@ -134,7 +134,7 @@ static void write_merged_cover_file_delta(const stego_key_t* key, void* disk,
 
 static bool check_parameters(size_t user_level_size, off_t off,
                              size_t buf_size) {
-  return (size_t) off < user_level_size && off + buf_size < user_level_size &&
+  return (size_t) off < user_level_size && buf_size < user_level_size - off &&
          buf_size % 16 == 0 && off % 16 == 0;
 }
 
