@@ -181,6 +181,9 @@ int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
   }
 
   void* encrypted = malloc(size);
+  if (!encrypted) {
+    return -ENOMEM;
+  }
   void* disk_data;
 
   int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, buf, encrypted, size);
