@@ -88,18 +88,19 @@ static bs_disk_t create_tmp_disk(size_t size) {
 
 START_TEST(test_read_write_level_roundtrip) {
   const int level_size = 8;
-  
+
   const char data1[48] = "The quick brown fox jumps over the lazy dog";
   const char data2[sizeof(data1)] = "0123456789012345678901234567890123456789";
-  
+
   char read1[sizeof(data1)] = { 0 };
   char read2[sizeof(data2)] = { 0 };
-  
+
   stego_key_t keys[2];
   ck_assert_int_eq(stego_gen_user_keys(keys, 2), 0);
-  
-  bs_disk_t disk = create_tmp_disk(KEYTAB_SIZE + STEGO_COVER_FILE_COUNT * level_size);
-  
+
+  bs_disk_t disk =
+      create_tmp_disk(KEYTAB_SIZE + STEGO_COVER_FILE_COUNT * level_size);
+
   ck_assert_int_eq(stego_write_level(keys, disk, data1, 0, sizeof(data1)), 0);
   ck_assert_int_eq(stego_write_level(keys + 1, disk, data2, 0, sizeof(data2)),
                    0);
