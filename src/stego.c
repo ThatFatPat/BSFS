@@ -174,9 +174,11 @@ cleanup_data:
 
 int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
-  size_t level_size = compute_level_size(disk_get_size(disk));
+  size_t disk_size = disk_get_size(disk);
+  size_t user_level_size = stego_compute_user_level_size(disk_size);
+  size_t level_size = compute_level_size(disk_size);
 
-  if (!check_parameters(level_size, off, size)) {
+  if (!check_parameters(user_level_size, off, size)) {
     return -EINVAL;
   }
 
