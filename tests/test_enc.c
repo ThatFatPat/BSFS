@@ -15,19 +15,20 @@ START_TEST(test_basic_roundtrip) {
   char cipher[sizeof(plain)];
   char decrypted[sizeof(plain)];
 
-  int status = aes_encrypt(password, strlen(password), salt, sizeof(salt),
-                           plain, cipher, sizeof(plain));
-  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(aes_encrypt(password, strlen(password), salt, sizeof(salt),
+                               plain, cipher, sizeof(plain)),
+                   0);
 
-  status = aes_decrypt(password, strlen(password), salt, sizeof(salt), cipher,
-                       decrypted, sizeof(cipher));
-  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(aes_decrypt(password, strlen(password), salt, sizeof(salt),
+                               cipher, decrypted, sizeof(cipher)),
+                   0);
 
   ck_assert_str_eq(plain, (char*) decrypted);
 
-  status = aes_decrypt(password, strlen(password), bad_salt, sizeof(bad_salt),
-                       cipher, decrypted, sizeof(cipher));
-  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(aes_decrypt(password, strlen(password), bad_salt,
+                               sizeof(bad_salt), cipher, decrypted,
+                               sizeof(cipher)),
+                   0);
 
   ck_assert_int_ne(memcmp(decrypted, plain, sizeof(plain)), 0);
 }
