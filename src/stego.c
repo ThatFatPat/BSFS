@@ -165,7 +165,7 @@ int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
 
   disk_unlock_read(disk);
 
-  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, data, buf, size);
+  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, data, buf, size);
 
 cleanup_data:
   free(data);
@@ -188,7 +188,8 @@ int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
   }
   void* disk_data;
 
-  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, buf, encrypted, size);
+  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, buf,
+                        encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }

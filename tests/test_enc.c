@@ -12,11 +12,11 @@ START_TEST(test_basic_roundtrip) {
   char cipher[sizeof(plain)];
   char decrypted[sizeof(plain)];
 
-  int status =
-      aes_encrypt(password, strlen(password), plain, cipher, sizeof(plain));
+  int status = aes_encrypt(password, strlen(password), NULL, 0, plain, cipher,
+                           sizeof(plain));
   ck_assert_int_eq(status, 0);
 
-  status = aes_decrypt(password, strlen(password), cipher, decrypted,
+  status = aes_decrypt(password, strlen(password), NULL, 0, cipher, decrypted,
                        sizeof(cipher));
   ck_assert_int_eq(status, 0);
 
@@ -30,9 +30,9 @@ START_TEST(test_basic_wrong_size) {
 
   char cipher[sizeof(plain)];
 
-  ck_assert_int_eq(
-      aes_encrypt(password, strlen(password), plain, cipher, sizeof(plain)),
-      -EINVAL);
+  ck_assert_int_eq(aes_encrypt(password, strlen(password), NULL, 0, plain,
+                               cipher, sizeof(plain)),
+                   -EINVAL);
 }
 END_TEST
 
