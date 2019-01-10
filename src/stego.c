@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_LEVELS_PER_PASSWORD)
+#define STEGO_SALT_SIZE (2 * sizeof(uint64_t))
 
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
@@ -138,6 +139,11 @@ static bool check_parameters(size_t user_level_size, off_t off,
          buf_size % 16 == 0 && off % 16 == 0;
 }
 
+static void get_salt(uint8_t* buf, uint64_t off, uint64_t size) {
+  memcpy(buf, &off, sizeof(uint64_t));
+  memcpy(buf + sizeof(uint64_t), &size, sizeof(uint64_t));
+}
+
 int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
                      off_t off, size_t size) {
   size_t disk_size = disk_get_size(disk);
@@ -165,7 +171,10 @@ int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
 
   disk_unlock_read(disk);
 
-  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, data, buf, size);
+  uint8_t salt[STEGO_SALT_SIZE];
+  get_salt(salt, off, size);
+  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, salt, STEGO_SALT_SIZE,
+                    data, buf, size);
 
 cleanup_data:
   free(data);
@@ -188,8 +197,10 @@ int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
   }
   void* disk_data;
 
-  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, buf,
-                        encrypted, size);
+  uint8_t salt[STEGO_SALT_SIZE];
+  get_salt(salt, off, size);
+  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, salt, STEGO_SALT_SIZE,
+                        buf, encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }
