@@ -8,4 +8,7 @@ RUN wget https://github.com/libfuse/libfuse/releases/download/fuse-3.2.6/fuse-3.
 RUN tar xf fuse-3.2.6.tar.xz
 RUN cd ./fuse-3.2.6 && meson build && cd build && ninja && ninja install && ldconfig
 
-RUN git clone https://github.com/ThatFatPat/BSFS /root/BSFS
+COPY . /bsfs
+WORKDIR /bsfs
+
+CMD [ "/bin/bash", "-c", "mkdir build && cd build && CC=clang cmake -G Ninja .. && cmake --build . && ctest -V" ]
