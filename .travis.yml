@@ -8,7 +8,4 @@ compiler: clang
 before_install:
   - docker build -t bsfs .
 script:
-  - docker run
-branches:
-  only:
-    - /.*/
+  - docker run bsfs
