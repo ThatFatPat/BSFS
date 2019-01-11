@@ -152,9 +152,10 @@ Generate `count` user keys, placing the result in `keys`.
 ### aes_encrypt:
 ```c
 int aes_encrypt(const void* password, size_t password_size
-  const void* plain, void* enc, size_t size);
+  const void* salt, size_t salt_size, const void* plain, void* enc, size_t size);
 ```
-Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`.<br>
+Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`
+and `salt`.<br>
 Places the encrypted result in `enc`.
 
 **Note**: This function will fail if `size` is not a multiple of 16.
@@ -162,9 +163,10 @@ Places the encrypted result in `enc`.
 ### aes_decrypt:
 ```c
 int aes_decrypt(const void* password, size_t password_size,
-  const void* enc, void* plain, size_t size);
+  const void* salt, size_t salt_size, const void* enc, void* plain, size_t size);
 ```
-Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
+Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`
+and `salt`.<br>
 Places the decrypted result in `plain`.
 
 **Note**: This function will fail if `size` is not a multiple of 16.
