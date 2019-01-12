@@ -61,15 +61,15 @@ fail:
   return ret;
 }
 
-int aes_encrypt(const void* password, size_t password_size, const void* plain,
-                void* enc, size_t size) {
+int aes_encrypt(const void* password, size_t password_size, const void* salt,
+                size_t salt_size, const void* plain, void* enc, size_t size) {
   if (size % AES_BLOCK_SIZE != 0) {
     return -EINVAL;
   }
 
   EVP_CIPHER_CTX* e_ctx;
-  int ret = init_cipher_ctx(EVP_aes_128_cbc(), password, password_size, NULL, 0,
-                            EVP_EncryptInit_ex, &e_ctx);
+  int ret = init_cipher_ctx(EVP_aes_128_cbc(), password, password_size, salt,
+                            salt_size, EVP_EncryptInit_ex, &e_ctx);
   if (ret < 0) {
     return ret;
   }
@@ -98,15 +98,15 @@ cleanup:
   return ret;
 }
 
-int aes_decrypt(const void* password, size_t password_size, const void* enc,
-                void* plain, size_t size) {
+int aes_decrypt(const void* password, size_t password_size, const void* salt,
+                size_t salt_size, const void* enc, void* plain, size_t size) {
   if (size % AES_BLOCK_SIZE != 0) {
     return -EINVAL;
   }
 
   EVP_CIPHER_CTX* d_ctx;
-  int ret = init_cipher_ctx(EVP_aes_128_cbc(), password, password_size, NULL, 0,
-                            EVP_DecryptInit_ex, &d_ctx);
+  int ret = init_cipher_ctx(EVP_aes_128_cbc(), password, password_size, salt,
+                            salt_size, EVP_DecryptInit_ex, &d_ctx);
   if (ret < 0) {
     return ret;
   }

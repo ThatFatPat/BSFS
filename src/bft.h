@@ -3,6 +3,7 @@
 
 #include "cluster.h"
 #include "disk.h"
+#include "stego.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -42,7 +43,7 @@ int bft_iter_table_entries(const void* bft, bft_entry_iter_t iter, void* ctx);
 int bft_find_table_entry(const void* bft, const char* filename,
                          bft_offset_t* off);
 
-int bft_read_table(const void* key, bs_disk_t disk, void* bft);
-int bft_write_table(const void* key, bs_disk_t disk, void* bft);
+int bft_read_table(const stego_key_t* key, bs_disk_t disk, void* bft);
+int bft_write_table(const stego_key_t* key, bs_disk_t disk, void* bft);
 
 #endif // BS_BFT_H

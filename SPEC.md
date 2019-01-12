@@ -71,25 +71,59 @@ considered invalid.
 ## Stego:
 ### Amount of Cover Files:
 ```c
-#define COVER_FILE_COUNT 128
+#define STEGO_COVER_FILE_COUNT 128
 ```
 Number of cover files present on the system; also the number of bits in a key.
+
+### Levels per Password
+```c
+#define STEGO_LEVELS_PER_PASSWORD 8
+```
+The number of internal stego levels per user password.
+
+### Number of User Levels
+```c
+#define STEGO_USER_LEVEL_COUNT (STEGO_COVER_FILE_COUNT / STEGO_LEVELS_PER_PASSWORD)
+```
+Number of user levels per disk.
 
 ### Key Size:
 ```c
 #define STEGO_KEY_SIZE (COVER_FILE_COUNT/CHAR_BIT)
 ```
-The size of a key, in bytes.
+The size of a level key, in bytes.
 
-### compute_level_size:
+### AES Key Size
 ```c
-size_t compute_level_size(size_t disk_size);
+#define STEGO_AES_KEY_SIZE 16
 ```
-Calculate the size of a single level given the size of the disk.
+The size of a stego AES key.
+
+### Stego Key
+```c
+typedef struct {
+  uint8_t aes_key[STEGO_AES_KEY_SIZE];
+  uint8_t read_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+  uint8_t write_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+} stego_key_t;
+```
+Represents a user level key.
+
+#### Structure on Disk
+
+1. `aes_key`
+1. `read_keys`
+1. `write_keys`
+
+### stego_compute_user_level_size:
+```c
+size_t stego_compute_user_level_size(size_t disk_size);
+```
+Calculate the size of a user level given the size of the disk.
 
 ### stego_read_level:
 ```c
-int stego_read_level(const void* key, bs_disk_t disk,
+int stego_read_level(const stego_key_t* key, bs_disk_t disk,
   void* buf, off_t off, size_t size);
 ```
 Read `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
@@ -100,30 +134,28 @@ Read `size` bytes out of encrypted file specified by `key`, beginning at offset 
 
 ### stego_write_level:
 ```c
-int stego_write_level(const void* key, bs_disk_t disk,
+int stego_write_level(const stego_key_t* key, bs_disk_t disk,
   const void* buf, off_t off, size_t size);
 ```
 Write `size` bytes out of encrypted file specified by `key`, beginning at offset `off`.
 
 **Note:** Since the AES encryption is done cluster-wise, we have to make sure to write in clusters while using this function.
 
-
-### stego_gen_keys:
+### stego_gen_user_keys
 ```c
-int stego_gen_keys(void* buf, size_t count);
+int stego_gen_user_keys(stego_key_t* keys, size_t count);
 ```
-Generate the orthonormal extraction keys.
-
-**Note**: This function is used only on initialization.
+Generate `count` user keys, placing the result in `keys`.
 
 
 ## AES:
 ### aes_encrypt:
 ```c
 int aes_encrypt(const void* password, size_t password_size
-  const void* plain, void* enc, size_t size);
+  const void* salt, size_t salt_size, const void* plain, void* enc, size_t size);
 ```
-Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`.<br>
+Encrypt `size` bytes of `plain` with 128-bit AES encryption using a key derived from `password`
+and `salt`.<br>
 Places the encrypted result in `enc`.
 
 **Note**: This function will fail if `size` is not a multiple of 16.
@@ -131,9 +163,10 @@ Places the encrypted result in `enc`.
 ### aes_decrypt:
 ```c
 int aes_decrypt(const void* password, size_t password_size,
-  const void* enc, void* plain, size_t size);
+  const void* salt, size_t salt_size, const void* enc, void* plain, size_t size);
 ```
-Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`.<br>
+Decrypt `size` bytes of `enc` with 128-bit AES decryption using a key derived from `password`
+and `salt`.<br>
 Places the decrypted result in `plain`.
 
 **Note**: This function will fail if `size` is not a multiple of 16.
@@ -162,18 +195,19 @@ Authenticated decryption &mdash; decrypt `enc` with `password` and `salt` in a m
 
 ## Key Table:
 
+### Key Table Tag Size
+```c
+#define KEYTAB_TAG_SIZE 16
+```
+The size of a key table authentication tag.
+
 ### Key Table Entry Size:
 ```c
-#define KEYTAB_ENTRY_SIZE 32
+#define KEYTAB_ENTRY_SIZE                                                     \ 
+  (STEGO_AES_KEY_SIZE + STEGO_LEVELS_PER_PASSWORD * STEGO_KEY_SIZE * 2 +          \
+   KEYTAB_TAG_SIZE)
 ```
 The size of a keytab entry in bytes.
-
-### Max Levels:
-```c
-#define MAX_LEVELS 16
-```
-The maximum number of security levels on the system (and hence the maximal size
-of the key table).
 
 ### Key Table Salt Size
 ```c
@@ -183,20 +217,20 @@ The size of the salt used by the key table, stored at the beginning of the disk.
 
 ### Key Table Size
 ```c
-#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * MAX_LEVELS)
+#define KEYTAB_SIZE (KEYTAB_SALT_SIZE + KEYTAB_ENTRY_SIZE * STEGO_USER_LEVEL_COUNT)
 ```
 The total size the keytable takes on disk.
 
 ### keytab_lookup:
 ```c
-int keytab_lookup(bs_disk_t disk, const char* password, void* key);
+int keytab_lookup(bs_disk_t disk, const char* password, stego_key_t* key);
 ```
 Look up `password` in the key table stored at the beginning of disk, and if found,
 return the matching key that was stored there.
 
 ### keytab_store:
 ```c
-int keytab_store(bs_disk_t disk, off_t index, const char* password, const void* key);
+int keytab_store(bs_disk_t disk, off_t index, const char* password, const stego_key_t* key);
 ```
 Store `key`, authenticated and encrypted with `password` at index `index` in the key table.
 
@@ -239,7 +273,7 @@ Determine how many clusters would fit into a level of size `level_size`, taking 
 
 ### fs_read_cluster:
 ```c
-int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
+int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,
   cluster_offset_t cluster);
 ```
 Read the `cluster_index` cluster from the file matching `key` and places its contents in `buf`.
@@ -248,7 +282,7 @@ Read the `cluster_index` cluster from the file matching `key` and places its con
 
 ### fs_write_cluster:
 ```c
-int fs_write_cluster(const void* key, bs_disk_t disk,
+int fs_write_cluster(const stego_key_t* key, bs_disk_t disk,
   const void* buf, cluster_offset_t cluster);
 ```
 Write the contents of `buf` to the cluster specified by `cluster`, in the level specified by `key`.
@@ -265,14 +299,14 @@ Find the index of the next cluster in the cluster chain (file).
 
 ### fs_read_bitmap:
 ```c
-int fs_read_bitmap(const void* key, bs_disk_t disk,
+int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk,
   void* buf, size_t bitmap_size);
 ```
 Read the bitmap of the level matching `key` to `buf`.
 
 ### fs_write_bitmap:
 ```c
-int fs_write_bitmap(const void* key, bs_disk_t disk,
+int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk,
   const void* buf, size_t bitmap_size);
 ```
 Write the contents of `buf` to the bitmap in the level specified by `key`.
@@ -426,7 +460,7 @@ on every iteration and can be used to maintain application-specific data.
 
 ### bft_read_table:
 ```c
-int bft_read_table(const void* key, bs_disk_t disk, void* bft);
+int bft_read_table(const stego_key_t* key, bs_disk_t disk, void* bft);
 ```
 Read the BFT written at the beginning of the level specified by `key` into `bft`.
 
@@ -434,7 +468,7 @@ Read the BFT written at the beginning of the level specified by `key` into `bft`
 
 ### bft_write_table:
 ```c
-int bft_write_table(const void* key, bs_disk_t disk, const void* bft);
+int bft_write_table(const stego_key_t* key, bs_disk_t disk, const void* bft);
 ```
 Write `bft` to the beginning of the level specified by `key`.
 

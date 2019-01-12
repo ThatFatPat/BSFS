@@ -11,4 +11,6 @@ void write_big_endian(void* buf, uint32_t host_endian);
 bool get_bit(const void* buf, size_t bit);
 void set_bit(void* buf, size_t bit, bool val);
 
+size_t round_to_bytes(size_t bits);
+
 #endif // BS_BIT_UTIL_H

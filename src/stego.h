@@ -4,18 +4,29 @@
 #include "disk.h"
 #include "enc.h"
 #include <limits.h>
+#include <stdint.h>
 #include <sys/types.h>
 
-#define COVER_FILE_COUNT 128
-#define STEGO_KEY_SIZE (COVER_FILE_COUNT / CHAR_BIT)
+#define STEGO_COVER_FILE_COUNT 128
+#define STEGO_KEY_SIZE (STEGO_COVER_FILE_COUNT / CHAR_BIT)
+#define STEGO_LEVELS_PER_PASSWORD 8
+#define STEGO_USER_LEVEL_COUNT                                                 \
+  (STEGO_COVER_FILE_COUNT / STEGO_LEVELS_PER_PASSWORD)
+#define STEGO_AES_KEY_SIZE 16
 
-int stego_gen_keys(void* buf, size_t count);
+typedef struct {
+  uint8_t aes_key[STEGO_AES_KEY_SIZE];
+  uint8_t read_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+  uint8_t write_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
+} stego_key_t;
 
-size_t compute_level_size(size_t disk_size);
+size_t stego_compute_user_level_size(size_t disk_size);
 
-int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
-                     size_t size);
-int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
+int stego_gen_user_keys(stego_key_t* keys, size_t count);
+
+int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
+                     off_t off, size_t size);
+int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size);
 
 #endif // BS_STEGO_H
