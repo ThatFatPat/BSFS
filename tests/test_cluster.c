@@ -33,6 +33,38 @@ START_TEST(test_count_clusters) {
 }
 END_TEST
 
+static bs_disk_t create_tmp_disk(void) {
+  int fd = syscall(SYS_memfd_create, "test_cluster.bsf", 0);
+  ck_assert_int_ne(ftruncate(fd, 0x8000000), -1); // 128MiB
+
+  bs_disk_t disk;
+  ck_assert_int_eq(disk_create(fd, &disk), 0);
+  return disk;
+}
+
+START_TEST(test_read_write_cluster_roundtrip) {
+  uint8_t cluster1[CLUSTER_SIZE];
+  uint8_t cluster2[CLUSTER_SIZE];
+  uint8_t read_cluster[CLUSTER_SIZE];
+
+  stego_key_t key;
+  ck_assert_int_eq(stego_gen_user_keys(&key, 1), 0);
+
+  bs_disk_t disk = create_tmp_disk();
+
+  ck_assert_int_eq(fs_write_cluster(&key, disk, cluster1, 0), 0);
+  ck_assert_int_eq(fs_write_cluster(&key, disk, cluster2, 1), 0);
+
+  ck_assert_int_eq(fs_read_cluster(&key, disk, read_cluster, 0), 0);
+  ck_assert_int_eq(memcmp(read_cluster, cluster1, CLUSTER_SIZE), 0);
+
+  ck_assert_int_eq(fs_read_cluster(&key, disk, read_cluster, 1), 0);
+  ck_assert_int_eq(memcmp(read_cluster, cluster2, CLUSTER_SIZE), 0);
+
+  disk_free(disk);
+}
+END_TEST
+
 START_TEST(test_get_set_next_cluster_roundtrip) {
   static uint8_t expected_data[CLUSTER_DATA_SIZE] = { 0 };
 
@@ -40,6 +72,31 @@ START_TEST(test_get_set_next_cluster_roundtrip) {
   fs_set_next_cluster(cluster, 0xdeadbeef);
   ck_assert_int_eq(memcmp(cluster, expected_data, CLUSTER_DATA_SIZE), 0);
   ck_assert_uint_eq(fs_next_cluster(cluster), 0xdeadbeef);
+}
+END_TEST
+
+START_TEST(test_read_write_bitmap_roundtrip) {
+  stego_key_t key;
+  ck_assert_int_eq(stego_gen_user_keys(&key, 1), 0);
+
+  bs_disk_t disk = create_tmp_disk();
+  size_t bitmap_size = fs_compute_bitmap_size(
+      fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk))));
+
+  void* bitmap = malloc(bitmap_size);
+  void* read_bitmap = malloc(bitmap_size);
+
+  memset(bitmap, 0, bitmap_size);
+  strcpy((char*) bitmap, "abcdefghijklmnopqrstuvwxyz");
+
+  ck_assert_int_eq(fs_write_bitmap(&key, disk, bitmap), 0);
+  ck_assert_int_eq(fs_read_bitmap(&key, disk, read_bitmap), 0);
+
+  ck_assert_int_eq(memcmp(read_bitmap, bitmap, bitmap_size), 0);
+
+  free(read_bitmap);
+  free(bitmap);
+  disk_free(disk);
 }
 END_TEST
 
@@ -97,11 +154,16 @@ Suite* cluster_suite(void) {
   tcase_add_test(count_tcase, test_count_clusters);
   suite_add_tcase(suite, count_tcase);
 
+  TCase* read_write_tcase = tcase_create("read_write");
+  tcase_add_test(read_write_tcase, test_read_write_cluster_roundtrip);
+  suite_add_tcase(suite, read_write_tcase);
+
   TCase* next_tcase = tcase_create("next");
   tcase_add_test(next_tcase, test_get_set_next_cluster_roundtrip);
   suite_add_tcase(suite, next_tcase);
 
   TCase* bitmap_tcase = tcase_create("bitmap");
+  tcase_add_test(bitmap_tcase, test_read_write_bitmap_roundtrip);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster);
   tcase_add_test(bitmap_tcase, test_bitmap_alloc_cluster_nospace);
   tcase_add_test(bitmap_tcase, test_bitmap_dealloc_cluster);
