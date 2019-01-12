@@ -47,18 +47,18 @@ START_TEST(test_read_write_cluster_roundtrip) {
   uint8_t cluster2[CLUSTER_SIZE];
   uint8_t read_cluster[CLUSTER_SIZE];
 
-  uint8_t key[STEGO_KEY_SIZE];
-  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+  stego_key_t key;
+  ck_assert_int_eq(stego_gen_user_keys(&key, 1), 0);
 
   bs_disk_t disk = create_tmp_disk();
 
-  ck_assert_int_eq(fs_write_cluster(key, disk, cluster1, 0), 0);
-  ck_assert_int_eq(fs_write_cluster(key, disk, cluster2, 1), 0);
+  ck_assert_int_eq(fs_write_cluster(&key, disk, cluster1, 0), 0);
+  ck_assert_int_eq(fs_write_cluster(&key, disk, cluster2, 1), 0);
 
-  ck_assert_int_eq(fs_read_cluster(key, disk, read_cluster, 0), 0);
+  ck_assert_int_eq(fs_read_cluster(&key, disk, read_cluster, 0), 0);
   ck_assert_int_eq(memcmp(read_cluster, cluster1, CLUSTER_SIZE), 0);
 
-  ck_assert_int_eq(fs_read_cluster(key, disk, read_cluster, 1), 0);
+  ck_assert_int_eq(fs_read_cluster(&key, disk, read_cluster, 1), 0);
   ck_assert_int_eq(memcmp(read_cluster, cluster2, CLUSTER_SIZE), 0);
 
   disk_free(disk);
@@ -76,12 +76,12 @@ START_TEST(test_get_set_next_cluster_roundtrip) {
 END_TEST
 
 START_TEST(test_read_write_bitmap_roundtrip) {
-  uint8_t key[STEGO_KEY_SIZE];
-  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+  stego_key_t key;
+  ck_assert_int_eq(stego_gen_user_keys(&key, 1), 0);
 
   bs_disk_t disk = create_tmp_disk();
   size_t bitmap_size = fs_compute_bitmap_size(
-      fs_count_clusters(compute_level_size(disk_get_size(disk))));
+      fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk))));
 
   void* bitmap = malloc(bitmap_size);
   void* read_bitmap = malloc(bitmap_size);
@@ -89,8 +89,8 @@ START_TEST(test_read_write_bitmap_roundtrip) {
   memset(bitmap, 0, bitmap_size);
   strcpy((char*) bitmap, "abcdefghijklmnopqrstuvwxyz");
 
-  ck_assert_int_eq(fs_write_bitmap(key, disk, bitmap), 0);
-  ck_assert_int_eq(fs_read_bitmap(key, disk, read_bitmap), 0);
+  ck_assert_int_eq(fs_write_bitmap(&key, disk, bitmap), 0);
+  ck_assert_int_eq(fs_read_bitmap(&key, disk, read_bitmap), 0);
 
   ck_assert_int_eq(memcmp(read_bitmap, bitmap, bitmap_size), 0);
 

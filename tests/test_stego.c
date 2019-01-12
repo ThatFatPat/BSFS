@@ -13,62 +13,73 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-/**
- * Don't check for linear independency
- */
-static bool check_orthonormality(void* buf, size_t count) {
-  uint8_t* int_buf = (uint8_t*) buf;
-  for (size_t i = 0; i < count; i++) {
-    uint8_t* key_1 = int_buf + i * STEGO_KEY_SIZE;
+static void validate_keys(const stego_key_t* keys, size_t count) {
+  for (size_t i1 = 0; i1 < count; i1++) {
+    const stego_key_t* key = keys + i1;
 
-    if (vector_norm(key_1, STEGO_KEY_SIZE) == 0) {
-      return false;
-    }
+    for (size_t j1 = 0; j1 < STEGO_LEVELS_PER_PASSWORD; j1++) {
+      const uint8_t* read_key = key->read_keys[j1];
 
-    for (size_t j = 0; j < i; j++) {
-      uint8_t* key_2 = int_buf + j * STEGO_KEY_SIZE;
-      if (vector_scalar_product(key_1, key_2, STEGO_KEY_SIZE) == 1) {
-        return false;
+      for (size_t i2 = 0; i2 < count; i2++) {
+        const stego_key_t* other_key = keys + i2;
+
+        for (size_t j2 = 0; j2 < STEGO_LEVELS_PER_PASSWORD; j2++) {
+          const uint8_t* write_key = other_key->write_keys[j2];
+
+          // A read key and a write key should have an inner product of 1 iff
+          // they correspond to one another.
+          ck_assert_int_eq(
+              vector_scalar_product(read_key, write_key, STEGO_KEY_SIZE),
+              i1 == i2 && j1 == j2);
+        }
       }
     }
   }
-
-  return true;
 }
 
 START_TEST(test_gen_keys) {
-  uint8_t buf[MAX_LEVELS * STEGO_KEY_SIZE];
-  for (size_t count = 1; count <= MAX_LEVELS; count++) {
-    ck_assert_int_eq(stego_gen_keys(buf, count), 0);
-    ck_assert(check_orthonormality(buf, count));
+  stego_key_t keys[STEGO_USER_LEVEL_COUNT];
+  for (size_t count = 0; count <= STEGO_USER_LEVEL_COUNT; count++) {
+    ck_assert_int_eq(stego_gen_user_keys(keys, count), 0);
+    validate_keys(keys, count);
   }
 }
 END_TEST
 
 START_TEST(test_gen_keys_too_many) {
-  uint8_t buf[(MAX_LEVELS + 1) * STEGO_KEY_SIZE];
-  ck_assert_int_eq(stego_gen_keys(buf, MAX_LEVELS + 1), -EINVAL);
+  stego_key_t keys[STEGO_USER_LEVEL_COUNT + 1];
+  ck_assert_int_eq(stego_gen_user_keys(keys, STEGO_USER_LEVEL_COUNT + 1),
+                   -EINVAL);
 }
 END_TEST
 
 START_TEST(test_compute_level_size) {
-  for (size_t disk_size = 0x400; disk_size <= 0x200000; disk_size += 0x8000) {
-    size_t level_size = compute_level_size(disk_size);
-    ck_assert_uint_le(KEYTAB_SIZE + COVER_FILE_COUNT * level_size, disk_size);
+  for (size_t disk_size = 0x2000; disk_size <= 0x200000; disk_size += 0x8000) {
+    size_t level_size = stego_compute_user_level_size(disk_size);
+    ck_assert_uint_le(KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * level_size,
+                      disk_size);
+
+    ck_assert_uint_eq(level_size % STEGO_LEVELS_PER_PASSWORD, 0);
+
+    // Don't be tempted to just use `STEGO_USER_LEVEL_COUNT * (level_size + 1)`,
+    // as there will most likely be wasted space to ensure that `level_size` is
+    // a multiple of `STEGO_LEVELS_PER_PASSWORD`.
     ck_assert_uint_le(disk_size,
-                      KEYTAB_SIZE + COVER_FILE_COUNT * (level_size + 1));
+                      KEYTAB_SIZE +
+                          STEGO_COVER_FILE_COUNT *
+                              (level_size / STEGO_LEVELS_PER_PASSWORD + 1));
   }
 }
 END_TEST
 
 START_TEST(test_compute_level_size_too_small) {
-  ck_assert_int_eq(compute_level_size(500), 0);
+  ck_assert_int_eq(stego_compute_user_level_size(500), 0);
 }
 END_TEST
 
-static bs_disk_t create_tmp_disk() {
+static bs_disk_t create_tmp_disk(size_t size) {
   int fd = syscall(SYS_memfd_create, "test_stego.bsf", 0);
-  ck_assert_int_ne(ftruncate(fd, 0x200000), -1); // 2MiB
+  ck_assert_int_ne(ftruncate(fd, size), -1);
 
   bs_disk_t disk;
   ck_assert_int_eq(disk_create(fd, &disk), 0);
@@ -76,28 +87,29 @@ static bs_disk_t create_tmp_disk() {
 }
 
 START_TEST(test_read_write_level_roundtrip) {
-  uint8_t keys[2 * STEGO_KEY_SIZE];
-  ck_assert_int_eq(stego_gen_keys(keys, 2), 0);
+  const int level_size = 8;
 
-  char data1[32] = "Hello!!! This is level 1!";
-  char data2[32] = "And this is level 2!";
+  const char data1[48] = "The quick brown fox jumps over the lazy dog";
+  const char data2[sizeof(data1)] = "0123456789012345678901234567890123456789";
 
   char read1[sizeof(data1)] = { 0 };
   char read2[sizeof(data2)] = { 0 };
 
-  bs_disk_t disk = create_tmp_disk();
+  stego_key_t keys[2];
+  ck_assert_int_eq(stego_gen_user_keys(keys, 2), 0);
+
+  bs_disk_t disk =
+      create_tmp_disk(KEYTAB_SIZE + STEGO_COVER_FILE_COUNT * level_size);
 
   ck_assert_int_eq(stego_write_level(keys, disk, data1, 0, sizeof(data1)), 0);
-  ck_assert_int_eq(
-      stego_write_level(keys + STEGO_KEY_SIZE, disk, data2, 0, sizeof(data2)),
-      0);
+  ck_assert_int_eq(stego_write_level(keys + 1, disk, data2, 0, sizeof(data2)),
+                   0);
 
   ck_assert_int_eq(stego_read_level(keys, disk, read1, 0, sizeof(read1)), 0);
   ck_assert_int_eq(memcmp(read1, data1, sizeof(data1)), 0);
 
-  ck_assert_int_eq(
-      stego_read_level(keys + STEGO_KEY_SIZE, disk, read2, 0, sizeof(read2)),
-      0);
+  ck_assert_int_eq(stego_read_level(keys + 1, disk, read2, 0, sizeof(read2)),
+                   0);
   ck_assert_int_eq(memcmp(read2, data2, sizeof(data2)), 0);
 
   disk_free(disk);
@@ -105,42 +117,42 @@ START_TEST(test_read_write_level_roundtrip) {
 END_TEST
 
 START_TEST(test_read_write_invalid) {
-  uint8_t key[STEGO_KEY_SIZE];
-  ck_assert_int_eq(stego_gen_keys(key, 1), 0);
+  stego_key_t key;
+  ck_assert_int_eq(stego_gen_user_keys(&key, 1), 0);
 
   char data[25] = "Incorrectly-sized data";
   char correct_data[16] = "correctly-sized";
 
   char read[25];
 
-  bs_disk_t disk = create_tmp_disk();
+  bs_disk_t disk = create_tmp_disk(0x200000); // 2MiB
 
-  ck_assert_int_eq(stego_write_level(key, disk, data, 0, sizeof(data)),
+  ck_assert_int_eq(stego_write_level(&key, disk, data, 0, sizeof(data)),
                    -EINVAL);
 
   ck_assert_int_eq(
-      stego_write_level(key, disk, correct_data, 0, sizeof(correct_data)), 0);
+      stego_write_level(&key, disk, correct_data, 0, sizeof(correct_data)), 0);
   ck_assert_int_eq(
-      stego_write_level(key, disk, correct_data, 5, sizeof(correct_data)),
+      stego_write_level(&key, disk, correct_data, 5, sizeof(correct_data)),
       -EINVAL);
 
-  ck_assert_int_eq(stego_read_level(key, disk, read, 0, sizeof(read)), -EINVAL);
+  ck_assert_int_eq(stego_read_level(&key, disk, read, 0, sizeof(read)),
+                   -EINVAL);
 
-  ck_assert_int_eq(stego_read_level(key, disk, read, 0, 16), 0);
-  ck_assert_int_eq(stego_read_level(key, disk, read, 5, 16), -EINVAL);
+  ck_assert_int_eq(stego_read_level(&key, disk, read, 0, 16), 0);
+  ck_assert_int_eq(stego_read_level(&key, disk, read, 5, 16), -EINVAL);
 
   disk_free(disk);
 }
 END_TEST
 
 Suite* stego_suite(void) {
-
   Suite* suite = suite_create("stego");
 
-  TCase* stego_gen_keys_tcase = tcase_create("gen_keys");
-  tcase_add_test(stego_gen_keys_tcase, test_gen_keys);
-  tcase_add_test(stego_gen_keys_tcase, test_gen_keys_too_many);
-  suite_add_tcase(suite, stego_gen_keys_tcase);
+  TCase* gen_keys_tcase = tcase_create("gen_keys");
+  tcase_add_test(gen_keys_tcase, test_gen_keys);
+  tcase_add_test(gen_keys_tcase, test_gen_keys_too_many);
+  suite_add_tcase(suite, gen_keys_tcase);
 
   TCase* level_size_tcase = tcase_create("level_size");
   tcase_add_test(level_size_tcase, test_compute_level_size);

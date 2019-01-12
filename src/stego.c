@@ -6,72 +6,56 @@
 #include <errno.h>
 #include <openssl/rand.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
-// size of padding appended to every key, used to ensure orthonormality
-#define STEGO_KEY_PADDING_SIZE (MAX_LEVELS / CHAR_BIT)
+#define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_LEVELS_PER_PASSWORD)
+#define STEGO_SALT_SIZE (2 * sizeof(uint64_t))
 
-// size of the random part of the key
-#define STEGO_KEY_RND_SIZE (STEGO_KEY_SIZE - STEGO_KEY_PADDING_SIZE)
-
-/**
- * Generating a random key.
- * The 2 last bytes are filled with 0.
- */
-static int generate_random_key(uint8_t* buf) {
-  if (!RAND_bytes(buf, STEGO_KEY_RND_SIZE)) {
-    return -EIO;
-  }
-  memset(buf + STEGO_KEY_RND_SIZE, 0, STEGO_KEY_PADDING_SIZE);
-  return 0;
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
 }
 
-/**
- * Generating "count" orthonormal keys.
- * Uses special Gram-Schmidt to do so.
- */
-int stego_gen_keys(void* buf, size_t count) {
-  if (count > MAX_LEVELS) {
-    return -EINVAL;
-  }
-
-  uint8_t* int_buf = (uint8_t*) buf;
-
-  for (size_t i = 0; i < count; i++) {
-    vector_t key = int_buf + i * STEGO_KEY_SIZE;
-
-    int rnd_status = generate_random_key(key);
-    if (rnd_status < 0) {
-      return rnd_status;
-    }
-
-    // Add to "key" all the keys before him which have scalar product 1 with
-    // him.
-    for (size_t j = 0; j < i; j++) {
-      vector_t other_key = int_buf + j * STEGO_KEY_SIZE;
-
-      vector_linear_combination(
-          key, key, other_key, STEGO_KEY_SIZE,
-          vector_scalar_product(key, other_key, STEGO_KEY_SIZE));
-    }
-
-    // If the norm of the key is 0, set the proper bit in the last padding
-    // bytes.
-    if (!vector_norm(key, STEGO_KEY_SIZE)) {
-      set_bit(key + STEGO_KEY_RND_SIZE, i, 1);
-    }
-  }
-
-  return 0;
-}
-
-size_t compute_level_size(size_t disk_size) {
+static size_t compute_level_size(size_t disk_size) {
   if (disk_size < KEYTAB_SIZE) {
     return 0;
   }
-  return (disk_size - KEYTAB_SIZE) / COVER_FILE_COUNT;
+  return (disk_size - KEYTAB_SIZE) / STEGO_COVER_FILE_COUNT;
 }
+
+size_t stego_compute_user_level_size(size_t disk_size) {
+  return STEGO_LEVELS_PER_PASSWORD * compute_level_size(disk_size);
+}
+
+int stego_gen_user_keys(stego_key_t* keys, size_t count) {
+  if (count > STEGO_USER_LEVEL_COUNT) {
+    return -EINVAL;
+  }
+
+  uint8_t read_keys[round_to_bytes(STEGO_COVER_FILE_COUNT *
+                                   STEGO_COVER_FILE_COUNT)];
+  uint8_t write_keys[sizeof(read_keys)];
+
+  int ret = matrix_gen_nonsing(read_keys, write_keys, STEGO_COVER_FILE_COUNT);
+  if (ret < 0) {
+    return ret;
+  }
+
+  matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
+
+  for (size_t i = 0; i < count; i++) {
+    if (!RAND_bytes(keys[i].aes_key, STEGO_AES_KEY_SIZE)) {
+      return -EIO;
+    }
+    memcpy(keys[i].read_keys, read_keys + i * STEGO_USER_KEY_SIZE,
+           STEGO_USER_KEY_SIZE);
+    memcpy(keys[i].write_keys, write_keys + i * STEGO_USER_KEY_SIZE,
+           STEGO_USER_KEY_SIZE);
+  }
+
+  return 0;
+}
+
+/// READ/WRITE IMPLEMENTATION
 
 static off_t cover_offset(size_t level_size, size_t i, off_t off) {
   return KEYTAB_SIZE + i * level_size + off;
@@ -83,44 +67,90 @@ static off_t cover_offset(size_t level_size, size_t i, off_t off) {
  * The result is also the multiplication of the key vector with
  * the cover files matrix.
  */
-static void read_cover_file_delta(const void* key, const void* disk_data,
-                                  size_t level_size, off_t off, void* buf,
-                                  size_t read_size) {
-  const_vector_t data = (const_vector_t) disk_data;
-
-  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
+static void read_cover_file_delta(const void* key, vector_t disk_data,
+                                  size_t level_size, off_t off, vector_t buf,
+                                  size_t buf_size) {
+  for (size_t i = 0; i < STEGO_COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t cur_off = cover_offset(level_size, i, off);
 
-    vector_linear_combination((vector_t) buf, (const_vector_t) buf,
-                              data + cur_off, read_size, bit);
+    vector_linear_combination(buf, buf, disk_data + cur_off, buf_size, bit);
   }
 }
 
-static void write_cover_file_delta(const void* key, void* disk_data,
-                                   size_t level_size, off_t off, void* delta,
+static void write_cover_file_delta(const void* key, vector_t disk_data,
+                                   size_t level_size, off_t off, vector_t buf,
                                    size_t buf_size) {
-  vector_t data = (vector_t) disk_data;
-
-  for (size_t i = 0; i < COVER_FILE_COUNT; i++) {
+  for (size_t i = 0; i < STEGO_COVER_FILE_COUNT; i++) {
     bool bit = get_bit(key, i);
     off_t cur_off = cover_offset(level_size, i, off);
 
-    vector_linear_combination(data + cur_off, data + cur_off,
-                              (const_vector_t) delta, buf_size, bit);
+    vector_linear_combination(disk_data + cur_off, disk_data + cur_off, buf,
+                              buf_size, bit);
   }
 }
 
-static bool check_parameters(size_t level_size, off_t off, size_t buf_size) {
-  return (size_t) off < level_size && off + buf_size < level_size &&
+typedef uint8_t individual_key_t[STEGO_KEY_SIZE];
+typedef void (*cover_file_op_t)(const void*, vector_t, size_t, off_t, vector_t,
+                                size_t);
+
+static void merged_cover_file_op(cover_file_op_t op,
+                                 const individual_key_t* keys, vector_t disk,
+                                 size_t level_size, off_t off, vector_t buf,
+                                 size_t size) {
+  size_t level_idx = off / level_size;
+  off_t cur_off = off % level_size;
+
+  size_t processed = 0;
+  while (processed < size) {
+    size_t total_remaining = size - processed;
+    size_t level_remaining = level_size - cur_off;
+    size_t cur_size = min(total_remaining, level_remaining);
+
+    op(keys[level_idx], disk, level_size, cur_off, buf + processed, cur_size);
+
+    cur_off = 0; // We always operate from offset 0 after the first iteration.
+    processed += cur_size;
+    level_idx++;
+  }
+}
+
+static void read_merged_cover_file_delta(const stego_key_t* key,
+                                         const void* disk, size_t level_size,
+                                         off_t off, void* buf, size_t size) {
+  // De-constification of `disk` is safe as `read_cover_file_delta` will not
+  // modify it.
+  merged_cover_file_op(read_cover_file_delta, key->read_keys, (vector_t) disk,
+                       level_size, off, (vector_t) buf, size);
+}
+
+static void write_merged_cover_file_delta(const stego_key_t* key, void* disk,
+                                          size_t level_size, off_t off,
+                                          const void* buf, size_t size) {
+  // De-constification of `buf` is safe as `write_cover_file_delta` will not
+  // modify it.
+  merged_cover_file_op(write_cover_file_delta, key->write_keys, (vector_t) disk,
+                       level_size, off, (vector_t) buf, size);
+}
+
+static bool check_parameters(size_t user_level_size, off_t off,
+                             size_t buf_size) {
+  return (size_t) off < user_level_size && buf_size < user_level_size - off &&
          buf_size % 16 == 0 && off % 16 == 0;
 }
 
-int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
-                     size_t size) {
-  size_t level_size = compute_level_size(disk_get_size(disk));
+static void get_salt(uint8_t* buf, uint64_t off, uint64_t size) {
+  memcpy(buf, &off, sizeof(uint64_t));
+  memcpy(buf + sizeof(uint64_t), &size, sizeof(uint64_t));
+}
 
-  if (!check_parameters(level_size, off, size)) {
+int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
+                     off_t off, size_t size) {
+  size_t disk_size = disk_get_size(disk);
+  size_t user_level_size = stego_compute_user_level_size(disk_size);
+  size_t level_size = compute_level_size(disk_size);
+
+  if (!check_parameters(user_level_size, off, size)) {
     return -EINVAL;
   }
 
@@ -136,29 +166,41 @@ int stego_read_level(const void* key, bs_disk_t disk, void* buf, off_t off,
   }
 
   memset(data, 0, size);
-  read_cover_file_delta(key, disk_data, level_size, off, data, size);
+
+  read_merged_cover_file_delta(key, disk_data, level_size, off, data, size);
 
   disk_unlock_read(disk);
 
-  ret = aes_decrypt(key, STEGO_KEY_SIZE, data, buf, size);
+  uint8_t salt[STEGO_SALT_SIZE];
+  get_salt(salt, off, size);
+  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, salt, STEGO_SALT_SIZE,
+                    data, buf, size);
 
 cleanup_data:
   free(data);
   return ret;
 }
 
-int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
+int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
                       off_t off, size_t size) {
-  size_t level_size = compute_level_size(disk_get_size(disk));
+  size_t disk_size = disk_get_size(disk);
+  size_t user_level_size = stego_compute_user_level_size(disk_size);
+  size_t level_size = compute_level_size(disk_size);
 
-  if (!check_parameters(level_size, off, size)) {
+  if (!check_parameters(user_level_size, off, size)) {
     return -EINVAL;
   }
 
   void* encrypted = malloc(size);
+  if (!encrypted) {
+    return -ENOMEM;
+  }
   void* disk_data;
 
-  int ret = aes_encrypt(key, STEGO_KEY_SIZE, buf, encrypted, size);
+  uint8_t salt[STEGO_SALT_SIZE];
+  get_salt(salt, off, size);
+  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, salt, STEGO_SALT_SIZE,
+                        buf, encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }
@@ -169,10 +211,12 @@ int stego_write_level(const void* key, bs_disk_t disk, const void* buf,
   }
 
   // compute delta between existing disk contents and `encrypted`
-  read_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
+  read_merged_cover_file_delta(key, disk_data, level_size, off, encrypted,
+                               size);
 
   // write to disk
-  write_cover_file_delta(key, disk_data, level_size, off, encrypted, size);
+  write_merged_cover_file_delta(key, disk_data, level_size, off, encrypted,
+                                size);
 
   disk_unlock_write(disk);
 

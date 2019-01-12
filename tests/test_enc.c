@@ -9,18 +9,28 @@ START_TEST(test_basic_roundtrip) {
   const char* password = "Doctor Who";
   const char plain[32] = "But what kind of Doctor?";
 
+  const char salt[] = "salt!!!";
+  const char bad_salt[] = "bad salt";
+
   char cipher[sizeof(plain)];
   char decrypted[sizeof(plain)];
 
-  int status =
-      aes_encrypt(password, strlen(password), plain, cipher, sizeof(plain));
-  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(aes_encrypt(password, strlen(password), salt, sizeof(salt),
+                               plain, cipher, sizeof(plain)),
+                   0);
 
-  status = aes_decrypt(password, strlen(password), cipher, decrypted,
-                       sizeof(cipher));
-  ck_assert_int_eq(status, 0);
+  ck_assert_int_eq(aes_decrypt(password, strlen(password), salt, sizeof(salt),
+                               cipher, decrypted, sizeof(cipher)),
+                   0);
 
   ck_assert_str_eq(plain, (char*) decrypted);
+
+  ck_assert_int_eq(aes_decrypt(password, strlen(password), bad_salt,
+                               sizeof(bad_salt), cipher, decrypted,
+                               sizeof(cipher)),
+                   0);
+
+  ck_assert_int_ne(memcmp(decrypted, plain, sizeof(plain)), 0);
 }
 END_TEST
 
@@ -30,9 +40,9 @@ START_TEST(test_basic_wrong_size) {
 
   char cipher[sizeof(plain)];
 
-  ck_assert_int_eq(
-      aes_encrypt(password, strlen(password), plain, cipher, sizeof(plain)),
-      -EINVAL);
+  ck_assert_int_eq(aes_encrypt(password, strlen(password), NULL, 0, plain,
+                               cipher, sizeof(plain)),
+                   -EINVAL);
 }
 END_TEST
 

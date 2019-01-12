@@ -2,7 +2,6 @@
 
 #include "bft.h"
 #include "bit_util.h"
-#include "stego.h"
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,7 +10,7 @@
 
 static size_t compute_bitmap_size_from_disk(bs_disk_t disk) {
   return fs_compute_bitmap_size(
-      fs_count_clusters(compute_level_size(disk_get_size(disk))));
+      fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk))));
 }
 
 size_t fs_count_clusters(size_t level_size) {
@@ -28,10 +27,10 @@ size_t fs_count_clusters(size_t level_size) {
 }
 
 size_t fs_compute_bitmap_size(size_t clusters) {
-  return 16 * (((clusters + CHAR_BIT - 1) / CHAR_BIT + 15) / 16);
+  return 16 * ((round_to_bytes(clusters) + 15) / 16);
 }
 
-int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
+int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,
                     cluster_offset_t cluster) {
   return stego_read_level(key, disk, buf,
                           BFT_SIZE + compute_bitmap_size_from_disk(disk) +
@@ -39,7 +38,7 @@ int fs_read_cluster(const void* key, bs_disk_t disk, void* buf,
                           CLUSTER_SIZE);
 }
 
-int fs_write_cluster(const void* key, bs_disk_t disk, const void* buf,
+int fs_write_cluster(const stego_key_t* key, bs_disk_t disk, const void* buf,
                      cluster_offset_t cluster) {
   return stego_write_level(key, disk, buf,
                            BFT_SIZE + compute_bitmap_size_from_disk(disk) +
@@ -55,12 +54,12 @@ void fs_set_next_cluster(void* cluster, cluster_offset_t next) {
   write_big_endian((uint8_t*) cluster + CLUSTER_DATA_SIZE, next);
 }
 
-int fs_read_bitmap(const void* key, bs_disk_t disk, void* buf) {
+int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk, void* buf) {
   return stego_read_level(key, disk, buf, BFT_SIZE,
                           compute_bitmap_size_from_disk(disk));
 }
 
-int fs_write_bitmap(const void* key, bs_disk_t disk, const void* buf) {
+int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk, const void* buf) {
   return stego_write_level(key, disk, buf, BFT_SIZE,
                            compute_bitmap_size_from_disk(disk));
 }
