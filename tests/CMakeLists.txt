@@ -6,9 +6,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/ ${CHECK_INCLUDE_DIR})
 set(TEST_SOURCES
   test_bit_util.c
   test_bft.c
+  test_bsfs.c
   test_cluster.c
   test_enc.c
-  test_fuse_ops.c
   test_keytab.c
   test_stego.c
   test_disk.c
