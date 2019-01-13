@@ -1,4 +1,4 @@
-FROM nmraz/fuse3-ubuntu-dev:latest
+FROM nmraz/bsfs-build-env:latest
 
 COPY . /bsfs
 WORKDIR /bsfs
