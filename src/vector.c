@@ -170,11 +170,12 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
 }
 
 static int gen_nonzero_vector(vector_t vector, size_t size) {
+
   srand(time(NULL));
   int r = rand() % size; // Noam replace this
   if (!RAND_bytes(vector, size)) {
     return -EIO;
   }
-  vector |= 1UL << r;
+  vector[r / CHAR_BIT] |= 1UL << r % CHAR_BIT;
   return 0;
 }
