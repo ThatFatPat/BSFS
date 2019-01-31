@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
 // Vector implementation
 
@@ -133,53 +134,6 @@ static int rand_index(size_t n, size_t* out) {
   return 0;
 }
 
-static int matrix_gen_LUP(matrix_t L, matrix_t U, matrix_t P, size_t dim) {
-  void* bmp = calloc(1, round_to_bytes(dim));
-  if (!bmp) {
-    return -ENOMEM;
-  }
-
-  int ret = 0;
-
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j < i; j++) {
-      bool bit;
-
-      // place random bits below diagonal of L
-      ret = rand_bit(&bit);
-      if (ret < 0) {
-        goto cleanup;
-      }
-      matrix_set(L, i, j, bit, dim);
-
-      // place random bits above diagonal of U
-      ret = rand_bit(&bit);
-      if (ret < 0) {
-        goto cleanup;
-      }
-      matrix_set(U, j, i, bit, dim);
-    }
-
-    // guarantee 1s along the diagonal
-    matrix_set(L, i, i, 1, dim);
-    matrix_set(U, i, i, 1, dim);
-
-    size_t bmp_idx;
-    ret = rand_index(dim - i, &bmp_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    size_t perm_idx = nth_free_space(bmp, bmp_idx, dim);
-    set_bit(bmp, perm_idx, 1);
-    matrix_set(P, i, perm_idx, 1, dim);
-  }
-
-cleanup:
-  free(bmp);
-  return ret;
-}
-
 void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
                      size_t dim) {
 
@@ -207,45 +161,20 @@ void matrix_transpose(matrix_t dest, const_matrix_t mat, size_t dim) {
   }
 }
 
-int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim) {
+int matrix_gen_nonsing(matrix_t mat, size_t dim) {
   size_t matrix_storage_size = round_to_bytes(dim * dim);
 
-  // Allocate space for: L, U, P, Linv, Uinv, Pinv, temp
-  matrix_t storage = (matrix_t) calloc(7, matrix_storage_size);
-  if (!storage) {
-    return -ENOMEM;
+  // cleanup:
+  //   free();
+  //   return ret;
+}
+
+static int gen_nonzero_vector(vector_t vector, size_t size) {
+  srand(time(NULL));
+  int r = rand() % size; // Noam replace this
+  if (!RAND_bytes(vector, size)) {
+    return -EIO;
   }
-
-  matrix_t L = storage;
-  matrix_t U = L + matrix_storage_size;
-  matrix_t P = U + matrix_storage_size;
-  matrix_t Linv = P + matrix_storage_size;
-  matrix_t Uinv = Linv + matrix_storage_size;
-  matrix_t Pinv = Uinv + matrix_storage_size;
-  matrix_t temp = Pinv + matrix_storage_size;
-
-  int ret = 0;
-
-  ret = matrix_gen_LUP(L, U, P, dim);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-  matrix_inverse_triangular(Linv, L, true, dim);
-  matrix_inverse_triangular(Uinv, U, false, dim);
-
-  // P is a permutation matrix, so its inverse is its transpose.
-  matrix_transpose(Pinv, P, dim);
-
-  // mat = L*U*P
-  matrix_multiply(temp, L, U, dim);
-  matrix_multiply(mat, temp, P, dim);
-
-  // inv = Pinv*Uinv*Linv
-  matrix_multiply(temp, Pinv, Uinv, dim);
-  matrix_multiply(inv, temp, Linv, dim);
-
-cleanup:
-  free(storage);
-  return ret;
+  vector |= 1UL << r;
+  return 0;
 }
