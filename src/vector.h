@@ -27,8 +27,6 @@ void vector_linear_combination(vector_t linear_combination,
 void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
                      size_t dim);
 
-void matrix_transpose(matrix_t dest, const_matrix_t matrix, size_t dim);
-
-int matrix_gen_nonsing(matrix_t mat, matrix_t inv, size_t dim);
+int matrix_gen_nonsing(matrix_t mat, size_t dim);
 
 #endif // BS_VECTOR_H
