@@ -2,6 +2,7 @@
 
 #include "bit_util.h"
 #include "keytab.h"
+#include "matrix.h"
 #include "vector.h"
 #include <errno.h>
 #include <openssl/rand.h>
@@ -33,14 +34,14 @@ int stego_gen_user_keys(stego_key_t* keys, size_t count) {
 
   uint8_t read_keys[round_to_bytes(STEGO_COVER_FILE_COUNT *
                                    STEGO_COVER_FILE_COUNT)];
-  uint8_t write_keys[sizeof(read_keys)];
+  // uint8_t write_keys[sizeof(read_keys)];
 
-  int ret = matrix_gen_nonsing(read_keys, write_keys, STEGO_COVER_FILE_COUNT);
+  int ret = matrix_gen_nonsing(read_keys, STEGO_COVER_FILE_COUNT);
   if (ret < 0) {
     return ret;
   }
 
-  matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
+  // matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
 
   for (size_t i = 0; i < count; i++) {
     if (!RAND_bytes(keys[i].aes_key, STEGO_AES_KEY_SIZE)) {
@@ -48,8 +49,8 @@ int stego_gen_user_keys(stego_key_t* keys, size_t count) {
     }
     memcpy(keys[i].read_keys, read_keys + i * STEGO_USER_KEY_SIZE,
            STEGO_USER_KEY_SIZE);
-    memcpy(keys[i].write_keys, write_keys + i * STEGO_USER_KEY_SIZE,
-           STEGO_USER_KEY_SIZE);
+    // memcpy(keys[i].write_keys, write_keys + i * STEGO_USER_KEY_SIZE,
+    //        STEGO_USER_KEY_SIZE);
   }
 
   return 0;

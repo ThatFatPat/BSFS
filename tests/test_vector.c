@@ -43,19 +43,11 @@ START_TEST(test_linear_combination) {
 }
 END_TEST
 
-START_TEST(test_matrix_multiplication) {
-  uint8_t mat1[8] = { 0xe2, 0xf2, 0x1c, 0x77, 0x19, 0x4e, 0x7b, 0xe1 };
-  uint8_t mat2[8] = { 0xe1, 0x91, 0x76, 0x8, 0xad, 0xc6, 0xe0, 0x4c };
-  uint8_t expected_mul[8] = { 0xe6, 0xee, 0x63, 0x85, 0xe9, 0x1a, 0xee, 0x4a };
-  uint8_t mul[8];
-
-  matrix_multiply(mul, mat1, mat2, 8);
-
-  ck_assert_int_eq(memcmp(mul, expected_mul, 8), 0);
-}
-END_TEST
-
-START_TEST(test_matrix_gen_nonsing) {
+START_TEST(test_gen_nonzero_vector) {
+  uint64_t vector = 0x0000000000000000;
+  size_t dim = 64;
+  gen_nonzero_vector((vector_t) &vector, dim);
+  ck_assert_int_eq(vector, 0);
 }
 END_TEST
 
@@ -71,13 +63,9 @@ Suite* vector_suite(void) {
   tcase_add_test(linear_combination_tcase, test_linear_combination);
   suite_add_tcase(suite, linear_combination_tcase);
 
-  TCase* matrix_multiply_tcase = tcase_create("matrix_multiply");
-  tcase_add_test(matrix_multiply_tcase, test_matrix_multiplication);
-  suite_add_tcase(suite, matrix_multiply_tcase);
-
-  TCase* matrix_gen_nonsing_tcase = tcase_create("matrix_gen_nonsing");
-  tcase_add_test(matrix_gen_nonsing_tcase, test_matrix_gen_nonsing);
-  suite_add_tcase(suite, matrix_gen_nonsing_tcase);
+  TCase* gen_nonzero_vector_tcase = tcase_create("gen_nonzero_vector");
+  tcase_add_test(gen_nonzero_vector_tcase, test_gen_nonzero_vector);
+  suite_add_tcase(suite, gen_nonzero_vector_tcase);
 
   return suite;
 }
