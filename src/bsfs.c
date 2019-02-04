@@ -76,6 +76,24 @@ static void insert_open_file(bs_file_table_t* table, bs_file_t file) {
   }
 }
 
+static int rehash_open_files(bs_file_table_t* table, size_t bucket_count) {
+  int ret = realloc_buckets(table, bucket_count);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bs_file_t iter = table->head;
+  table->head = NULL;
+
+  while (iter) {
+    bs_file_t next = iter->next;
+    insert_open_file(table, iter);
+    iter = next;
+  }
+
+  return 0;
+}
+
 int bs_file_table_init(bs_file_table_t* table) {
   memset(table, 0, sizeof(bs_file_table_t));
   int ret = realloc_buckets(table, FTAB_INITIAL_BUCKET_COUNT);
