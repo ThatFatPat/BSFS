@@ -8,6 +8,31 @@
 #define FTAB_INITIAL_BUCKET_COUNT 8
 #define FTAB_MAX_LOAD_FACTOR 1.f
 
+static int create_open_file(struct bs_open_level_impl* level,
+                            bft_offset_t index, bs_file_t* out) {
+  bs_file_t file = (bs_file_t) malloc(sizeof(struct bs_file_impl));
+  if (!file) {
+    return -ENOMEM;
+  }
+
+  int ret = -pthread_rwlock_init(&file->file_lock, NULL);
+  if (ret < 0) {
+    free(file);
+    return ret;
+  }
+
+  file->index = index;
+  file->level = level;
+  *out = file;
+
+  return 0;
+}
+
+static void destroy_open_file(bs_file_t file) {
+  pthread_rwlock_destroy(&file->file_lock);
+  free(file);
+}
+
 static int realloc_buckets(bs_file_table_t* table, size_t bucket_count) {
   bs_file_t* new_buckets = (bs_file_t*) calloc(bucket_count, sizeof(bs_file_t));
   if (!new_buckets) {
@@ -51,11 +76,11 @@ int bsfs_release(bs_file_t file) {
   return -ENOSYS;
 }
 
-ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
+ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t index) {
   return -ENOSYS;
 }
 
-ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
+ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t index) {
   return -ENOSYS;
 }
 
