@@ -21,6 +21,7 @@ struct bs_file_table {
   bs_file_t* buckets;
   size_t bucket_count;
   size_t size;
+  pthread_mutex_t lock; // Protects all table operations
 };
 
 struct bs_open_level_impl {
@@ -30,7 +31,6 @@ struct bs_open_level_impl {
   void* bft;
   void* bitmap;
   struct bs_file_table open_files;
-  pthread_mutex_t ftab_lock;      // Protects open file table
   pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
 };
 
