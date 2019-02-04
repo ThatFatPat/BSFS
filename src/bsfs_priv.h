@@ -8,10 +8,12 @@
 
 struct bs_file_impl {
   struct bs_open_level_impl* level;
+
   bft_offset_t index;
-  atomic_int refcount; // Atomically counts the amount of references to file.
-  pthread_rwlock_t file_lock;
-  bs_file_t next;
+  atomic_int refcount;
+  pthread_rwlock_t file_lock; // Protects reads and writes to the file
+
+  bs_file_t next; // For chaining in the table
 };
 
 struct bs_file_table {
@@ -28,14 +30,14 @@ struct bs_open_level_impl {
   void* bft;
   void* bitmap;
   // TODO: open_files
-  pthread_mutex_t ftab_lock;      // Locks the Open File Table.
-  pthread_rwlock_t metadata_lock; // Used for locking BFT and Bitmap.
+  pthread_mutex_t ftab_lock;      // Protects open file table
+  pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
 };
 
 struct bs_bsfs_impl {
   struct bs_open_level_impl levels[STEGO_USER_LEVEL_COUNT];
+  pthread_mutex_t level_lock; // Protects `levels`
   bs_disk_t disk;
-  pthread_mutex_t level_lock;
 };
 
 #endif
