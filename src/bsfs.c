@@ -61,6 +61,21 @@ static bs_file_t find_open_file(bs_file_table_t* table, bft_offset_t index) {
   return NULL;
 }
 
+static void insert_open_file(bs_file_table_t* table, bs_file_t file) {
+  size_t bucket = bucket_of(file->index, table->bucket_count);
+  if (table->buckets[bucket]) {
+    // insert after existing node
+    bs_file_t prev = table->buckets[bucket];
+    file->next = prev->next;
+    prev->next = file;
+  } else {
+    // insert at head
+    file->next = table->head;
+    table->head = file;
+    table->buckets[bucket] = file;
+  }
+}
+
 int bs_file_table_init(bs_file_table_t* table) {
   memset(table, 0, sizeof(bs_file_table_t));
   int ret = realloc_buckets(table, FTAB_INITIAL_BUCKET_COUNT);
