@@ -30,7 +30,7 @@ struct bs_open_level_impl {
   char* pass;
   void* bft;
   void* bitmap;
-  struct bs_file_table open_files;
+  bs_file_table_t open_files;
   pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
 };
 
@@ -41,7 +41,7 @@ struct bs_bsfs_impl {
 };
 
 int bs_file_table_init(bs_file_table_t* table);
-void bs_file_table_destroy(struct bs_file_table* table);
+void bs_file_table_destroy(bs_file_table_t* table);
 
 int bs_file_table_open(bs_file_table_t* table, struct bs_open_level_impl* level,
                        bft_offset_t index, bs_file_t* file);
