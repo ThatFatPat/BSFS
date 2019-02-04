@@ -24,7 +24,7 @@ struct bs_file_table {
 };
 
 struct bs_open_level_impl {
-  bs_bsfs_t bsfs;
+  bs_bsfs_t fs;
   stego_key_t key;
   char* pass;
   void* bft;
