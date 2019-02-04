@@ -29,7 +29,7 @@ struct bs_open_level_impl {
   char* pass;
   void* bft;
   void* bitmap;
-  // TODO: open_files
+  struct bs_file_table open_files;
   pthread_mutex_t ftab_lock;      // Protects open file table
   pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
 };
