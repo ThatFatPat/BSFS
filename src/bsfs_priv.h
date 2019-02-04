@@ -40,4 +40,11 @@ struct bs_bsfs_impl {
   bs_disk_t disk;
 };
 
+int bs_file_table_init(struct bs_file_table* table);
+void bs_file_table_destroy(struct bs_file_table* table);
+
+int bs_file_table_open(struct bs_file_table* table, bft_offset_t off,
+                       bs_file_t* file);
+int bs_file_table_release(struct bs_file_table* table, bs_file_t file);
+
 #endif
