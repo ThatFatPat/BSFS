@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 
 typedef struct bs_file_impl* bs_file_t;
-typedef struct bs_open_level_impl* bs_open_level_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
 
 int bsfs_init(int fd, bs_bsfs_t* fs);
