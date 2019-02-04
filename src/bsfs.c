@@ -53,6 +53,18 @@ int bs_file_table_init(bs_file_table_t* table) {
   return -pthread_mutex_init(&table->lock, NULL);
 }
 
+void bs_file_table_destroy(bs_file_table_t* table) {
+  pthread_mutex_destroy(&table->lock);
+  free(table->buckets);
+
+  bs_file_t iter = table->head;
+  while (iter) {
+    bs_file_t next = iter->next;
+    destroy_open_file(iter);
+    iter = next;
+  }
+}
+
 int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
 }
