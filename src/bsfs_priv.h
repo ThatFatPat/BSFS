@@ -11,6 +11,14 @@ struct bs_file_impl {
   bft_offset_t index;
   atomic_int refcount; // Atomically counts the amount of references to file.
   pthread_rwlock_t file_lock;
+  bs_file_t next;
+};
+
+struct bs_file_table {
+  bs_file_t head;
+  bs_file_t* buckets;
+  size_t bucket_count;
+  size_t size;
 };
 
 struct bs_open_level_impl {
