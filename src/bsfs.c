@@ -2,7 +2,31 @@
 
 #include "stego.h"
 #include <errno.h>
-#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define FTAB_INITIAL_BUCKET_COUNT 8
+#define FTAB_MAX_LOAD_FACTOR 1.f
+
+static int realloc_buckets(bs_file_table_t* table, size_t bucket_count) {
+  bs_file_t* new_buckets = (bs_file_t*) calloc(bucket_count, sizeof(bs_file_t));
+  if (!new_buckets) {
+    return -ENOMEM;
+  }
+  free(table->buckets);
+  table->buckets = new_buckets;
+  table->bucket_count = bucket_count;
+  return 0;
+}
+
+int bs_file_table_init(bs_file_table_t* table) {
+  memset(table, 0, sizeof(bs_file_table_t));
+  int ret = realloc_buckets(table, FTAB_INITIAL_BUCKET_COUNT);
+  if (ret < 0) {
+    return ret;
+  }
+  return -pthread_mutex_init(&table->lock, NULL);
+}
 
 int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
