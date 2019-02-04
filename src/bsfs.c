@@ -15,7 +15,7 @@ static int create_open_file(struct bs_open_level_impl* level,
     return -ENOMEM;
   }
 
-  int ret = -pthread_rwlock_init(&file->file_lock, NULL);
+  int ret = -pthread_rwlock_init(&file->lock, NULL);
   if (ret < 0) {
     free(file);
     return ret;
@@ -29,7 +29,7 @@ static int create_open_file(struct bs_open_level_impl* level,
 }
 
 static void destroy_open_file(bs_file_t file) {
-  pthread_rwlock_destroy(&file->file_lock);
+  pthread_rwlock_destroy(&file->lock);
   free(file);
 }
 
