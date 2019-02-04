@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FTAB_INITIAL_BUCKET_COUNT 8
+#define FTAB_INITIAL_BUCKET_COUNT (1 << 3) // must be power of 2
 #define FTAB_MAX_LOAD_FACTOR 1.f
 
 static int create_open_file(struct bs_open_level_impl* level,
@@ -42,6 +42,23 @@ static int realloc_buckets(bs_file_table_t* table, size_t bucket_count) {
   table->buckets = new_buckets;
   table->bucket_count = bucket_count;
   return 0;
+}
+
+static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
+  return (size_t) index & (bucket_count - 1); // assumes power-of-2 bucket count
+}
+
+static bs_file_t find_open_file(bs_file_table_t* table, bft_offset_t index) {
+  size_t bucket = bucket_of(index, table->bucket_count);
+  bs_file_t iter = table->buckets[bucket];
+
+  while (iter && bucket_of(iter->index, table->bucket_count) == bucket) {
+    if (iter->index == index) {
+      return iter;
+    }
+  }
+
+  return NULL;
 }
 
 int bs_file_table_init(bs_file_table_t* table) {
