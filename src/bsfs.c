@@ -50,9 +50,10 @@ static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
 
 static bs_file_t find_open_file(bs_file_table_t* table, bft_offset_t index) {
   size_t bucket = bucket_of(index, table->bucket_count);
-  bs_file_t iter = table->buckets[bucket];
 
-  while (iter && bucket_of(iter->index, table->bucket_count) == bucket) {
+  for (bs_file_t iter = table->buckets[bucket];
+       iter && bucket_of(iter->index, table->bucket_count) == bucket;
+       iter = iter->next) {
     if (iter->index == index) {
       return iter;
     }
