@@ -16,13 +16,13 @@ struct bs_file_impl {
   bs_file_t next; // For chaining in the table
 };
 
-struct bs_file_table {
+typedef struct bs_file_table {
   bs_file_t head;
   bs_file_t* buckets;
   size_t bucket_count;
   size_t size;
   pthread_mutex_t lock; // Protects all table operations
-};
+} bs_file_table_t;
 
 struct bs_open_level_impl {
   bs_bsfs_t fs;
@@ -40,11 +40,11 @@ struct bs_bsfs_impl {
   bs_disk_t disk;
 };
 
-int bs_file_table_init(struct bs_file_table* table);
+int bs_file_table_init(bs_file_table_t* table);
 void bs_file_table_destroy(struct bs_file_table* table);
 
-int bs_file_table_open(struct bs_file_table* table, bft_offset_t off,
+int bs_file_table_open(bs_file_table_t* table, bft_offset_t off,
                        bs_file_t* file);
-int bs_file_table_release(struct bs_file_table* table, bs_file_t file);
+int bs_file_table_release(bs_file_table_t* table, bs_file_t file);
 
 #endif
