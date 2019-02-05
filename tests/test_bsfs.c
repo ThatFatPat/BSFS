@@ -231,6 +231,20 @@ START_TEST(test_ftab_remove_size) {
 }
 END_TEST
 
+START_TEST(test_ftab_release_decref) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_file_table_open(&table, NULL, 123, &file), 0);
+  ck_assert_int_eq(bs_file_table_open(&table, NULL, 123, &file), 0);
+  ck_assert_int_eq(bs_file_table_release(&table, file), 0);
+  ck_assert_int_eq(file->refcount, 1);
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -248,6 +262,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(ftab_tcase, test_ftab_insert_after_rehash);
   tcase_add_test(ftab_tcase, test_ftab_remove_empty);
   tcase_add_test(ftab_tcase, test_ftab_remove_size);
+  tcase_add_test(ftab_tcase, test_ftab_release_decref);
   suite_add_tcase(suite, ftab_tcase);
 
   return suite;
