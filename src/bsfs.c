@@ -2,6 +2,7 @@
 
 #include "stego.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -49,14 +50,17 @@ static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
   return (size_t) index & (bucket_count - 1); // assumes power-of-2 bucket count
 }
 
+static bool matches_bucket(bs_file_t file, size_t bucket, size_t bucket_count) {
+  return file && bucket_of(file->index, bucket_count) == bucket;
+}
+
 static bs_file_t find_open_file(bs_file_table_t* table, bft_offset_t index) {
   size_t bucket = bucket_of(index, table->bucket_count);
   bs_file_t* prev_link = table->buckets[bucket];
 
   if (prev_link) {
     for (bs_file_t iter = *prev_link;
-         iter && bucket_of(iter->index, table->bucket_count) == bucket;
-         iter = iter->next) {
+         matches_bucket(iter, bucket, table->bucket_count); iter = iter->next) {
       if (iter->index == index) {
         return iter;
       }
@@ -94,8 +98,8 @@ static int remove_open_file(bs_file_table_t* table, bs_file_t file) {
   }
 
   bs_file_t* prev_link = table->buckets[bucket];
-  for (; *prev_link != file && *prev_link &&
-         bucket_of((*prev_link)->index, table->bucket_count) == bucket;
+  for (; *prev_link != file &&
+         matches_bucket(*prev_link, bucket, table->bucket_count);
        prev_link = &(*prev_link)->next) {
   }
 
