@@ -2,6 +2,23 @@
 
 #include "bsfs_priv.h"
 
+START_TEST(test_ftab_insert_vals) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  struct bs_open_level_impl* const level =
+      (struct bs_open_level_impl*) 0xdeadbeef;
+  const bft_offset_t index = 123;
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_file_table_open(&table, level, index, &file), 0);
+  ck_assert_ptr_eq(file->level, level);
+  ck_assert_int_eq(file->index, index);
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
 START_TEST(test_ftab_insert_lookup) {
   bs_file_table_t table;
   ck_assert_int_eq(bs_file_table_init(&table), 0);
@@ -11,6 +28,25 @@ START_TEST(test_ftab_insert_lookup) {
   bs_file_t found;
   ck_assert_int_eq(bs_file_table_open(&table, NULL, 123, &found), 0);
   ck_assert_ptr_eq(created, found);
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
+START_TEST(test_ftab_insert_lookup_vals) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  struct bs_open_level_impl* const level =
+      (struct bs_open_level_impl*) 0xdeadbeef;
+  const bft_offset_t index = 123;
+
+  bs_file_t created;
+  ck_assert_int_eq(bs_file_table_open(&table, level, index, &created), 0);
+  bs_file_t found;
+  ck_assert_int_eq(bs_file_table_open(&table, NULL, index, &found), 0);
+
+  ck_assert_ptr_eq(found->level, level);
 
   bs_file_table_destroy(&table);
 }
@@ -77,7 +113,9 @@ Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
   TCase* ftab_tcase = tcase_create("ftab");
+  tcase_add_test(ftab_tcase, test_ftab_insert_vals);
   tcase_add_test(ftab_tcase, test_ftab_insert_lookup);
+  tcase_add_test(ftab_tcase, test_ftab_insert_lookup_vals);
   tcase_add_test(ftab_tcase, test_ftab_insert_size);
   tcase_add_test(ftab_tcase, test_ftab_insert_lookup_refcount);
   tcase_add_test(ftab_tcase, test_ftab_insert_multi);
