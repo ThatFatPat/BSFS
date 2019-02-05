@@ -34,7 +34,8 @@ static void destroy_open_file(bs_file_t file) {
 }
 
 static int realloc_buckets(bs_file_table_t* table, size_t bucket_count) {
-  bs_file_t* new_buckets = (bs_file_t*) calloc(bucket_count, sizeof(bs_file_t));
+  bs_file_t** new_buckets =
+      (bs_file_t**) calloc(bucket_count, sizeof(bs_file_t*));
   if (!new_buckets) {
     return -ENOMEM;
   }
@@ -50,12 +51,15 @@ static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
 
 static bs_file_t find_open_file(bs_file_table_t* table, bft_offset_t index) {
   size_t bucket = bucket_of(index, table->bucket_count);
+  bs_file_t* prev_link = table->buckets[bucket];
 
-  for (bs_file_t iter = table->buckets[bucket];
-       iter && bucket_of(iter->index, table->bucket_count) == bucket;
-       iter = iter->next) {
-    if (iter->index == index) {
-      return iter;
+  if (prev_link) {
+    for (bs_file_t iter = *prev_link;
+         iter && bucket_of(iter->index, table->bucket_count) == bucket;
+         iter = iter->next) {
+      if (iter->index == index) {
+        return iter;
+      }
     }
   }
 
@@ -66,14 +70,20 @@ static void insert_open_file(bs_file_table_t* table, bs_file_t file) {
   size_t bucket = bucket_of(file->index, table->bucket_count);
   if (table->buckets[bucket]) {
     // insert after existing node
-    bs_file_t prev = table->buckets[bucket];
-    file->next = prev->next;
-    prev->next = file;
+    bs_file_t* prev_link = table->buckets[bucket];
+    file->next = *prev_link;
+    *prev_link = file;
   } else {
     // insert at head
     file->next = table->head;
     table->head = file;
-    table->buckets[bucket] = file;
+    table->buckets[bucket] = &table->head;
+
+    if (file->next) {
+      // patch other bucket with new next pointer
+      size_t next_bucket = bucket_of(file->next->index, table->bucket_count);
+      table->buckets[next_bucket] = &file->next;
+    }
   }
 }
 

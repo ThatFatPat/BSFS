@@ -18,7 +18,7 @@ struct bs_file_impl {
 
 typedef struct bs_file_table {
   bs_file_t head;
-  bs_file_t* buckets;
+  bs_file_t** buckets; // Array of next pointers
   size_t bucket_count;
   size_t size;
   pthread_mutex_t lock; // Protects all table operations
