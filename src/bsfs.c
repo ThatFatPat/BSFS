@@ -114,13 +114,13 @@ static int remove_open_file(bs_file_table_t* table, bs_file_t file) {
     return -EINVAL;
   }
 
-  *prev_link = file->next;
-
   if (*table->buckets[bucket] == file &&
       !matches_bucket(file->next, bucket, table->bucket_count)) {
     // `file` was the only entry in the bucket - empty it
     table->buckets[bucket] = NULL;
   }
+
+  *prev_link = file->next;
 
   if (*prev_link) {
     // patch other bucket with new next pointer
