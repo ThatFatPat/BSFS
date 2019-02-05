@@ -213,6 +213,35 @@ unlock:
   return ret;
 }
 
+int bs_file_table_release(bs_file_table_t* table, bs_file_t file) {
+  int new_refcount =
+      atomic_fetch_sub_explicit(&file->refcount, 1, memory_order_acq_rel) - 1;
+  if (new_refcount) {
+    return 0;
+  }
+
+  int ret = -pthread_mutex_lock(&table->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // recheck refcount after locking
+  new_refcount = atomic_load_explicit(&file->refcount, memory_order_acquire);
+  if (new_refcount) {
+    goto unlock;
+  }
+
+  ret = remove_open_file(table, file);
+  if (ret < 0) {
+    goto unlock;
+  }
+  destroy_open_file(file);
+
+unlock:
+  pthread_mutex_unlock(&table->lock);
+  return ret;
+}
+
 int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
 }
