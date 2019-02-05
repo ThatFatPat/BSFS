@@ -93,35 +93,30 @@ void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
 int matrix_gen_nonsing(matrix_t mat, size_t dim) {
   size_t matrix_storage_size = round_to_bytes(dim * dim);
 
+  int ret = 0;
+
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j < dim; j++) {
       matrix_set(mat, i, j, 0, dim);
     }
   }
 
-  bool bmp[dim]; // Bitmap of minors
-
-  vector_t b = (vector_t) malloc(round_to_bytes(dim)); // A random vector
+  uint8_t* bmp = (uint8_t*) calloc(1, round_to_bytes(dim)); // Bitmap of minors
+  vector_t b = (vector_t) malloc(round_to_bytes(dim));      // A random vector
   vector_t c =
       (vector_t) malloc(round_to_bytes(dim)); // A random non-zero vector
 
-  if (!c || !b) {
-    return -ENOMEM;
-  }
-
-  for (size_t i = 0; i < dim; i++) {
-    bmp[i] = 0;
-  }
-
-  for (size_t i = 0; i < dim; i++) {
-    bmp[i] = 0;
+  if (!bmp || !c || !b) {
+    ret = -ENOMEM;
+    goto cleanup;
   }
 
   for (size_t i = 0; i < dim - 1; i++) {
     size_t size = dim - i;
 
     if (!gen_nonzero_vector(c, size) || !RAND_bytes(b, size)) {
-      return -EIO;
+      ret = -EIO;
+      goto cleanup;
     }
 
     bool saw_nonzero_in_c = false;
@@ -130,14 +125,14 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
     size_t idx_in_mat = 0;
 
     while (idx_in_mat < temp_size) {
-      if (!bmp[idx_in_mat]) {
+      if (!get_bit(bmp, idx_in_mat)) {
 
         bool c_value = get_bit(c, idx_in_minor);
 
         if (c_value) {
           if (!saw_nonzero_in_c) {
             saw_nonzero_in_c = true;
-            bmp[idx_in_mat] = true;
+            set_bit(bmp, idx_in_mat, true);
           }
 
           matrix_add(mat, idx_in_mat, i, c_value, dim);
@@ -154,7 +149,9 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
     }
   }
 
+cleanup:
+  free(bmp);
   free(b);
   free(c);
-  return 0;
+  return ret;
 }
