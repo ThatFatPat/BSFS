@@ -87,6 +87,32 @@ static void insert_open_file(bs_file_table_t* table, bs_file_t file) {
   }
 }
 
+static int remove_open_file(bs_file_table_t* table, bs_file_t file) {
+  size_t bucket = bucket_of(file->index, table->bucket_count);
+  if (!table->buckets[bucket]) {
+    return -EINVAL;
+  }
+
+  bs_file_t* prev_link = table->buckets[bucket];
+  for (; *prev_link != file && *prev_link &&
+         bucket_of((*prev_link)->index, table->bucket_count) == bucket;
+       prev_link = &(*prev_link)->next) {
+  }
+
+  if (*prev_link != file) {
+    return -EINVAL;
+  }
+
+  *prev_link = file->next;
+  if (*prev_link) {
+    // patch other bucket with new next pointer
+    size_t next_bucket = bucket_of((*prev_link)->index, table->bucket_count);
+    table->buckets[next_bucket] = prev_link;
+  }
+
+  return 0;
+}
+
 static int rehash_open_files(bs_file_table_t* table, size_t bucket_count) {
   int ret = realloc_buckets(table, bucket_count);
   if (ret < 0) {
