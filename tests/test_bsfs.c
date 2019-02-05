@@ -201,6 +201,36 @@ START_TEST(test_ftab_insert_after_rehash) {
 }
 END_TEST
 
+START_TEST(test_ftab_remove_empty) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_file_table_open(&table, NULL, 123, &file), 0);
+  ck_assert_int_eq(bs_file_table_release(&table, file), 0);
+
+  ck_assert_ptr_eq(table.head, NULL);
+  for (size_t i = 0; i < table.bucket_count; i++) {
+    ck_assert_ptr_eq(table.buckets[i], NULL);
+  }
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
+START_TEST(test_ftab_remove_size) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_file_table_open(&table, NULL, 123, &file), 0);
+  ck_assert_int_eq(bs_file_table_release(&table, file), 0);
+  ck_assert_int_eq(table.size, 0);
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -216,6 +246,8 @@ Suite* bsfs_suite(void) {
   tcase_add_test(ftab_tcase, test_ftab_lookup_multi_same_bucket);
   tcase_add_test(ftab_tcase, test_ftab_rehash);
   tcase_add_test(ftab_tcase, test_ftab_insert_after_rehash);
+  tcase_add_test(ftab_tcase, test_ftab_remove_empty);
+  tcase_add_test(ftab_tcase, test_ftab_remove_size);
   suite_add_tcase(suite, ftab_tcase);
 
   return suite;
