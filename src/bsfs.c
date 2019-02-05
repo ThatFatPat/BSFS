@@ -179,6 +179,40 @@ void bs_file_table_destroy(bs_file_table_t* table) {
   }
 }
 
+int bs_file_table_open(bs_file_table_t* table, struct bs_open_level_impl* level,
+                       bft_offset_t index, bs_file_t* file) {
+  int ret = -pthread_mutex_lock(&table->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bs_file_t existing_file = find_open_file(table, index);
+  if (existing_file) {
+    *file = existing_file;
+    goto success;
+  }
+
+  bs_file_t new_file;
+  ret = create_open_file(level, index, &new_file);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  ret = add_open_file(table, new_file);
+  if (ret < 0) {
+    destroy_open_file(new_file);
+    goto unlock;
+  }
+
+  *file = new_file;
+
+success:
+  atomic_fetch_add_explicit(&(*file)->refcount, 1, memory_order_relaxed);
+unlock:
+  pthread_mutex_unlock(&table->lock);
+  return ret;
+}
+
 int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
 }
