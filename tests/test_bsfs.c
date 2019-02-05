@@ -158,12 +158,20 @@ START_TEST(test_ftab_rehash) {
   for (; table.bucket_count == initial_bucket_count; i++) {
     bs_file_t file;
     ck_assert_int_eq(bs_file_table_open(&table, NULL, i, &file), 0);
+    ck_assert_int_eq(
+        bs_file_table_open(&table, NULL, i + 2 * initial_bucket_count, &file),
+        0);
   }
 
   // verify contents
   for (i--; i >= 0; i--) {
     bs_file_t file;
     ck_assert_int_eq(bs_file_table_open(&table, NULL, i, &file), 0);
+    ck_assert_int_eq(file->refcount, 2);
+
+    ck_assert_int_eq(
+        bs_file_table_open(&table, NULL, i + 2 * initial_bucket_count, &file),
+        0);
     ck_assert_int_eq(file->refcount, 2);
   }
 
