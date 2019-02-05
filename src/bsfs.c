@@ -119,6 +119,11 @@ static int remove_open_file(bs_file_table_t* table, bs_file_t file) {
 }
 
 static int rehash_open_files(bs_file_table_t* table, size_t bucket_count) {
+  if (!bucket_count || bucket_count & (bucket_count - 1)) {
+    // not a power of 2
+    return -EINVAL;
+  }
+
   int ret = realloc_buckets(table, bucket_count);
   if (ret < 0) {
     return ret;
