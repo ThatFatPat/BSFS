@@ -15,6 +15,7 @@ static int create_open_file(struct bs_open_level_impl* level,
   if (!file) {
     return -ENOMEM;
   }
+  memset(file, 0, sizeof(struct bs_file_impl));
 
   int ret = -pthread_rwlock_init(&file->lock, NULL);
   if (ret < 0) {
@@ -22,6 +23,7 @@ static int create_open_file(struct bs_open_level_impl* level,
     return ret;
   }
 
+  // note: initial refcount is 0 (not 1)
   file->index = index;
   file->level = level;
   *out = file;
