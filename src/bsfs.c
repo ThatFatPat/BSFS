@@ -136,6 +136,21 @@ static int rehash_open_files(bs_file_table_t* table, size_t bucket_count) {
   return 0;
 }
 
+static int add_open_file(bs_file_table_t* table, bs_file_t file) {
+  if (table->size + 1 > table->bucket_count * FTAB_MAX_LOAD_FACTOR) {
+    // note: still power-of-2
+    int rehash_status = rehash_open_files(table, 2 * table->bucket_count);
+    if (rehash_status < 0) {
+      return rehash_status;
+    }
+  }
+
+  insert_open_file(table, file);
+  table->size++;
+
+  return 0;
+}
+
 int bs_file_table_init(bs_file_table_t* table) {
   memset(table, 0, sizeof(bs_file_table_t));
   int ret = realloc_buckets(table, FTAB_INITIAL_BUCKET_COUNT);
