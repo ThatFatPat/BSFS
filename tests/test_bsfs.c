@@ -147,7 +147,7 @@ START_TEST(test_ftab_lookup_multi_same_bucket) {
 }
 END_TEST
 
-START_TEST(test_ftab_insert_multi_rehash) {
+START_TEST(test_ftab_rehash) {
   bs_file_table_t table;
   ck_assert_int_eq(bs_file_table_init(&table), 0);
 
@@ -206,7 +206,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(ftab_tcase, test_ftab_insert_multi_same_bucket);
   tcase_add_test(ftab_tcase, test_ftab_insert_multi_size);
   tcase_add_test(ftab_tcase, test_ftab_lookup_multi_same_bucket);
-  tcase_add_test(ftab_tcase, test_ftab_insert_multi_rehash);
+  tcase_add_test(ftab_tcase, test_ftab_rehash);
   tcase_add_test(ftab_tcase, test_ftab_insert_after_rehash);
   suite_add_tcase(suite, ftab_tcase);
 
