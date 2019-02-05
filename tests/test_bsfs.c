@@ -1,6 +1,7 @@
 #include "test_bsfs.h"
 
 #include "bsfs_priv.h"
+#include <errno.h>
 
 START_TEST(test_ftab_insert_vals) {
   bs_file_table_t table;
@@ -218,6 +219,17 @@ START_TEST(test_ftab_remove_empty) {
 }
 END_TEST
 
+START_TEST(test_ftab_remove_invalid) {
+  bs_file_table_t table;
+  ck_assert_int_eq(bs_file_table_init(&table), 0);
+
+  struct bs_file_impl raw_file = { .refcount = 1 };
+  ck_assert_int_eq(bs_file_table_release(&table, &raw_file), -EINVAL);
+
+  bs_file_table_destroy(&table);
+}
+END_TEST
+
 START_TEST(test_ftab_remove_size) {
   bs_file_table_t table;
   ck_assert_int_eq(bs_file_table_init(&table), 0);
@@ -304,6 +316,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(ftab_tcase, test_ftab_rehash);
   tcase_add_test(ftab_tcase, test_ftab_insert_after_rehash);
   tcase_add_test(ftab_tcase, test_ftab_remove_empty);
+  tcase_add_test(ftab_tcase, test_ftab_remove_invalid);
   tcase_add_test(ftab_tcase, test_ftab_remove_size);
   tcase_add_test(ftab_tcase, test_ftab_release_decref);
   tcase_add_test(ftab_tcase, test_ftab_remove_same_bucket);
