@@ -113,6 +113,7 @@ static int remove_open_file(bs_file_table_t* table, bs_file_t file) {
     size_t next_bucket = bucket_of((*prev_link)->index, table->bucket_count);
     table->buckets[next_bucket] = prev_link;
   }
+  table->size--;
 
   return 0;
 }
