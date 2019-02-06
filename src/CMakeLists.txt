@@ -7,27 +7,15 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR} ${FUSE3_INCLUDE_DIR})
 
 set(SOURCE_FILES
   bft.c
-  bft.h
   bit_util.c
-  bit_util.h
-  bsfs_priv.h
   bsfs.c
-  bsfs.h
   cluster.c
-  cluster.h
   disk.c
-  disk.h
   enc.c
-  enc.h
   fuse_ops.c
-  fuse_ops.h
-  fuse_wrap.h
   keytab.c
-  keytab.h
   stego.c
-  stego.h
   vector.c
-  vector.h
 )
 
 add_library(bsfs-core ${SOURCE_FILES})
