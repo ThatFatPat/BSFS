@@ -240,16 +240,19 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file) {
   // recheck refcount after locking
   new_refcount = atomic_load_explicit(&file->refcount, memory_order_acquire);
   if (new_refcount) {
-    goto unlock;
+    goto fail;
   }
 
   ret = oft_remove(table, file);
   if (ret < 0) {
-    goto unlock;
+    goto fail;
   }
-  destroy_open_file(file);
 
-unlock:
+  pthread_mutex_unlock(&table->lock);
+  destroy_open_file(file);
+  return 0;
+
+fail:
   pthread_mutex_unlock(&table->lock);
   return ret;
 }
