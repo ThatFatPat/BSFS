@@ -11,17 +11,17 @@ struct bs_file_impl {
 
   bft_offset_t index;
   atomic_int refcount;
-  pthread_rwlock_t lock; // Protects reads and writes to the file
+  pthread_rwlock_t lock; // protects reads and writes to the file
 
-  bs_file_t next; // For chaining in the table
+  bs_file_t next; // for chaining in the table
 };
 
 typedef struct bs_oft {
   bs_file_t head;
-  bs_file_t** buckets; // Array of next pointers
+  bs_file_t** buckets; // array of next pointers
   size_t bucket_count;
   size_t size;
-  pthread_mutex_t lock; // Protects all table operations
+  pthread_mutex_t lock; // protects all table operations
 } bs_oft_t;
 
 struct bs_open_level_impl {
@@ -31,12 +31,12 @@ struct bs_open_level_impl {
   void* bft;
   void* bitmap;
   bs_oft_t open_files;
-  pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
+  pthread_rwlock_t metadata_lock; // protects BFT and bitmap
 };
 
 struct bs_bsfs_impl {
   struct bs_open_level_impl levels[STEGO_USER_LEVEL_COUNT];
-  pthread_mutex_t level_lock; // Protects `levels`
+  pthread_mutex_t level_lock; // protects `levels`
   bs_disk_t disk;
 };
 

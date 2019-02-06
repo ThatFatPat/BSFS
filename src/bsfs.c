@@ -23,7 +23,7 @@ static int create_open_file(struct bs_open_level_impl* level,
     return ret;
   }
 
-  // note: initial refcount is 0 (not 1)
+  // note: initial refcount is 0 (not 1), so it must be incremented elsewhere
   file->index = index;
   file->level = level;
   *out = file;
@@ -157,7 +157,7 @@ static int oft_rehash(bs_oft_t* table, size_t bucket_count) {
 
 static int oft_insert(bs_oft_t* table, bs_file_t file) {
   if (table->size + 1 > table->bucket_count * OFT_MAX_LOAD_FACTOR) {
-    // note: still power-of-2
+    // note: still power of 2
     int rehash_status = oft_rehash(table, 2 * table->bucket_count);
     if (rehash_status < 0) {
       return rehash_status;
@@ -237,22 +237,22 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file) {
     return ret;
   }
 
-  // recheck refcount after locking
+  // recheck refcount under lock (double-checked locking)
   new_refcount = atomic_load_explicit(&file->refcount, memory_order_acquire);
   if (new_refcount) {
-    goto fail;
+    goto unlock;
   }
 
   ret = oft_remove(table, file);
   if (ret < 0) {
-    goto fail;
+    goto unlock;
   }
 
   pthread_mutex_unlock(&table->lock);
   destroy_open_file(file);
   return 0;
 
-fail:
+unlock:
   pthread_mutex_unlock(&table->lock);
   return ret;
 }
