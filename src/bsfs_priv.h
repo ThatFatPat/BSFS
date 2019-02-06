@@ -16,13 +16,13 @@ struct bs_file_impl {
   bs_file_t next; // For chaining in the table
 };
 
-typedef struct bs_file_table {
+typedef struct bs_oft {
   bs_file_t head;
   bs_file_t** buckets; // Array of next pointers
   size_t bucket_count;
   size_t size;
   pthread_mutex_t lock; // Protects all table operations
-} bs_file_table_t;
+} bs_oft_t;
 
 struct bs_open_level_impl {
   bs_bsfs_t fs;
@@ -30,7 +30,7 @@ struct bs_open_level_impl {
   char* pass;
   void* bft;
   void* bitmap;
-  bs_file_table_t open_files;
+  bs_oft_t open_files;
   pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
 };
 
@@ -40,11 +40,11 @@ struct bs_bsfs_impl {
   bs_disk_t disk;
 };
 
-int bs_file_table_init(bs_file_table_t* table);
-void bs_file_table_destroy(bs_file_table_t* table);
+int bs_oft_init(bs_oft_t* table);
+void bs_oft_destroy(bs_oft_t* table);
 
-int bs_file_table_open(bs_file_table_t* table, struct bs_open_level_impl* level,
-                       bft_offset_t index, bs_file_t* file);
-int bs_file_table_release(bs_file_table_t* table, bs_file_t file);
+int bs_oft_get(bs_oft_t* table, struct bs_open_level_impl* level,
+               bft_offset_t index, bs_file_t* file);
+int bs_oft_release(bs_oft_t* table, bs_file_t file);
 
 #endif
