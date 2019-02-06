@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FTAB_INITIAL_BUCKET_COUNT (1 << 3) // must be power of 2
-#define FTAB_MAX_LOAD_FACTOR 1.f
+#define OFT_INITIAL_BUCKET_COUNT (1 << 3) // must be power of 2
+#define OFT_MAX_LOAD_FACTOR 1.f
 
 static int create_open_file(struct bs_open_level_impl* level,
                             bft_offset_t index, bs_file_t* out) {
@@ -156,7 +156,7 @@ static int oft_rehash(bs_oft_t* table, size_t bucket_count) {
 }
 
 static int oft_insert(bs_oft_t* table, bs_file_t file) {
-  if (table->size + 1 > table->bucket_count * FTAB_MAX_LOAD_FACTOR) {
+  if (table->size + 1 > table->bucket_count * OFT_MAX_LOAD_FACTOR) {
     // note: still power-of-2
     int rehash_status = oft_rehash(table, 2 * table->bucket_count);
     if (rehash_status < 0) {
@@ -172,7 +172,7 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
 
 int bs_oft_init(bs_oft_t* table) {
   memset(table, 0, sizeof(bs_oft_t));
-  int ret = oft_realloc_buckets(table, FTAB_INITIAL_BUCKET_COUNT);
+  int ret = oft_realloc_buckets(table, OFT_INITIAL_BUCKET_COUNT);
   if (ret < 0) {
     return ret;
   }
