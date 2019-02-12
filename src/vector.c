@@ -48,20 +48,22 @@ void vector_linear_combination(vector_t linear_combination,
   }
 }
 
-static bool has_nonzero(vector_t vector, size_t size) {
-  for (size_t i = 0; i < size; i++) {
-    if (vector[i]) {
+static bool has_nonzero(vector_t vector, size_t dim) {
+  for (size_t i = 0; i < dim; i++) {
+    if (get_bit(vector, i)) {
       return true;
     }
   }
   return false;
 }
 
-int gen_nonzero_vector(vector_t vector, size_t size) {
+int gen_nonzero_vector(vector_t vector, size_t dim) {
+  size_t size = round_to_bytes(dim);
+
   do {
     if (!RAND_bytes(vector, size)) {
       return -EIO;
     }
-  } while (!has_nonzero(vector, size));
+  } while (!has_nonzero(vector, dim));
   return 0;
 }

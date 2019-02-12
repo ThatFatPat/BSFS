@@ -1,6 +1,7 @@
 #include "test_vector.h"
 
 #include "vector.h"
+#include <limits.h>
 #include <stdint.h>
 
 START_TEST(test_scalar_product) {
@@ -45,7 +46,8 @@ END_TEST
 
 START_TEST(test_gen_nonzero_vector) {
   uint64_t vector = 0x0000000000000000;
-  ck_assert_int_eq(gen_nonzero_vector((vector_t) &vector, sizeof(vector)), 0);
+  ck_assert_int_eq(
+      gen_nonzero_vector((vector_t) &vector, sizeof(vector) * CHAR_BIT), 0);
   ck_assert_uint_ne(vector, 0);
 }
 END_TEST

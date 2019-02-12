@@ -11,41 +11,43 @@
 #include <string.h>
 #include <time.h>
 
-static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
-  return get_bit(mat, row * dim + col);
-}
-
-static void matrix_set(matrix_t mat, size_t row, size_t col, bool val,
+static bool matrix_get(const_matrix_t matrix, size_t row, size_t col,
                        size_t dim) {
-  set_bit(mat, row * dim + col, val);
+  return get_bit(matrix, row * dim + col);
 }
 
-static void matrix_elem_add(matrix_t mat, size_t row, size_t col,
+static void matrix_set(matrix_t matrix, size_t row, size_t col, bool val,
+                       size_t dim) {
+  set_bit(matrix, row * dim + col, val);
+}
+
+static void matrix_elem_add(matrix_t matrix, size_t row, size_t col,
                             bool added_val, size_t dim) {
   if (added_val) {
-    matrix_set(mat, row, col, !matrix_get(mat, row, col, dim), dim);
+    matrix_set(matrix, row, col, !matrix_get(matrix, row, col, dim), dim);
   }
 }
 
-static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
+static void matrix_add_row(matrix_t matrix, size_t to, size_t from,
+                           size_t dim) {
   // Note: can't use `vector_linear_combination` as the row boundaries may not
   // always fall on byte boundaries.
   for (size_t i = 0; i < dim; i++) {
-    bool to_val = matrix_get(mat, to, i, dim);
-    bool from_val = matrix_get(mat, from, i, dim);
-    matrix_set(mat, to, i, to_val ^ from_val, dim);
+    bool to_val = matrix_get(matrix, to, i, dim);
+    bool from_val = matrix_get(matrix, from, i, dim);
+    matrix_set(matrix, to, i, to_val ^ from_val, dim);
   }
 }
 
-void matrix_transpose(matrix_t dest, const_matrix_t mat, size_t dim) {
+void matrix_transpose(matrix_t dest, const_matrix_t matrix, size_t dim) {
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j < i; j++) {
-      bool IJ = matrix_get(mat, i, j, dim);
-      bool JI = matrix_get(mat, j, i, dim);
+      bool IJ = matrix_get(matrix, i, j, dim);
+      bool JI = matrix_get(matrix, j, i, dim);
       matrix_set(dest, i, j, JI, dim);
       matrix_set(dest, j, i, IJ, dim);
     }
-    matrix_set(dest, i, i, matrix_get(mat, i, i, dim), dim);
+    matrix_set(dest, i, i, matrix_get(matrix, i, i, dim), dim);
   }
 }
 
@@ -64,23 +66,64 @@ void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
 }
 
 /**
+ * b is a vector of curr_dim
+ */
+static void gen_nonsing_dim(matrix_t matrix, const_vector_t b, const_vector_t c,
+                            size_t dim, size_t curr_dim, uint8_t* bmp) {
+  size_t n = dim - curr_dim;
+
+  size_t temp_size = n;
+  size_t idx_in_minor = 0; // The index of the curret element in c, used to find
+                           // the first non-zero value
+  bool found_nonzero_bit = false; // Found a nonzero bit in c
+  size_t idx_in_mat;              // The index of
+
+  for (idx_in_mat = 0; idx_in_mat < temp_size; idx_in_mat++) {
+
+    if (!get_bit(bmp, idx_in_mat)) {
+
+      bool c_value = get_bit(c, idx_in_minor);
+
+      if (c_value) {
+        if (!found_nonzero_bit) {
+          // c_value is the first non-zero calue in c
+          found_nonzero_bit = true;
+          set_bit(bmp, idx_in_mat, true);
+        }
+
+        matrix_elem_add(matrix, idx_in_mat, curr_dim, c_value,
+                        dim); // Add c into the matrix
+        // Add b into the matrix
+        for (size_t v = 0; v < n - 1; v++) {
+          matrix_elem_add(matrix, idx_in_mat, v + curr_dim + 1, get_bit(b, v),
+                          dim);
+        }
+      }
+
+      idx_in_minor++;
+    } else {
+      temp_size++;
+    }
+  }
+}
+
+/**
  * Iterative algorithm that creates a random nonsingular matrix
  */
-int matrix_gen_nonsing(matrix_t mat, size_t dim) {
+int matrix_gen_nonsing(matrix_t matrix, size_t dim) {
   size_t vec_size = round_to_bytes(dim);
 
   int ret = 0;
 
   for (size_t i = 0; i < dim; i++) {
     for (size_t j = 0; j < dim; j++) {
-      matrix_set(mat, i, j, 0, dim);
+      matrix_set(matrix, i, j, 0, dim);
     }
   }
 
   uint8_t* bmp = (uint8_t*) calloc(1, vec_size); // Bitmap of minors
   vector_t b = (vector_t) malloc(vec_size);      // A random vector
-  vector_t c =
-      (vector_t) malloc(vec_size); // A random non-zero vector
+  vector_t c = (vector_t) malloc(vec_size);      // A random non-zero vector
 
   if (!bmp || !c || !b) {
     ret = -ENOMEM;
@@ -91,43 +134,17 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
   for (size_t i = 0; i < dim - 1; i++) {
     size_t n = dim - i;
 
-    ret = gen_nonzero_vector(c, round_to_bytes(n));
+    ret = gen_nonzero_vector(c, n);
     if (ret < 0) {
       goto cleanup;
     }
-    if (!RAND_bytes(b, n)) {
+
+    if (!RAND_bytes(b, round_to_bytes(n))) {
       ret = -EIO;
       goto cleanup;
     }
 
-    bool found_nonzero_bit = false; // Found a nonzero bit in c
-    size_t temp_size = n;
-    size_t idx_in_minor = 0;
-    size_t idx_in_mat = 0;
-
-    while (idx_in_mat < temp_size) {
-      if (!get_bit(bmp, idx_in_mat)) {
-
-        bool c_value = get_bit(c, idx_in_minor);
-
-        if (c_value) {
-          if (!found_nonzero_bit) {
-            found_nonzero_bit = true;
-            set_bit(bmp, idx_in_mat, true);
-          }
-
-          matrix_elem_add(mat, idx_in_mat, i, c_value, dim);
-          for (size_t v = 0; v < n - 1; v++) {
-            matrix_elem_add(mat, idx_in_mat, v + i + 1, get_bit(b, v), dim);
-          }
-        }
-
-        idx_in_minor++;
-      } else {
-        temp_size++;
-      }
-      idx_in_mat++;
-    }
+    gen_nonsing_dim(matrix, b, c, dim, i, bmp);
   }
 
 cleanup:
