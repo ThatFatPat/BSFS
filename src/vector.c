@@ -48,27 +48,20 @@ void vector_linear_combination(vector_t linear_combination,
   }
 }
 
-// Generate an unbiased random integer in [0, n)
-static int rand_index(size_t n, size_t* out) {
-  size_t threshold = SIZE_MAX - SIZE_MAX % n;
-
-  size_t raw_rnd;
-  do {
-    if (!RAND_bytes((uint8_t*) &raw_rnd, sizeof(raw_rnd))) {
-      return -EIO;
+static bool has_nonzero(vector_t vector, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    if (vector[i]) {
+      return true;
     }
-  } while (raw_rnd >= threshold);
-
-  *out = raw_rnd % n;
-  return 0;
+  }
+  return false;
 }
 
-int gen_nonzero_vector(vector_t vector, size_t dim) {
-
-  size_t r;
-  if (!RAND_bytes(vector, round_to_bytes(dim)) || !rand_index(dim, &r)) {
-    return -EIO;
-  }
-  vector[r / CHAR_BIT] |= 1UL << (r % CHAR_BIT);
+int gen_nonzero_vector(vector_t vector, size_t size) {
+  do {
+    if (!RAND_bytes(vector, size)) {
+      return -EIO;
+    }
+  } while (!has_nonzero(vector, size));
   return 0;
 }

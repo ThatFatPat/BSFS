@@ -45,9 +45,8 @@ END_TEST
 
 START_TEST(test_gen_nonzero_vector) {
   uint64_t vector = 0x0000000000000000;
-  size_t dim = 64;
-  gen_nonzero_vector((vector_t) &vector, dim);
-  ck_assert_int_eq(vector, 0);
+  ck_assert_int_eq(gen_nonzero_vector((vector_t) &vector, sizeof(vector)), 0);
+  ck_assert_uint_ne(vector, 0);
 }
 END_TEST
 

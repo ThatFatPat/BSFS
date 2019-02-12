@@ -67,7 +67,7 @@ void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
  * Iterative algorithm that creates a random nonsingular matrix
  */
 int matrix_gen_nonsing(matrix_t mat, size_t dim) {
-  size_t matrix_storage_size = round_to_bytes(dim * dim);
+  size_t vec_size = round_to_bytes(dim);
 
   int ret = 0;
 
@@ -77,26 +77,31 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
     }
   }
 
-  uint8_t* bmp = (uint8_t*) calloc(1, round_to_bytes(dim)); // Bitmap of minors
-  vector_t b = (vector_t) malloc(round_to_bytes(dim));      // A random vector
+  uint8_t* bmp = (uint8_t*) calloc(1, vec_size); // Bitmap of minors
+  vector_t b = (vector_t) malloc(vec_size);      // A random vector
   vector_t c =
-      (vector_t) malloc(round_to_bytes(dim)); // A random non-zero vector
+      (vector_t) malloc(vec_size); // A random non-zero vector
 
   if (!bmp || !c || !b) {
     ret = -ENOMEM;
     goto cleanup;
   }
 
+  // The iterative algorithm
   for (size_t i = 0; i < dim - 1; i++) {
-    size_t size = dim - i;
+    size_t n = dim - i;
 
-    if (!gen_nonzero_vector(c, size) || !RAND_bytes(b, size)) {
+    ret = gen_nonzero_vector(c, round_to_bytes(n));
+    if (ret < 0) {
+      goto cleanup;
+    }
+    if (!RAND_bytes(b, n)) {
       ret = -EIO;
       goto cleanup;
     }
 
-    bool saw_nonzero_in_c = false;
-    size_t temp_size = size;
+    bool found_nonzero_bit = false; // Found a nonzero bit in c
+    size_t temp_size = n;
     size_t idx_in_minor = 0;
     size_t idx_in_mat = 0;
 
@@ -106,13 +111,13 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
         bool c_value = get_bit(c, idx_in_minor);
 
         if (c_value) {
-          if (!saw_nonzero_in_c) {
-            saw_nonzero_in_c = true;
+          if (!found_nonzero_bit) {
+            found_nonzero_bit = true;
             set_bit(bmp, idx_in_mat, true);
           }
 
           matrix_elem_add(mat, idx_in_mat, i, c_value, dim);
-          for (size_t v = 0; v < size - 1; v++) {
+          for (size_t v = 0; v < n - 1; v++) {
             matrix_elem_add(mat, idx_in_mat, v + i + 1, get_bit(b, v), dim);
           }
         }
