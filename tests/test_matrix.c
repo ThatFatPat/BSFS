@@ -58,6 +58,18 @@ START_TEST(test_matrix_invert_singular) {
 }
 END_TEST
 
+START_TEST(test_matrix_gen_nonsingular) {
+  size_t dim = 8;
+
+  uint8_t mat[8] = { 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
+  uint8_t inverse[8];
+
+  ck_assert_int_eq(matrix_gen_nonsing(mat, dim), 0);
+
+  ck_assert_int_eq(matrix_invert(inverse, mat, 8), 0);
+}
+END_TEST
+
 Suite* matrix_suite(void) {
   Suite* suite = suite_create("matrix");
 
@@ -73,6 +85,7 @@ Suite* matrix_suite(void) {
   tcase_add_test(matrix_nonsing_tcase, test_matrix_invert);
   tcase_add_test(matrix_nonsing_tcase, test_matrix_invert_identity);
   tcase_add_test(matrix_nonsing_tcase, test_matrix_invert_singular);
+  tcase_add_test(matrix_nonsing_tcase, test_matrix_gen_nonsingular);
   suite_add_tcase(suite, matrix_nonsing_tcase);
 
   return suite;

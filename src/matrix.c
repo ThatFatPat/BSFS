@@ -66,43 +66,40 @@ void matrix_multiply(matrix_t restrict dest, const_matrix_t a, const_matrix_t b,
 }
 
 /**
- * b is a vector of curr_dim
+ * a step in the gen_nonsing algorithm
  */
 static void gen_nonsing_dim(matrix_t matrix, const_vector_t b, const_vector_t c,
                             size_t dim, size_t curr_dim, uint8_t* bmp) {
   size_t n = dim - curr_dim;
 
-  size_t temp_size = n;
-  size_t idx_in_minor = 0; // The index of the curret element in c, used to find
-                           // the first non-zero value
+  size_t idx_in_minor = 0; // The index of the curret element in c
+  size_t idx_in_mat =
+      0; // The index corresponding to the place of the place where we have to
+         // put the current element in c in the original matrix
+
   bool found_nonzero_bit = false; // Found a nonzero bit in c
-  size_t idx_in_mat;              // The index of
 
-  for (idx_in_mat = 0; idx_in_mat < temp_size; idx_in_mat++) {
+  for (idx_in_minor = 0; idx_in_minor < n; idx_in_minor++, idx_in_mat++) {
+    while (get_bit(bmp, idx_in_mat)) {
+      idx_in_mat++; // pass all of the selected rows in bmp
+    }
 
-    if (!get_bit(bmp, idx_in_mat)) {
+    bool c_value = get_bit(c, idx_in_minor);
 
-      bool c_value = get_bit(c, idx_in_minor);
-
-      if (c_value) {
-        if (!found_nonzero_bit) {
-          // c_value is the first non-zero calue in c
-          found_nonzero_bit = true;
-          set_bit(bmp, idx_in_mat, true);
-        }
-
-        matrix_elem_add(matrix, idx_in_mat, curr_dim, c_value,
-                        dim); // Add c into the matrix
-        // Add b into the matrix
-        for (size_t v = 0; v < n - 1; v++) {
-          matrix_elem_add(matrix, idx_in_mat, v + curr_dim + 1, get_bit(b, v),
-                          dim);
-        }
+    if (c_value) {
+      if (!found_nonzero_bit) {
+        // c_value is the first non-zero calue in c
+        found_nonzero_bit = true;
+        set_bit(bmp, idx_in_mat, true);
       }
 
-      idx_in_minor++;
-    } else {
-      temp_size++;
+      matrix_elem_add(matrix, idx_in_mat, curr_dim, c_value,
+                      dim); // Add c into the matrix
+      // Add b into the matrix
+      for (size_t v = 0; v < n - 1; v++) {
+        matrix_elem_add(matrix, idx_in_mat, curr_dim + v + 1, get_bit(b, v),
+                        dim);
+      }
     }
   }
 }
@@ -131,20 +128,23 @@ int matrix_gen_nonsing(matrix_t matrix, size_t dim) {
   }
 
   // The iterative algorithm
-  for (size_t i = 0; i < dim - 1; i++) {
-    size_t n = dim - i;
+  for (size_t j = 0; j < dim; j++) {
+    size_t n = dim - j;
 
+    // generating c: a nonzero coloumn vector
     ret = gen_nonzero_vector(c, n);
     if (ret < 0) {
       goto cleanup;
     }
 
-    if (!RAND_bytes(b, round_to_bytes(n))) {
+    // generating b: a row vector
+    if (!RAND_bytes(b, round_to_bytes(n - 1))) {
       ret = -EIO;
       goto cleanup;
     }
 
-    gen_nonsing_dim(matrix, b, c, dim, i, bmp);
+    // placing b and c in the appropriate location in the matrix
+    gen_nonsing_dim(matrix, b, c, dim, j, bmp);
   }
 
 cleanup:
@@ -172,7 +172,7 @@ static void matrix_swap_rows(matrix_t matrix, size_t r1, size_t r2,
 }
 
 static ssize_t find_pivot(matrix_t matrix, size_t col, size_t dim) {
-  // note: search starts from diagonal
+  // Note: search starts from diagonal
   for (size_t row = col; row < dim; row++) {
     if (matrix_get(matrix, row, col, dim)) {
       return row;
