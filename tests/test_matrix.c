@@ -1,7 +1,9 @@
 #include "test_matrix.h"
 
 #include "matrix.h"
+#include <errno.h>
 #include <stdint.h>
+#include <string.h>
 
 START_TEST(test_matrix_transpose) {
   uint8_t mat[8] = { 0xe2, 0xf2, 0x1c, 0x77, 0x19, 0x4e, 0x7b, 0xe1 };
@@ -29,7 +31,30 @@ START_TEST(test_matrix_multiplication) {
 }
 END_TEST
 
-START_TEST(test_matrix_gen_nonsing) {
+START_TEST(test_matrix_invert) {
+  const uint8_t identity[2] = { 0x84, 0x21 };
+  const uint8_t matrix[2] = { 0x16, 0x9a };
+  uint8_t inverse[2];
+  uint8_t product[2];
+
+  ck_assert_int_eq(matrix_invert(inverse, matrix, 4), 0);
+  matrix_multiply(product, matrix, inverse, 4);
+  ck_assert_int_eq(memcmp(product, identity, sizeof(identity)), 0);
+}
+END_TEST
+
+START_TEST(test_matrix_invert_identity) {
+  const uint8_t identity[8] = { 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
+  uint8_t inverse[8];
+  ck_assert_int_eq(matrix_invert(inverse, identity, 8), 0);
+  ck_assert_int_eq(memcmp(inverse, identity, sizeof(identity)), 0);
+}
+END_TEST
+
+START_TEST(test_matrix_invert_singular) {
+  uint8_t zero[8] = { 0 };
+  uint8_t inverse[8];
+  ck_assert_int_eq(matrix_invert(inverse, zero, 8), -EINVAL);
 }
 END_TEST
 
@@ -44,9 +69,11 @@ Suite* matrix_suite(void) {
   tcase_add_test(matrix_multiply_tcase, test_matrix_multiplication);
   suite_add_tcase(suite, matrix_multiply_tcase);
 
-  TCase* matrix_gen_nonsing_tcase = tcase_create("matrix_gen_nonsing");
-  tcase_add_test(matrix_gen_nonsing_tcase, test_matrix_gen_nonsing);
-  suite_add_tcase(suite, matrix_gen_nonsing_tcase);
+  TCase* matrix_nonsing_tcase = tcase_create("nonsing");
+  tcase_add_test(matrix_nonsing_tcase, test_matrix_invert);
+  tcase_add_test(matrix_nonsing_tcase, test_matrix_invert_identity);
+  tcase_add_test(matrix_nonsing_tcase, test_matrix_invert_singular);
+  suite_add_tcase(suite, matrix_nonsing_tcase);
 
   return suite;
 }

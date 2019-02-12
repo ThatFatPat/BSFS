@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 static bool matrix_get(const_matrix_t mat, size_t row, size_t col, size_t dim) {
@@ -19,8 +20,8 @@ static void matrix_set(matrix_t mat, size_t row, size_t col, bool val,
   set_bit(mat, row * dim + col, val);
 }
 
-static void matrix_add(matrix_t mat, size_t row, size_t col, bool added_val,
-                       size_t dim) {
+static void matrix_elem_add(matrix_t mat, size_t row, size_t col,
+                            bool added_val, size_t dim) {
   if (added_val) {
     matrix_set(mat, row, col, !matrix_get(mat, row, col, dim), dim);
   }
@@ -33,31 +34,6 @@ static void matrix_add_row(matrix_t mat, size_t to, size_t from, size_t dim) {
     bool to_val = matrix_get(mat, to, i, dim);
     bool from_val = matrix_get(mat, from, i, dim);
     matrix_set(mat, to, i, to_val ^ from_val, dim);
-  }
-}
-
-static void matrix_inverse_triangular(matrix_t dest, const_matrix_t triangular,
-                                      bool lower_triangular, size_t dim) {
-  // initialize to identity
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j < dim; j++) {
-      matrix_set(dest, i, j, i == j, dim);
-    }
-  }
-
-  // perform row operations
-  for (size_t i = 0; i < dim; i++) {
-    for (size_t j = 0; j < i; j++) {
-      if (lower_triangular) {
-        if (matrix_get(triangular, i, j, dim)) {
-          matrix_add_row(dest, i, j, dim);
-        }
-      } else {
-        if (matrix_get(triangular, dim - i - 1, dim - j - 1, dim)) {
-          matrix_add_row(dest, dim - i - 1, dim - j - 1, dim);
-        }
-      }
-    }
   }
 }
 
@@ -135,9 +111,9 @@ int matrix_gen_nonsing(matrix_t mat, size_t dim) {
             set_bit(bmp, idx_in_mat, true);
           }
 
-          matrix_add(mat, idx_in_mat, i, c_value, dim);
+          matrix_elem_add(mat, idx_in_mat, i, c_value, dim);
           for (size_t v = 0; v < size - 1; v++) {
-            matrix_add(mat, idx_in_mat, v + i + 1, get_bit(b, v), dim);
+            matrix_elem_add(mat, idx_in_mat, v + i + 1, get_bit(b, v), dim);
           }
         }
 
@@ -153,5 +129,75 @@ cleanup:
   free(bmp);
   free(b);
   free(c);
+  return ret;
+}
+
+static void matrix_set_identity(matrix_t matrix, size_t dim) {
+  for (size_t i = 0; i < dim; i++) {
+    for (size_t j = 0; j < dim; j++) {
+      matrix_set(matrix, i, j, i == j, dim);
+    }
+  }
+}
+
+static void matrix_swap_rows(matrix_t matrix, size_t r1, size_t r2,
+                             size_t dim) {
+  for (size_t i = 0; i < dim; i++) {
+    bool tmp = matrix_get(matrix, r1, i, dim);
+    matrix_set(matrix, r1, i, matrix_get(matrix, r2, i, dim), dim);
+    matrix_set(matrix, r2, i, tmp, dim);
+  }
+}
+
+static ssize_t find_pivot(matrix_t matrix, size_t col, size_t dim) {
+  // note: search starts from diagonal
+  for (size_t row = col; row < dim; row++) {
+    if (matrix_get(matrix, row, col, dim)) {
+      return row;
+    }
+  }
+
+  return -1;
+}
+
+int matrix_invert(matrix_t inverse, const_matrix_t matrix, size_t dim) {
+  size_t byte_size = round_to_bytes(dim * dim);
+  matrix_t tmp = (matrix_t) malloc(byte_size);
+
+  if (!tmp) {
+    return -ENOMEM;
+  }
+
+  int ret = 0;
+
+  memcpy(tmp, matrix, byte_size);
+
+  // Initialize inverse
+  matrix_set_identity(inverse, dim);
+
+  // Gaussian elimination
+  for (size_t j = 0; j < dim; j++) {
+    ssize_t pivot = find_pivot(tmp, j, dim);
+    if (pivot < 0) {
+      // matrix is singular
+      ret = -EINVAL;
+      goto cleanup;
+    }
+
+    // move pivot to diagonal
+    matrix_swap_rows(tmp, j, pivot, dim);
+    matrix_swap_rows(inverse, j, pivot, dim);
+
+    // zero out the rest of the column
+    for (size_t i = 0; i < dim; i++) {
+      if (i != j && matrix_get(tmp, i, j, dim)) {
+        matrix_add_row(tmp, i, j, dim);
+        matrix_add_row(inverse, i, j, dim);
+      }
+    }
+  }
+
+cleanup:
+  free(tmp);
   return ret;
 }
