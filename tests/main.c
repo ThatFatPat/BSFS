@@ -14,11 +14,11 @@
 int main() {
   SRunner* runner = srunner_create(bft_suite());
   srunner_add_suite(runner, bit_util_suite());
-  // srunner_add_suite(runner, cluster_suite());
+  srunner_add_suite(runner, cluster_suite());
   srunner_add_suite(runner, enc_suite());
   srunner_add_suite(runner, fuse_ops_suite());
   srunner_add_suite(runner, keytab_suite());
-  // srunner_add_suite(runner, stego_suite());
+  srunner_add_suite(runner, stego_suite());
   srunner_add_suite(runner, disk_suite());
   srunner_add_suite(runner, vector_suite());
   srunner_add_suite(runner, matrix_suite());
