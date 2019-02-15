@@ -61,21 +61,27 @@ static bool oft_matches_bucket(bs_file_t file, size_t bucket,
   return file && oft_bucket_of(file->index, bucket_count) == bucket;
 }
 
-static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
+static bs_file_t* oft_find_prev(bs_oft_t* table, bft_offset_t index) {
   size_t bucket = oft_bucket_of(index, table->bucket_count);
   bs_file_t* prev_link = table->buckets[bucket];
 
-  if (prev_link) {
-    for (bs_file_t iter = *prev_link;
-         oft_matches_bucket(iter, bucket, table->bucket_count);
-         iter = iter->next) {
-      if (iter->index == index) {
-        return iter;
-      }
+  if (!prev_link) {
+    return NULL;
+  }
+
+  for (; oft_matches_bucket(*prev_link, bucket, table->bucket_count);
+       prev_link = &(*prev_link)->next) {
+    if ((*prev_link)->index == index) {
+      return prev_link;
     }
   }
 
   return NULL;
+}
+
+static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
+  bs_file_t* prev_link = oft_find_prev(table, index);
+  return prev_link ? *prev_link : NULL;
 }
 
 static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
@@ -102,17 +108,9 @@ static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
 
 static int oft_remove(bs_oft_t* table, bs_file_t file) {
   size_t bucket = oft_bucket_of(file->index, table->bucket_count);
-  if (!table->buckets[bucket]) {
-    return -EINVAL;
-  }
 
-  bs_file_t* prev_link = table->buckets[bucket];
-  for (; *prev_link != file &&
-         oft_matches_bucket(*prev_link, bucket, table->bucket_count);
-       prev_link = &(*prev_link)->next) {
-  }
-
-  if (*prev_link != file) {
+  bs_file_t* prev_link = oft_find_prev(table, file->index);
+  if (!prev_link) {
     return -EINVAL;
   }
 
