@@ -175,7 +175,13 @@ int bs_oft_init(bs_oft_t* table) {
   if (ret < 0) {
     return ret;
   }
-  return -pthread_mutex_init(&table->lock, NULL);
+
+  ret = -pthread_mutex_init(&table->lock, NULL);
+  if (ret < 0) {
+    free(table->buckets);
+  }
+
+  return ret;
 }
 
 void bs_oft_destroy(bs_oft_t* table) {
