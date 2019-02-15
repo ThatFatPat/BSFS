@@ -17,6 +17,6 @@ void vector_linear_combination(vector_t linear_combination,
                                const_vector_t second_vector, size_t vector_size,
                                bool coefficient);
 
-int gen_nonzero_vector(vector_t vector, size_t size);
+int gen_nonzero_vector(vector_t vector, size_t dim);
 
 #endif // BS_VECTOR_H
