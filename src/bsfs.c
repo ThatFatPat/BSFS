@@ -136,8 +136,8 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
   return 0;
 }
 
-static int oft_rehash(bs_oft_t* table, size_t bucket_count) {
-  int ret = oft_realloc_buckets(table, bucket_count);
+static int oft_rehash(bs_oft_t* table, size_t new_bucket_count) {
+  int ret = oft_realloc_buckets(table, new_bucket_count);
   if (ret < 0) {
     return ret;
   }
