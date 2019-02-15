@@ -123,10 +123,14 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
   *prev_link = file->next;
 
   if (*prev_link) {
-    // patch other bucket with new next pointer
     size_t next_bucket =
         oft_bucket_of((*prev_link)->index, table->bucket_count);
-    table->buckets[next_bucket] = prev_link;
+
+    if (next_bucket != bucket) {
+      // the next item is in a different bucket - patch it with new next
+      // pointer
+      table->buckets[next_bucket] = prev_link;
+    }
   }
 
   table->size--;
