@@ -11,11 +11,10 @@
 
 static int create_open_file(struct bs_open_level_impl* level,
                             bft_offset_t index, bs_file_t* out) {
-  bs_file_t file = (bs_file_t) malloc(sizeof(struct bs_file_impl));
+  bs_file_t file = (bs_file_t) calloc(1, sizeof(struct bs_file_impl));
   if (!file) {
     return -ENOMEM;
   }
-  memset(file, 0, sizeof(struct bs_file_impl));
 
   int ret = -pthread_rwlock_init(&file->lock, NULL);
   if (ret < 0) {
