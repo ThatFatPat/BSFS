@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define OFT_INITIAL_BUCKET_COUNT (1 << 3) // must be power of 2
+#define OFT_INITIAL_BUCKET_COUNT (1 << 3) // Must be a power of 2.
 #define OFT_MAX_LOAD_FACTOR 1.f
 
 static int create_open_file(struct bs_open_level_impl* level,
@@ -22,7 +22,7 @@ static int create_open_file(struct bs_open_level_impl* level,
     return ret;
   }
 
-  // note: initial refcount is 0 (not 1), so it must be incremented elsewhere
+  // Note: initial refcount is 0 (not 1), so it must be incremented elsewhere.
   file->index = index;
   file->level = level;
   *out = file;
@@ -37,7 +37,7 @@ static void destroy_open_file(bs_file_t file) {
 
 static int oft_realloc_buckets(bs_oft_t* table, size_t bucket_count) {
   if (!bucket_count || bucket_count & (bucket_count - 1)) {
-    // not a power of 2
+    // Not a power of 2
     return -EINVAL;
   }
 
@@ -53,7 +53,8 @@ static int oft_realloc_buckets(bs_oft_t* table, size_t bucket_count) {
 }
 
 static size_t oft_bucket_of(bft_offset_t index, size_t bucket_count) {
-  return (size_t) index & (bucket_count - 1); // assumes power-of-2 bucket count
+  return (size_t) index &
+         (bucket_count - 1); // Assumes power-of-2 bucket count.
 }
 
 static bool oft_matches_bucket(bs_file_t file, size_t bucket,
@@ -87,18 +88,18 @@ static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
 static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
   size_t bucket = oft_bucket_of(file->index, table->bucket_count);
   if (table->buckets[bucket]) {
-    // insert at head of existing bucket
+    // Insert at head of existing bucket.
     bs_file_t* prev_link = table->buckets[bucket];
     file->next = *prev_link;
     *prev_link = file;
   } else {
-    // insert at head of table
+    // Insert at head of table.
     file->next = table->head;
     table->head = file;
     table->buckets[bucket] = &table->head;
 
     if (file->next) {
-      // patch other bucket with new next pointer
+      // Patch other bucket with new next pointer.
       size_t next_bucket =
           oft_bucket_of(file->next->index, table->bucket_count);
       table->buckets[next_bucket] = &file->next;
@@ -116,7 +117,7 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
 
   if (*table->buckets[bucket] == file &&
       !oft_matches_bucket(file->next, bucket, table->bucket_count)) {
-    // `file` was the only entry in the bucket - empty it
+    // `file` was the only entry in the bucket - empty it.
     table->buckets[bucket] = NULL;
   }
 
@@ -127,8 +128,8 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
         oft_bucket_of((*prev_link)->index, table->bucket_count);
 
     if (next_bucket != bucket) {
-      // the next item is in a different bucket - patch it with new next
-      // pointer
+      // The next item is in a different bucket - patch it with new next
+      // pointer.
       table->buckets[next_bucket] = prev_link;
     }
   }
@@ -158,7 +159,7 @@ static int oft_rehash(bs_oft_t* table, size_t new_bucket_count) {
 
 static int oft_insert(bs_oft_t* table, bs_file_t file) {
   if (table->size + 1 > table->bucket_count * OFT_MAX_LOAD_FACTOR) {
-    // note: still power of 2
+    // Note: still a power of 2.
     int rehash_status = oft_rehash(table, 2 * table->bucket_count);
     if (rehash_status < 0) {
       return rehash_status;
@@ -242,7 +243,7 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file) {
     return ret;
   }
 
-  // recheck refcount under lock (double-checked locking)
+  // Recheck refcount under lock (double-checked locking).
   new_refcount = atomic_load_explicit(&file->refcount, memory_order_acquire);
   if (new_refcount) {
     goto unlock;
