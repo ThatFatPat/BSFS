@@ -279,11 +279,11 @@ int bsfs_release(bs_file_t file) {
   return -ENOSYS;
 }
 
-ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t index) {
+ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
 
-ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t index) {
+ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
 
