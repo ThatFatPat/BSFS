@@ -197,28 +197,26 @@ int bs_oft_get(bs_oft_t* table, struct bs_open_level_impl* level,
     return ret;
   }
 
-  bs_file_t existing_file = oft_find(table, index);
-  if (existing_file) {
-    *file = existing_file;
-    goto success;
+  *file = oft_find(table, index);
+
+  if (!*file) {
+    bs_file_t new_file;
+    ret = create_open_file(level, index, &new_file);
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    ret = oft_insert(table, new_file);
+    if (ret < 0) {
+      destroy_open_file(new_file);
+      goto unlock;
+    }
+
+    *file = new_file;
   }
 
-  bs_file_t new_file;
-  ret = create_open_file(level, index, &new_file);
-  if (ret < 0) {
-    goto unlock;
-  }
-
-  ret = oft_insert(table, new_file);
-  if (ret < 0) {
-    destroy_open_file(new_file);
-    goto unlock;
-  }
-
-  *file = new_file;
-
-success:
   atomic_fetch_add_explicit(&(*file)->refcount, 1, memory_order_relaxed);
+
 unlock:
   pthread_mutex_unlock(&table->lock);
   return ret;
