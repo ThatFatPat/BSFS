@@ -81,12 +81,12 @@ static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
 static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
   size_t bucket = oft_bucket_of(file->index, table->bucket_count);
   if (table->buckets[bucket]) {
-    // insert after existing node
+    // insert at head of existing bucket
     bs_file_t* prev_link = table->buckets[bucket];
     file->next = *prev_link;
     *prev_link = file;
   } else {
-    // insert at head
+    // insert at head of table
     file->next = table->head;
     table->head = file;
     table->buckets[bucket] = &table->head;
