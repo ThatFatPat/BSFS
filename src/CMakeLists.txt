@@ -10,11 +10,11 @@ set(SOURCE_FILES
   bit_util.c
   bsfs.c
   cluster.c
+  disk.c
   enc.c
   fuse_ops.c
   keytab.c
   stego.c
-  disk.c
   vector.c
 )
 
