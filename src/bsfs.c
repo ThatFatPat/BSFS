@@ -267,7 +267,7 @@ int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
 }
 
-void bsfs_destry(bs_bsfs_t fs) {
+void bsfs_destroy(bs_bsfs_t fs) {
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path) {
