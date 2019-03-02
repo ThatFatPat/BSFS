@@ -315,6 +315,7 @@ int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size) {
   return -ENOSYS;
 }
 
-int readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter) {
+int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
+                 void* ctx) {
   return -ENOSYS;
 }

@@ -28,7 +28,7 @@ int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode);
 int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size);
 
 typedef int (*bs_dir_iter_t)(const char* name, const struct stat* st,
-                             bft_offset_t off);
-int readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter);
+                             void* ctx);
+int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter, void* ctx);
 
 #endif
