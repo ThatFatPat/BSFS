@@ -60,7 +60,9 @@ START_TEST(test_bft_entry_roundtrip) {
   uint8_t bft[BFT_SIZE];
 
   bft_entry_t original;
-  ck_assert_int_eq(bft_entry_init(&original, "file", 1024, 0, 1, 0, 0), 0);
+  ck_assert_int_eq(bft_entry_init(&original, "file", 1024, 0, 1,
+                                  0xdeadbeeff00df00d, 0xdeadbeefcafedead),
+                   0);
 
   int write_status = bft_write_table_entry(bft, &original, 0);
   ck_assert_int_eq(write_status, 0);
