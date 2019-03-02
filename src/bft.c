@@ -57,10 +57,10 @@ static int do_read_entry(const uint8_t* raw_ent, bft_entry_t* ent) {
   ent->mode = read_be32(raw_ent);
   raw_ent += sizeof(uint32_t);
 
-  ent->atim = read_be32(raw_ent);
-  raw_ent += sizeof(uint32_t);
+  ent->atim = read_be64(raw_ent);
+  raw_ent += sizeof(bft_timestamp_t);
 
-  ent->mtim = read_be32(raw_ent);
+  ent->mtim = read_be64(raw_ent);
   return 0;
 }
 
@@ -81,10 +81,10 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
   write_be32(raw_ent, ent->mode);
   raw_ent += sizeof(uint32_t);
 
-  write_be32(raw_ent, ent->atim);
-  raw_ent += sizeof(uint32_t);
+  write_be64(raw_ent, ent->atim);
+  raw_ent += sizeof(bft_timestamp_t);
 
-  write_be32(raw_ent, ent->mtim);
+  write_be64(raw_ent, ent->mtim);
   return 0;
 }
 
