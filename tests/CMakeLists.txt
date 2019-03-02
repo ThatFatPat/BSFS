@@ -11,8 +11,10 @@ set(TEST_SOURCES
   test_disk.c
   test_enc.c
   test_keytab.c
+  test_matrix.c
   test_stego.c
   test_vector.c
+  test_cluster.c
   main.c
 )
 

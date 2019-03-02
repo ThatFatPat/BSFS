@@ -14,6 +14,7 @@ set(SOURCE_FILES
   enc.c
   fuse_ops.c
   keytab.c
+  matrix.c
   stego.c
   vector.c
 )

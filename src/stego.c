@@ -2,6 +2,7 @@
 
 #include "bit_util.h"
 #include "keytab.h"
+#include "matrix.h"
 #include "vector.h"
 #include <errno.h>
 #include <openssl/rand.h>
@@ -35,7 +36,12 @@ int stego_gen_user_keys(stego_key_t* keys, size_t count) {
                                    STEGO_COVER_FILE_COUNT)];
   uint8_t write_keys[sizeof(read_keys)];
 
-  int ret = matrix_gen_nonsing(read_keys, write_keys, STEGO_COVER_FILE_COUNT);
+  int ret = matrix_gen_nonsing(read_keys, STEGO_COVER_FILE_COUNT);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = matrix_invert(write_keys, read_keys, STEGO_COVER_FILE_COUNT);
   if (ret < 0) {
     return ret;
   }
