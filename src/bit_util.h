@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-uint32_t read_big_endian(const void* buf);
-void write_big_endian(void* buf, uint32_t host_endian);
+uint32_t read_be32(const void* buf);
+void write_be32(void* buf, uint32_t host_endian);
 
 bool get_bit(const void* buf, size_t bit);
 void set_bit(void* buf, size_t bit, bool val);
