@@ -1,18 +1,29 @@
 #include "bit_util.h"
 
-#include <arpa/inet.h>
+#include <endian.h>
 #include <limits.h>
 #include <string.h>
 
 uint32_t read_be32(const void* buf) {
   uint32_t big_endian;
   memcpy(&big_endian, buf, sizeof(uint32_t));
-  return ntohl(big_endian);
+  return be32toh(big_endian);
 }
 
 void write_be32(void* buf, uint32_t host_endian) {
-  uint32_t big_endian = htonl(host_endian);
+  uint32_t big_endian = htobe32(host_endian);
   memcpy(buf, &big_endian, sizeof(uint32_t));
+}
+
+uint64_t read_be64(const void* buf) {
+  uint64_t big_endian;
+  memcpy(&big_endian, buf, sizeof(uint64_t));
+  return be64toh(big_endian);
+}
+
+void write_be64(void* buf, uint64_t host_endian) {
+  uint64_t big_endian = htobe64(host_endian);
+  memcpy(buf, &big_endian, sizeof(uint64_t));
 }
 
 static size_t byte_from_bit(size_t bit) {
