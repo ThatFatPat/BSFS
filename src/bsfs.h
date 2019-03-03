@@ -1,7 +1,6 @@
 #ifndef BS_BSFS_H
 #define BS_BSFS_H
 
-#include "bft.h"
 #include <stddef.h>
 #include <sys/stat.h>
 
