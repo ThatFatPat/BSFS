@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 typedef struct bs_file_impl* bs_file_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
