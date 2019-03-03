@@ -2,6 +2,8 @@
 #define BS_BSFS_PRIV_H
 
 #include "bsfs.h"
+
+#include "bft.h"
 #include "disk.h"
 #include <pthread.h>
 #include <stdatomic.h>
