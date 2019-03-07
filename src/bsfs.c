@@ -1,6 +1,7 @@
 #include "bsfs_priv.h"
 
 #include "cluster.h"
+#include "disk.h"
 #include "keytab.h"
 #include "stego.h"
 #include <errno.h>
@@ -77,7 +78,27 @@ fail_after_allocs:
   return ret;
 }
 
+static int level_flush_metadata(bs_open_level_t level) {
+  bs_disk_t disk = level->fs->disk;
+
+  // Note: take a read lock here as we are not modifying the in-memory cache.
+  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = fs_write_bitmap(&level->key, disk, level->bitmap);
+
+  if (ret >= 0) {
+    ret = bft_write_table(&level->key, disk, level->bft);
+  }
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
 static void level_destroy(bs_open_level_t level) {
+  level_flush_metadata(level);
   free(level->bft);
   free(level->bitmap);
   free(level->pass);
