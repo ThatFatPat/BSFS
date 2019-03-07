@@ -26,7 +26,7 @@ typedef struct bs_oft {
   pthread_mutex_t lock; // Protects all table operations
 } bs_oft_t;
 
-struct bs_open_level_impl {
+typedef struct bs_open_level_impl {
   bs_bsfs_t fs;
   stego_key_t key;
   char* pass;
@@ -34,7 +34,7 @@ struct bs_open_level_impl {
   void* bitmap;
   bs_oft_t open_files;
   pthread_rwlock_t metadata_lock; // Protects BFT and bitmap
-};
+} * bs_open_level_t;
 
 struct bs_bsfs_impl {
   struct bs_open_level_impl levels[STEGO_USER_LEVEL_COUNT];
