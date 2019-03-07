@@ -49,4 +49,6 @@ int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
                bs_file_t* file);
 int bs_oft_release(bs_oft_t* table, bs_file_t file);
 
+int bs_level_get(bs_bsfs_t fs, const char* pass, bs_open_level_t* out);
+
 #endif

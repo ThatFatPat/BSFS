@@ -363,6 +363,41 @@ static int level_open(bs_bsfs_t fs, const char* pass, size_t index,
   return 0;
 }
 
+int bs_level_get(bs_bsfs_t fs, const char* pass, bs_open_level_t* out) {
+  pthread_mutex_lock(&fs->level_lock);
+
+  int ret = 0;
+  ssize_t free_idx = -1;
+
+  for (size_t i = 0; i < STEGO_USER_LEVEL_COUNT; i++) {
+    bs_open_level_t level = &fs->levels[i];
+
+    // The level is open
+    if (level->pass && !strcmp(level->pass, pass)) {
+      *out = level;
+      goto unlock;
+    }
+
+    // Simultaneously keep track of a free level, to avoid another search later.
+    if (!level->fs) {
+      free_idx = i;
+    }
+  }
+
+  if (free_idx == -1) {
+    // All levels are already in use, so whichever level the user is trying to
+    // open necessarily doesn't exist.
+    ret = -ENOENT;
+    goto unlock;
+  }
+
+  ret = level_open(fs, pass, free_idx, out);
+
+unlock:
+  pthread_mutex_unlock(&fs->level_lock);
+  return ret;
+}
+
 int bsfs_init(int fd, bs_bsfs_t* fs) {
   return -ENOSYS;
 }
