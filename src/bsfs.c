@@ -1,5 +1,7 @@
 #include "bsfs_priv.h"
 
+#include "cluster.h"
+#include "keytab.h"
 #include "stego.h"
 #include <errno.h>
 #include <stdbool.h>
@@ -261,6 +263,104 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file) {
 unlock:
   pthread_mutex_unlock(&table->lock);
   return ret;
+}
+
+/**
+ * Initialize an open level
+ */
+static int level_init(bs_open_level_t level, bs_bsfs_t fs, stego_key_t* key,
+                      const char* pass) {
+  int ret = 0;
+
+  void* bft = NULL;
+  void* bitmap = NULL;
+
+  // Initialize the bft.
+  bft = malloc(BFT_SIZE);
+  if (!bft) {
+    return -ENOMEM;
+  }
+
+  ret = bft_read_table(key, fs->disk, bft);
+  if (ret < 0) {
+    goto fail_after_allocs;
+  }
+
+  // Initialize the bitmap.
+  bitmap = malloc(fs_compute_bitmap_size_from_disk(fs->disk));
+  if (!bitmap) {
+    ret = -ENOMEM;
+    goto fail_after_allocs;
+  }
+
+  ret = fs_read_bitmap(key, fs->disk, bitmap);
+  if (ret < 0) {
+    goto fail_after_allocs;
+  }
+
+  // Initialize the open file table.
+  ret = bs_oft_init(&level->open_files);
+  if (ret < 0) {
+    goto fail_after_allocs;
+  }
+
+  // Initialize the rwlock for metadata.
+  ret = -pthread_rwlock_init(&level->metadata_lock, NULL);
+  if (ret < 0) {
+    goto fail_after_oft;
+  }
+
+  // Set the level's parameters
+  level->pass = strdup(pass);
+  if (!level->pass) {
+    ret = -ENOMEM;
+    goto fail_after_lock;
+  }
+  level->key = *key;
+  level->bft = bft;
+  level->bitmap = bitmap;
+
+  // This must be last, as setting `fs` also marks the level as in-use.
+  level->fs = fs;
+  return 0;
+
+fail_after_lock:
+  pthread_rwlock_destroy(&level->metadata_lock);
+fail_after_oft:
+  bs_oft_destroy(&level->open_files);
+fail_after_allocs:
+  free(bitmap);
+  free(bft);
+  return ret;
+}
+
+static void level_destroy(bs_open_level_t level) {
+  free(level->bft);
+  free(level->bitmap);
+  free(level->pass);
+  pthread_rwlock_destroy(&level->metadata_lock);
+  bs_oft_destroy(&level->open_files);
+  memset(level, 0, sizeof(*level));
+}
+
+static int level_open(bs_bsfs_t fs, const char* pass, size_t index,
+                      bs_open_level_t* out) {
+  // Get the key
+  stego_key_t key;
+  int ret = keytab_lookup(fs->disk, pass, &key);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Initialize the level
+  bs_open_level_t level = fs->levels + index;
+  ret = level_init(level, fs, &key, pass);
+  if (ret < 0) {
+    return ret;
+  }
+
+  *out = level;
+  return 0;
 }
 
 int bsfs_init(int fd, bs_bsfs_t* fs) {
