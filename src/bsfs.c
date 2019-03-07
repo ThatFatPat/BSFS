@@ -270,7 +270,7 @@ int bsfs_init(int fd, bs_bsfs_t* fs) {
 void bsfs_destroy(bs_bsfs_t fs) {
 }
 
-int bsfs_mknod(bs_bsfs_t fs, const char* path) {
+int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   return -ENOSYS;
 }
 
