@@ -6,6 +6,7 @@
 #include "test_enc.h"
 #include "test_keytab.h"
 #include "test_matrix.h"
+#include "test_oft.h"
 #include "test_stego.h"
 #include "test_vector.h"
 #include <check.h>
@@ -28,6 +29,7 @@ int main() {
   srunner_add_suite(runner, bft_suite());
   srunner_add_suite(runner, cluster_suite());
 
+  srunner_add_suite(runner, oft_suite());
   srunner_add_suite(runner, bsfs_suite());
 
   srunner_set_fork_status(runner, CK_NOFORK);

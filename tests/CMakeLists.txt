@@ -12,6 +12,7 @@ set(TEST_SOURCES
   test_enc.c
   test_keytab.c
   test_matrix.c
+  test_oft.c
   test_stego.c
   test_vector.c
   test_cluster.c
