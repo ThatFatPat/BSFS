@@ -1,5 +1,6 @@
 #include "bsfs_priv.h"
 
+#include "bft.h"
 #include "cluster.h"
 #include "disk.h"
 #include "keytab.h"
@@ -162,7 +163,7 @@ unlock:
   return ret;
 }
 
-static int split_path(const char* path, char** out_pass, char** out_name) {
+int bs_split_path(const char* path, char** out_pass, char** out_name) {
   if (*path == '/') {
     path++;
   }
@@ -188,6 +189,48 @@ static int split_path(const char* path, char** out_pass, char** out_name) {
   *out_pass = pass;
   *out_name = name;
   return 0;
+}
+
+static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
+                                      bool write, bs_open_level_t* out_level,
+                                      bft_offset_t* out_index) {
+  // Split the path to password and name
+  char* pass;
+  char* name;
+  int ret = bs_split_path(path, &pass, &name);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Find level
+  bs_open_level_t level;
+  ret = bs_level_get(fs, pass, &level);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  // Find BFT index
+  if (write) {
+    ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  } else {
+    ret = -pthread_rwlock_rdlock(&level->metadata_lock);
+  }
+
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  ret = bft_find_table_entry(level->bft, name, out_index);
+  if (ret < 0) {
+    pthread_rwlock_unlock(&level->metadata_lock);
+  }
+
+  // Note: on success, the level remains locked!
+
+cleanup:
+  free(name);
+  free(pass);
+  return ret;
 }
 
 int bsfs_init(int fd, bs_bsfs_t* out) {

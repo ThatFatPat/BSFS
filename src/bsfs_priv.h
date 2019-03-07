@@ -51,4 +51,6 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file);
 
 int bs_level_get(bs_bsfs_t fs, const char* pass, bs_open_level_t* out);
 
+int bs_split_path(const char* path, char** out_pass, char** out_name);
+
 #endif
