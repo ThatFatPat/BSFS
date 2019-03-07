@@ -62,6 +62,31 @@ START_TEST(test_level_get) {
 }
 END_TEST
 
+START_TEST(test_level_get_noent) {
+  bs_open_level_t level;
+  ck_assert_int_eq(bs_level_get(tmp_fs, "sjklfajklsdjfklj2wioej", &level),
+                   -ENOENT);
+}
+END_TEST
+
+START_TEST(test_level_get_twice) {
+  bs_open_level_t level1;
+  bs_open_level_t level2;
+  ck_assert_int_eq(bs_level_get(tmp_fs, level_get_pass1, &level1), 0);
+  ck_assert_int_eq(bs_level_get(tmp_fs, level_get_pass1, &level2), 0);
+  ck_assert_ptr_eq(level1, level2);
+}
+END_TEST
+
+START_TEST(test_level_get_multi) {
+  bs_open_level_t level1;
+  bs_open_level_t level2;
+  ck_assert_int_eq(bs_level_get(tmp_fs, level_get_pass1, &level1), 0);
+  ck_assert_int_eq(bs_level_get(tmp_fs, level_get_pass2, &level2), 0);
+  ck_assert_ptr_ne(level1, level2);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -74,6 +99,9 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(level_get_tcase, level_get_fs_setup,
                             level_get_fs_teardown);
   tcase_add_test(level_get_tcase, test_level_get);
+  tcase_add_test(level_get_tcase, test_level_get_noent);
+  tcase_add_test(level_get_tcase, test_level_get_twice);
+  tcase_add_test(level_get_tcase, test_level_get_multi);
   suite_add_tcase(suite, level_get_tcase);
 
   return suite;
