@@ -235,6 +235,13 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
 
+int bsfs_fsync(bs_file_t file, bool datasync) {
+  if (!datasync) {
+    return level_flush_metadata(file->level);
+  }
+  return 0;
+}
+
 int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
   return -ENOSYS;
 }
