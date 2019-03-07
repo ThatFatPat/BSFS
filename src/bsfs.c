@@ -295,11 +295,21 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
 }
 
 int bsfs_open(bs_bsfs_t fs, const char* path, bs_file_t* file) {
-  return -ENOSYS;
+  bs_open_level_t level;
+  bft_offset_t index;
+
+  int ret = get_locked_level_and_index(fs, path, false, &level, &index);
+  if (ret < 0) {
+    return ret;
+  }
+  pthread_rwlock_unlock(&level->metadata_lock);
+
+  return bs_oft_get(&level->open_files, level, index, file);
 }
 
 int bsfs_release(bs_file_t file) {
-  return -ENOSYS;
+  bs_open_level_t level = file->level;
+  bs_oft_release(&level->open_files, file);
 }
 
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
