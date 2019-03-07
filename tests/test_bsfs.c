@@ -5,6 +5,7 @@
 #include "keytab.h"
 #include "stego.h"
 #include <errno.h>
+#include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -87,6 +88,47 @@ START_TEST(test_level_get_multi) {
 }
 END_TEST
 
+START_TEST(test_split_path) {
+  const char* path = "/pass/name";
+  char* pass;
+  char* name;
+
+  ck_assert_int_eq(bs_split_path(path, &pass, &name), 0);
+  ck_assert_str_eq(pass, "pass");
+  ck_assert_str_eq(name, "name");
+
+  free(pass);
+  free(name);
+
+  ck_assert_int_eq(bs_split_path(path + 1, &pass, &name), 0);
+  ck_assert_str_eq(pass, "pass");
+  ck_assert_str_eq(name, "name");
+
+  free(pass);
+  free(name);
+}
+END_TEST
+
+START_TEST(test_split_path_no_slash) {
+  const char* path = "/passname";
+  char* pass;
+  char* name;
+
+  ck_assert_int_eq(bs_split_path(path, &pass, &name), -ENOTSUP);
+  ck_assert_int_eq(bs_split_path(path + 1, &pass, &name), -ENOTSUP);
+}
+END_TEST
+
+START_TEST(test_split_path_double_slash) {
+  const char* path = "/pass/nam/e";
+  char* pass;
+  char* name;
+
+  ck_assert_int_eq(bs_split_path(path, &pass, &name), -ENOTSUP);
+  ck_assert_int_eq(bs_split_path(path + 1, &pass, &name), -ENOTSUP);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -103,6 +145,12 @@ Suite* bsfs_suite(void) {
   tcase_add_test(level_get_tcase, test_level_get_twice);
   tcase_add_test(level_get_tcase, test_level_get_multi);
   suite_add_tcase(suite, level_get_tcase);
+
+  TCase* split_path_tcase = tcase_create("split_path");
+  tcase_add_test(split_path_tcase, test_split_path);
+  tcase_add_test(split_path_tcase, test_split_path_no_slash);
+  tcase_add_test(split_path_tcase, test_split_path_double_slash);
+  suite_add_tcase(suite, split_path_tcase);
 
   return suite;
 }
