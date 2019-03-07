@@ -20,14 +20,23 @@ int bsfs_release(bs_file_t file);
 
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off);
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off);
+
 int bsfs_fsync(bs_file_t file, bool datasync);
 
 int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st);
+int bsfs_fgetattr(bs_file_t file, struct stat* st);
+
 int bsfs_setattr(bs_bsfs_t fs, const char* path, const struct stat* st);
+int bsfs_fsetattr(bs_file_t file, const struct stat* st);
+
+int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode);
+int bsfs_fchmod(bs_file_t file, mode_t mode);
+
+int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size);
+int bsfs_ftruncate(bs_file_t file, off_t size);
+
 int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
                 unsigned int flags);
-int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode);
-int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size);
 
 typedef int (*bs_dir_iter_t)(const char* name, const struct stat* st,
                              void* ctx);

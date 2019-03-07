@@ -246,12 +246,15 @@ int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
   return -ENOSYS;
 }
 
+int bsfs_fgetattr(bs_file_t file, struct stat* st) {
+  return -ENOSYS;
+}
+
 int bsfs_setattr(bs_bsfs_t fs, const char* path, const struct stat* st) {
   return -ENOSYS;
 }
 
-int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
-                unsigned int flags) {
+int bsfs_fsetattr(bs_file_t file, const struct stat* st) {
   return -ENOSYS;
 }
 
@@ -259,7 +262,20 @@ int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
   return -ENOSYS;
 }
 
+int bsfs_fchmod(bs_file_t file, mode_t mode) {
+  return -ENOSYS;
+}
+
 int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size) {
+  return -ENOSYS;
+}
+
+int bsfs_ftruncate(bs_file_t file, off_t size) {
+  return -ENOSYS;
+}
+
+int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
+                unsigned int flags) {
   return -ENOSYS;
 }
 
