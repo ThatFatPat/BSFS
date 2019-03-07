@@ -169,6 +169,10 @@ int bs_split_path(const char* path, char** out_pass, char** out_name) {
   }
 
   char* slash_loc = strchr(path, '/');
+  if (!slash_loc) {
+    return -ENOTSUP;
+  }
+
   if (strchr(slash_loc, '/')) {
     // Another slash was found in the path, but subdirectories are not
     // supported.
