@@ -162,11 +162,47 @@ unlock:
   return ret;
 }
 
-int bsfs_init(int fd, bs_bsfs_t* fs) {
-  return -ENOSYS;
+int bsfs_init(int fd, bs_bsfs_t* out) {
+  bs_bsfs_t fs = calloc(1, sizeof(*fs));
+  if (!fs) {
+    return -ENOMEM;
+  }
+
+  // Initialize lock
+  int ret = -pthread_mutex_init(&fs->level_lock, NULL);
+  if (ret < 0) {
+    goto fail_after_alloc;
+  }
+
+  // Initialize disk
+  ret = disk_create(fd, &fs->disk);
+  if (ret < 0) {
+    goto fail_after_mutex;
+  }
+
+  *out = fs;
+  return 0;
+
+fail_after_mutex:
+  pthread_mutex_destroy(&fs->level_lock);
+fail_after_alloc:
+  free(fs);
+  return ret;
 }
 
 void bsfs_destroy(bs_bsfs_t fs) {
+  // Destroy all open levels
+  for (size_t i = 0; i < STEGO_USER_LEVEL_COUNT; i++) {
+    bs_open_level_t level = &fs->levels[i];
+    if (level->fs) {
+      // Level is in use
+      level_destroy(level);
+    }
+  }
+
+  pthread_mutex_destroy(&fs->level_lock);
+  disk_free(fs->disk);
+  free(fs);
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {

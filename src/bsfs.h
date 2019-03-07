@@ -8,7 +8,7 @@
 typedef struct bs_file_impl* bs_file_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
 
-int bsfs_init(int fd, bs_bsfs_t* fs);
+int bsfs_init(int fd, bs_bsfs_t* out);
 void bsfs_destroy(bs_bsfs_t fs);
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode);
