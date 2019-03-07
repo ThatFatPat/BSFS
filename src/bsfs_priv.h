@@ -45,8 +45,8 @@ struct bs_bsfs_impl {
 int bs_oft_init(bs_oft_t* table);
 void bs_oft_destroy(bs_oft_t* table);
 
-int bs_oft_get(bs_oft_t* table, struct bs_open_level_impl* level,
-               bft_offset_t index, bs_file_t* file);
+int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
+               bs_file_t* file);
 int bs_oft_release(bs_oft_t* table, bs_file_t file);
 
 #endif

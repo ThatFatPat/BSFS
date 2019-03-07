@@ -7,8 +7,7 @@ START_TEST(test_oft_insert_vals) {
   bs_oft_t table;
   ck_assert_int_eq(bs_oft_init(&table), 0);
 
-  struct bs_open_level_impl* const level =
-      (struct bs_open_level_impl*) 0xdeadbeef;
+  const bs_open_level_t level = (bs_open_level_t) 0xdeadbeef;
   const bft_offset_t index = 123;
 
   bs_file_t file;
@@ -38,8 +37,7 @@ START_TEST(test_oft_insert_lookup_vals) {
   bs_oft_t table;
   ck_assert_int_eq(bs_oft_init(&table), 0);
 
-  struct bs_open_level_impl* const level =
-      (struct bs_open_level_impl*) 0xdeadbeef;
+  const bs_open_level_t level = (bs_open_level_t) 0xdeadbeef;
   const bft_offset_t index = 123;
 
   bs_file_t created;

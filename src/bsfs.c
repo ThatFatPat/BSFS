@@ -9,8 +9,8 @@
 #define OFT_INITIAL_BUCKET_COUNT (1 << 3) // Must be a power of 2.
 #define OFT_MAX_LOAD_FACTOR 1.f
 
-static int create_open_file(struct bs_open_level_impl* level,
-                            bft_offset_t index, bs_file_t* out) {
+static int create_open_file(bs_open_level_t level, bft_offset_t index,
+                            bs_file_t* out) {
   bs_file_t file = (bs_file_t) calloc(1, sizeof(struct bs_file_impl));
   if (!file) {
     return -ENOMEM;
@@ -199,8 +199,8 @@ void bs_oft_destroy(bs_oft_t* table) {
   }
 }
 
-int bs_oft_get(bs_oft_t* table, struct bs_open_level_impl* level,
-               bft_offset_t index, bs_file_t* file) {
+int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
+               bs_file_t* file) {
   int ret = -pthread_mutex_lock(&table->lock);
   if (ret < 0) {
     return ret;
