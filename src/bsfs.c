@@ -180,6 +180,12 @@ int bsfs_init(int fd, bs_bsfs_t* out) {
     goto fail_after_mutex;
   }
 
+  if (!fs_compute_bitmap_size_from_disk(fs->disk)) {
+    // The disk is too small to contain a valid filesystem
+    ret = -ENOSPC;
+    goto fail_after_mutex;
+  }
+
   *out = fs;
   return 0;
 
