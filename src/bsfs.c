@@ -162,6 +162,34 @@ unlock:
   return ret;
 }
 
+static int split_path(const char* path, char** out_pass, char** out_name) {
+  if (*path == '/') {
+    path++;
+  }
+
+  char* slash_loc = strchr(path, '/');
+  if (strchr(slash_loc, '/')) {
+    // Another slash was found in the path, but subdirectories are not
+    // supported.
+    return -ENOTSUP;
+  }
+
+  char* pass = strndup(path, slash_loc - path);
+  if (!pass) {
+    return -ENOMEM;
+  }
+
+  char* name = strdup(slash_loc + 1);
+  if (!name) {
+    free(pass);
+    return -ENOMEM;
+  }
+
+  *out_pass = pass;
+  *out_name = name;
+  return 0;
+}
+
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
