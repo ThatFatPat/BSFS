@@ -12,16 +12,23 @@
 #include <stdlib.h>
 
 int main() {
-  SRunner* runner = srunner_create(bft_suite());
+  SRunner* runner = srunner_create(NULL);
+
   srunner_add_suite(runner, bit_util_suite());
-  srunner_add_suite(runner, cluster_suite());
-  srunner_add_suite(runner, enc_suite());
-  srunner_add_suite(runner, bsfs_suite());
-  srunner_add_suite(runner, keytab_suite());
-  srunner_add_suite(runner, stego_suite());
-  srunner_add_suite(runner, disk_suite());
+
   srunner_add_suite(runner, vector_suite());
   srunner_add_suite(runner, matrix_suite());
+
+  srunner_add_suite(runner, enc_suite());
+  srunner_add_suite(runner, disk_suite());
+
+  srunner_add_suite(runner, keytab_suite());
+  srunner_add_suite(runner, stego_suite());
+
+  srunner_add_suite(runner, bft_suite());
+  srunner_add_suite(runner, cluster_suite());
+
+  srunner_add_suite(runner, bsfs_suite());
 
   srunner_set_fork_status(runner, CK_NOFORK);
   srunner_run_all(runner, CK_NORMAL);
