@@ -327,7 +327,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
 
   cluster_offset_t initial_cluster;
   ret = fs_alloc_cluster(&level->bitmap,
-                         fs_compute_bitmap_size_from_disk(&fs->disk),
+                         fs_compute_bitmap_size_from_disk(fs->disk),
                          &initial_cluster);
   if (ret < 0) {
     goto cleanup_after_metadata;
@@ -347,8 +347,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
 cleanup_after_bft_init:
   bft_entry_destroy(&ent);
 cleanup_after_cluster:
-  fs_dealloc_cluster(&level->bitmap,
-                     fs_compute_bitmap_size_from_disk(&fs->disk),
+  fs_dealloc_cluster(&level->bitmap, fs_compute_bitmap_size_from_disk(fs->disk),
                      initial_cluster);
 cleanup_after_metadata:
   pthread_rwlock_unlock(&level->metadata_lock);
