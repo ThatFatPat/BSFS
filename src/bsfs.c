@@ -292,15 +292,13 @@ void bsfs_destroy(bs_bsfs_t fs) {
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
-  int ret = 0;
-
   if (!S_ISREG(mode)) {
     return -ENOTSUP;
   }
 
   char* pass;
   char* name;
-  ret = bs_split_path(path, &pass, &name);
+  int ret = bs_split_path(path, &pass, &name);
   if (ret < 0) {
     return ret;
   }
@@ -347,22 +345,21 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   }
 
   bft_entry_t ent;
-  bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
+  ret = bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_bft_init;
+    goto cleanup_after_metadata;
   }
 
   ret = bft_write_table_entry(level->bft, &ent, offset);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_bft_init;
   }
 
-cleanup_after_bft_init:
   bft_entry_destroy(&ent);
+
 cleanup_after_metadata:
-  ret = pthread_rwlock_unlock(&level->metadata_lock);
+  pthread_rwlock_unlock(&level->metadata_lock);
 cleanup:
   free(name);
   free(pass);
