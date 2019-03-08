@@ -48,19 +48,19 @@ static int do_read_entry(const uint8_t* raw_ent, bft_entry_t* ent) {
   ent->name = (const char*) raw_ent;
   raw_ent += BFT_MAX_FILENAME;
 
-  ent->initial_cluster = read_big_endian(raw_ent);
+  ent->initial_cluster = read_be32(raw_ent);
   raw_ent += sizeof(uint32_t);
 
-  ent->size = read_big_endian(raw_ent);
+  ent->size = read_be32(raw_ent);
   raw_ent += sizeof(uint32_t);
 
-  ent->mode = read_big_endian(raw_ent);
+  ent->mode = read_be32(raw_ent);
   raw_ent += sizeof(uint32_t);
 
-  ent->atim = read_big_endian(raw_ent);
-  raw_ent += sizeof(uint32_t);
+  ent->atim = read_be64(raw_ent);
+  raw_ent += sizeof(bft_timestamp_t);
 
-  ent->mtim = read_big_endian(raw_ent);
+  ent->mtim = read_be64(raw_ent);
   return 0;
 }
 
@@ -72,19 +72,19 @@ static int do_write_entry(uint8_t* raw_ent, const bft_entry_t* ent) {
   strncpy((char*) raw_ent, ent->name, BFT_MAX_FILENAME);
   raw_ent += BFT_MAX_FILENAME;
 
-  write_big_endian(raw_ent, ent->initial_cluster);
+  write_be32(raw_ent, ent->initial_cluster);
   raw_ent += sizeof(uint32_t);
 
-  write_big_endian(raw_ent, ent->size);
+  write_be32(raw_ent, ent->size);
   raw_ent += sizeof(uint32_t);
 
-  write_big_endian(raw_ent, ent->mode);
+  write_be32(raw_ent, ent->mode);
   raw_ent += sizeof(uint32_t);
 
-  write_big_endian(raw_ent, ent->atim);
-  raw_ent += sizeof(uint32_t);
+  write_be64(raw_ent, ent->atim);
+  raw_ent += sizeof(bft_timestamp_t);
 
-  write_big_endian(raw_ent, ent->mtim);
+  write_be64(raw_ent, ent->mtim);
   return 0;
 }
 

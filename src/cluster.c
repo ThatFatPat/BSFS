@@ -47,11 +47,11 @@ int fs_write_cluster(const stego_key_t* key, bs_disk_t disk, const void* buf,
 }
 
 cluster_offset_t fs_next_cluster(const void* cluster) {
-  return read_big_endian((const uint8_t*) cluster + CLUSTER_DATA_SIZE);
+  return read_be32((const uint8_t*) cluster + CLUSTER_DATA_SIZE);
 }
 
 void fs_set_next_cluster(void* cluster, cluster_offset_t next) {
-  write_big_endian((uint8_t*) cluster + CLUSTER_DATA_SIZE, next);
+  write_be32((uint8_t*) cluster + CLUSTER_DATA_SIZE, next);
 }
 
 int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk, void* buf) {
