@@ -35,6 +35,10 @@ int bsfs_fchmod(bs_file_t file, mode_t mode);
 int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size);
 int bsfs_ftruncate(bs_file_t file, off_t size);
 
+int bsfs_utimens(bs_bsfs_t fs, const char* path,
+                 const struct timespec times[2]);
+int bsfs_futimens(bs_file_t file, const struct timespec times[2]);
+
 int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
                 unsigned int flags);
 
