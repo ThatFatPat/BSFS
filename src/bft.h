@@ -10,11 +10,14 @@
 #include <sys/types.h>
 
 #define BFT_MAX_FILENAME 64
-#define BFT_ENTRY_SIZE 84 // 64B + 5 * 4B
+#define BFT_ENTRY_SIZE                                                         \
+  (BFT_MAX_FILENAME + sizeof(cluster_offset_t) +                               \
+   2 * sizeof(uint32_t) /* size, mode */ +                                     \
+   2 * sizeof(bft_timestamp_t) /* atim, mtim */)
 #define BFT_MAX_ENTRIES 8192
 #define BFT_SIZE (BFT_ENTRY_SIZE * BFT_MAX_ENTRIES)
 
-typedef uint32_t bft_timestamp_t;
+typedef uint64_t bft_timestamp_t;
 typedef int16_t bft_offset_t;
 
 typedef struct bft_entry {
