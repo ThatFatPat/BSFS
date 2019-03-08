@@ -156,6 +156,7 @@ START_TEST(test_mknod) {
   char path[256];
   strcpy(path, mknod_level_name);
   ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/bla"), S_IFREG), 0);
+
 }
 END_TEST
 
@@ -170,6 +171,13 @@ END_TEST
 START_TEST(test_mknod_no_such_level) {
   const char* path = "/nosuchlvl/file";
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), -ENOENT);
+}
+END_TEST
+
+START_TEST(test_unlink) {
+  char path[256];
+  strcpy(path, mknod_level_name);
+  ck_assert_int_eq(bsfs_unlink(tmp_fs, strcat(path, "/bla")), 0);
 }
 END_TEST
 
@@ -196,12 +204,13 @@ Suite* bsfs_suite(void) {
   tcase_add_test(split_path_tcase, test_split_path_double_slash);
   suite_add_tcase(suite, split_path_tcase);
 
-  TCase* mknod_tcase = tcase_create("mknod");
-  tcase_add_checked_fixture(mknod_tcase, mknod_fs_setup, mknod_fs_teardown);
-  tcase_add_test(mknod_tcase, test_mknod);
-  tcase_add_test(mknod_tcase, test_mknod_not_reg);
-  tcase_add_test(mknod_tcase, test_mknod_no_such_level);
-  suite_add_tcase(suite, mknod_tcase);
+  TCase* mknod_unlink_tcase = tcase_create("mknod_unlink");
+  tcase_add_checked_fixture(mknod_unlink_tcase, mknod_fs_setup, mknod_fs_teardown);
+  tcase_add_test(mknod_unlink_tcase, test_mknod);
+  tcase_add_test(mknod_unlink_tcase, test_mknod_not_reg);
+  tcase_add_test(mknod_unlink_tcase, test_mknod_no_such_level);
+  tcase_add_test(mknod_unlink_tcase, test_unlink);
+  suite_add_tcase(suite, mknod_unlink_tcase);
 
   return suite;
 }
