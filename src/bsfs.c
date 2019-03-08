@@ -364,20 +364,12 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  // TODO: Set next cluster to CLUSTER_OFFSET_EOF
-  void* cluster;
-  ret = read_cluster_from_offset(level, initial_cluster, cluster);
+  uint8_t cluster_data[CLUSTER_SIZE] = { 0 };
+  fs_set_next_cluster(cluster_data, CLUSTER_OFFSET_EOF);
+
+  ret = fs_write_cluster(&level->key, fs->disk, cluster_data, initial_cluster);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_metadata;
-  }
-
-  fs_set_next_cluster(cluster, CLUSTER_OFFSET_EOF);
-
-  ret = write_cluster_from_offset(level, initial_cluster, cluster);
-  if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_metadata;
   }
 
   bft_entry_t ent;
