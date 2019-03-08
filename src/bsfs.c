@@ -316,18 +316,18 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   bft_offset_t existing_ent;
   if (!bft_find_table_entry(level->bft, name, &existing_ent)) {
     ret = -EEXIST;
-    goto cleanup;
+    goto cleanup_after_metadata;
   }
 
   bft_offset_t offset;
-  ret = bft_find_free_table_entry(&level->bft, &offset);
+  ret = bft_find_free_table_entry(level->bft, &offset);
   if (ret < 0) {
     goto cleanup_after_metadata;
   }
 
   cluster_offset_t initial_cluster;
-  ret = fs_alloc_cluster(&level->bitmap,
-                         fs_compute_bitmap_size_from_disk(fs->disk),
+  ret = fs_alloc_cluster(level->bitmap,
+                         CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
                          &initial_cluster);
   if (ret < 0) {
     goto cleanup_after_metadata;
@@ -336,21 +336,24 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   bft_entry_t ent;
   bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
-    goto cleanup_after_cluster;
+    fs_dealloc_cluster(level->bitmap,
+                       CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
+                       initial_cluster);
+    goto cleanup_after_bft_init;
   }
 
-  ret = bft_write_table_entry(&level->bft, &ent, offset);
+  ret = bft_write_table_entry(level->bft, &ent, offset);
   if (ret < 0) {
+    fs_dealloc_cluster(level->bitmap,
+                       CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
+                       initial_cluster);
     goto cleanup_after_bft_init;
   }
 
 cleanup_after_bft_init:
   bft_entry_destroy(&ent);
-cleanup_after_cluster:
-  fs_dealloc_cluster(&level->bitmap, fs_compute_bitmap_size_from_disk(fs->disk),
-                     initial_cluster);
 cleanup_after_metadata:
-  pthread_rwlock_unlock(&level->metadata_lock);
+  ret = pthread_rwlock_unlock(&level->metadata_lock);
 cleanup:
   free(name);
   free(pass);
