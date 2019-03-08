@@ -376,7 +376,7 @@ int bsfs_open(bs_bsfs_t fs, const char* path, bs_file_t* file) {
 
 int bsfs_release(bs_file_t file) {
   bs_open_level_t level = file->level;
-  bs_oft_release(&level->open_files, file);
+  return bs_oft_release(&level->open_files, file);
 }
 
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
