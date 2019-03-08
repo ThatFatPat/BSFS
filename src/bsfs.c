@@ -237,6 +237,10 @@ cleanup:
   return ret;
 }
 
+static size_t count_clusters_from_disk(bs_disk_t disk) {
+  return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
+}
+
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
@@ -325,10 +329,10 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
+  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
+
   cluster_offset_t initial_cluster;
-  ret = fs_alloc_cluster(level->bitmap,
-                         CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
-                         &initial_cluster);
+  ret = fs_alloc_cluster(level->bitmap, bitmap_bits, &initial_cluster);
   if (ret < 0) {
     goto cleanup_after_metadata;
   }
@@ -336,17 +340,13 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   bft_entry_t ent;
   bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap,
-                       CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
-                       initial_cluster);
+    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
     goto cleanup_after_bft_init;
   }
 
   ret = bft_write_table_entry(level->bft, &ent, offset);
   if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap,
-                       CHAR_BIT * fs_compute_bitmap_size_from_disk(fs->disk),
-                       initial_cluster);
+    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
     goto cleanup_after_bft_init;
   }
 
