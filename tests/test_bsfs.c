@@ -184,8 +184,8 @@ END_TEST
 
 START_TEST(test_unlink_noent) {
   char path[256];
-  strcat(path, "/bla");
   strcpy(path, mknod_level_name);
+  strcat(path, "/bla");
   ck_assert_int_eq(bsfs_unlink(tmp_fs, path), -ENOENT);
 }
 END_TEST
