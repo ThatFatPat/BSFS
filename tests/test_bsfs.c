@@ -159,6 +159,20 @@ START_TEST(test_mknod) {
 }
 END_TEST
 
+START_TEST(test_mknod_not_reg) {
+  char path[256];
+  strcpy(path, mknod_level_name);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/fifo"), S_IFIFO),
+                   -ENOTSUP);
+}
+END_TEST
+
+START_TEST(test_mknod_no_such_level) {
+  const char* path = "/nosuchlvl/file";
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), -ENOENT);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -185,6 +199,8 @@ Suite* bsfs_suite(void) {
   TCase* mknod_tcase = tcase_create("mknod");
   tcase_add_checked_fixture(mknod_tcase, mknod_fs_setup, mknod_fs_teardown);
   tcase_add_test(mknod_tcase, test_mknod);
+  tcase_add_test(mknod_tcase, test_mknod_not_reg);
+  tcase_add_test(mknod_tcase, test_mknod_no_such_level);
   suite_add_tcase(suite, mknod_tcase);
 
   return suite;
