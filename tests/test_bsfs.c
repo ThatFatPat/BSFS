@@ -130,19 +130,32 @@ START_TEST(test_split_path_double_slash) {
 }
 END_TEST
 
-START_TEST(test_mknod) {
-  static bs_bsfs_t tmp_fs;
-  stego_key_t key[1];
-  const char* level_pass1 = "pass1";
-  ck_assert_int_eq(stego_gen_user_keys(key, 1), 0);
+stego_key_t mknod_key;
+const char* mknod_level_name = "mknodlvl";
+
+static void mknod_fs_setup(void) {
   int fd = create_tmp_file(FS_DISK_SIZE);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, level_pass1, key), 0);
 
-  char buf[256];
-  strcpy(buf, level_pass1);
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), S_IFREG), 0);
+  ck_assert_int_eq(stego_gen_user_keys(&mknod_key, 1), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, mknod_level_name, &mknod_key),
+                   0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&mknod_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&mknod_key, tmp_fs->disk, zero), 0);
+  free(zero);
+}
+
+static void mknod_fs_teardown(void) {
   bsfs_destroy(tmp_fs);
+}
+
+START_TEST(test_mknod) {
+  char buf[256];
+  strcpy(buf, mknod_level_name);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), S_IFREG), 0);
 }
 END_TEST
 
@@ -170,6 +183,7 @@ Suite* bsfs_suite(void) {
   suite_add_tcase(suite, split_path_tcase);
 
   TCase* mknod_tcase = tcase_create("mknod");
+  tcase_add_checked_fixture(mknod_tcase, mknod_fs_setup, mknod_fs_teardown);
   tcase_add_test(mknod_tcase, test_mknod);
   suite_add_tcase(suite, mknod_tcase);
 
