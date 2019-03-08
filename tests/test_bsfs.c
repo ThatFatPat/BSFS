@@ -153,9 +153,9 @@ static void mknod_fs_teardown(void) {
 }
 
 START_TEST(test_mknod) {
-  char buf[256];
-  strcpy(buf, mknod_level_name);
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), S_IFREG), 0);
+  char path[256];
+  strcpy(path, mknod_level_name);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/bla"), S_IFREG), 0);
 }
 END_TEST
 
