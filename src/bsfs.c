@@ -287,7 +287,75 @@ void bsfs_destroy(bs_bsfs_t fs) {
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
-  return -ENOSYS;
+  int ret = 0;
+
+  if (!S_ISREG(mode)) {
+    return -ENOTSUP;
+  }
+
+  char* pass;
+  char* name;
+  ret = bs_split_path(path, &pass, &name);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Find level
+  bs_open_level_t level;
+  ret = bs_level_get(fs, pass, &level);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  // Check if file exists
+  bft_offset_t existing_ent;
+  if (!bft_find_table_entry(level->bft, name, &existing_ent)) {
+    ret = -EEXIST;
+    goto cleanup;
+  }
+
+  bft_offset_t offset;
+  ret = bft_find_free_table_entry(&level->bft, offset);
+  if (ret < 0) {
+    goto cleanup_after_metadata;
+  }
+
+  cluster_offset_t initial_cluster;
+  ret = fs_alloc_cluster(&level->bitmap,
+                         fs_compute_bitmap_size_from_disk(&fs->disk),
+                         &initial_cluster);
+  if (ret < 0) {
+    goto cleanup_after_metadata;
+  }
+
+  bft_entry_t ent;
+  bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
+  if (ret < 0) {
+    goto cleanup_after_cluster;
+  }
+
+  ret = bft_write_table_entry(&level->bft, &ent, offset);
+  if (ret < 0) {
+    goto cleanup_after_bft_init;
+  }
+
+cleanup_after_bft_init:
+  bft_entry_destroy(&ent);
+cleanup_after_cluster:
+  fs_dealloc_cluster(&level->bitmap,
+                     fs_compute_bitmap_size_from_disk(&fs->disk),
+                     initial_cluster);
+cleanup_after_metadata:
+  pthread_rwlock_unlock(&level->metadata_lock);
+cleanup:
+  free(name);
+  free(pass);
+  return ret;
 }
 
 int bsfs_unlink(bs_bsfs_t fs, const char* path) {

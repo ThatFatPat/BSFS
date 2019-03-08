@@ -129,6 +129,23 @@ START_TEST(test_split_path_double_slash) {
 }
 END_TEST
 
+START_TEST(test_mknod) {
+  static bs_bsfs_t tmp_fs;
+  stego_key_t key[1];
+  const char* level_pass1 = "pass1";
+  ck_assert_int_eq(stego_gen_user_keys(key, 1), 0);
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, level_pass1, key), 0);
+
+  char buf[256];
+  strcpy(buf, level_pass1);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), 0), 0);
+  bsfs_destroy(tmp_fs);
+  free(buf);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -151,6 +168,10 @@ Suite* bsfs_suite(void) {
   tcase_add_test(split_path_tcase, test_split_path_no_slash);
   tcase_add_test(split_path_tcase, test_split_path_double_slash);
   suite_add_tcase(suite, split_path_tcase);
+
+  TCase* mknod_tcase = tcase_create("mknod");
+  tcase_add_test(mknod_tcase, test_mknod);
+  suite_add_tcase(suite, mknod_tcase);
 
   return suite;
 }
