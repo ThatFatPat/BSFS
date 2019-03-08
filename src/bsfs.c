@@ -238,32 +238,6 @@ cleanup:
   return ret;
 }
 
-static int read_cluster_from_offset(bs_open_level_t level, cluster_offset_t off,
-                                    void* buf) {
-  // Get the key
-  stego_key_t key;
-  int ret = keytab_lookup(level->fs->disk, level->pass, &key);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = fs_read_cluster(&key, level->fs->disk, buf, off);
-  return ret;
-}
-
-static int write_cluster_from_offset(bs_open_level_t level,
-                                     cluster_offset_t off, const void* buf) {
-  // Get the key
-  stego_key_t key;
-  int ret = keytab_lookup(level->fs->disk, level->pass, &key);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = fs_write_cluster(&key, level->fs->disk, buf, off);
-  return ret;
-}
-
 static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
@@ -318,16 +292,13 @@ void bsfs_destroy(bs_bsfs_t fs) {
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
-  int ret = 0;
-  size_t bitmap_bits;
-
   if (!S_ISREG(mode)) {
     return -ENOTSUP;
   }
 
   char* pass;
   char* name;
-  ret = bs_split_path(path, &pass, &name);
+  int ret = bs_split_path(path, &pass, &name);
   if (ret < 0) {
     return ret;
   }
@@ -357,7 +328,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  bitmap_bits = count_clusters_from_disk(fs->disk);
+  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
 
   cluster_offset_t initial_cluster;
   ret = fs_alloc_cluster(level->bitmap, bitmap_bits, &initial_cluster);
@@ -365,38 +336,30 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  void* cluster;
-  ret = read_cluster_from_offset(level, initial_cluster, cluster);
+  uint8_t cluster_data[CLUSTER_SIZE] = { 0 };
+  fs_set_next_cluster(cluster_data, CLUSTER_OFFSET_EOF);
+
+  ret = fs_write_cluster(&level->key, fs->disk, cluster_data, initial_cluster);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_metadata;
-  }
-
-  fs_set_next_cluster(cluster, CLUSTER_OFFSET_EOF);
-
-  ret = write_cluster_from_offset(level, initial_cluster, cluster);
-  if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_metadata;
   }
 
   bft_entry_t ent;
-  bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
+  ret = bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_bft_init;
+    goto cleanup_after_metadata;
   }
 
   ret = bft_write_table_entry(level->bft, &ent, offset);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
-    goto cleanup_after_bft_init;
   }
 
-cleanup_after_bft_init:
   bft_entry_destroy(&ent);
+
 cleanup_after_metadata:
-  ret = pthread_rwlock_unlock(&level->metadata_lock);
+  pthread_rwlock_unlock(&level->metadata_lock);
 cleanup:
   free(name);
   free(pass);
