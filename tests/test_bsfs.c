@@ -140,7 +140,7 @@ START_TEST(test_mknod) {
 
   char buf[256];
   strcpy(buf, level_pass1);
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), 0), 0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(buf, "/bla"), S_IFREG), 0);
   bsfs_destroy(tmp_fs);
   free(buf);
 }
