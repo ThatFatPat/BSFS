@@ -370,49 +370,45 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
   bs_open_level_t level;
   bft_offset_t index;
 
-  int ret = get_locked_level_and_index(fs, path, false, &level, &index);
+  int ret = get_locked_level_and_index(fs, path, true, &level, &index);
   if (ret < 0) {
     return ret;
   }
 
-  ret = -pthread_mutex_lock(&level->open_files.lock);
-  if (ret < 0) {
-    return ret;
-  }
-  
   bft_entry_t ent;
-  ret = bft_read_table_entry(&level->bft, &ent, index);
+  ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
     goto cleanup;
   }
   cluster_offset_t init_cluster_idx = ent.initial_cluster;
 
-  ret = bft_remove_table_entry(&level->bft, index);
+  // Remove BFT entry
+  ret = bft_remove_table_entry(level->bft, index);
+  bft_entry_destroy(&ent);
   if (ret < 0) {
     goto cleanup;
   }
 
   cluster_offset_t cluster_idx = init_cluster_idx;
+  uint8_t cluster[CLUSTER_SIZE];
   size_t bitmap_bits = count_clusters_from_disk(fs->disk);
-  void* buf;
 
-  while (cluster_idx != CLUSTER_OFFSET_EOF){
-    ret = fs_dealloc_cluster(&level->bitmap, bitmap_bits, cluster_idx);
+  // Dealloc clusters
+  while (cluster_idx != CLUSTER_OFFSET_EOF) {
+    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
     if (ret < 0) {
       goto cleanup;
     }
-    
-    ret = read_cluster_from_offset(level, cluster_idx, buf);
+
+    ret = fs_read_cluster(&level->key, fs->disk, cluster, cluster_idx);
     if (ret < 0) {
       goto cleanup;
     }
-    
-    cluster_idx = fs_next_cluster(buf);
+
+    cluster_idx = fs_next_cluster(cluster);
   }
 
-
 cleanup:
-  pthread_mutex_unlock(&level->open_files.lock);
   pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
