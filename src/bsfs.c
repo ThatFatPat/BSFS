@@ -319,6 +319,7 @@ void bsfs_destroy(bs_bsfs_t fs) {
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   int ret = 0;
+  size_t bitmap_bits;
 
   if (!S_ISREG(mode)) {
     return -ENOTSUP;
@@ -356,7 +357,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
+  bitmap_bits = count_clusters_from_disk(fs->disk);
 
   cluster_offset_t initial_cluster;
   ret = fs_alloc_cluster(level->bitmap, bitmap_bits, &initial_cluster);
@@ -364,7 +365,6 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  // TODO: Set next cluster to CLUSTER_OFFSET_EOF
   void* cluster;
   ret = read_cluster_from_offset(level, initial_cluster, cluster);
   if (ret < 0) {
