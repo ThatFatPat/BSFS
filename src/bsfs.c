@@ -228,6 +228,7 @@ static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
   if (ret < 0) {
     pthread_rwlock_unlock(&level->metadata_lock);
   }
+  *out_level = level;
 
   // Note: on success, the level remains locked!
 
