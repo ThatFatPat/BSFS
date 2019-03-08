@@ -41,9 +41,10 @@ static const char* level_get_pass1 = "pass1";
 static const char* level_get_pass2 = "pass2";
 
 static void level_get_fs_setup(void) {
-  ck_assert_int_eq(stego_gen_user_keys(level_get_keys, 2), 0);
   int fd = create_tmp_file(FS_DISK_SIZE);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(level_get_keys, 2), 0);
   ck_assert_int_eq(
       keytab_store(tmp_fs->disk, 0, level_get_pass1, level_get_keys), 0);
   ck_assert_int_eq(
