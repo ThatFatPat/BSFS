@@ -320,7 +320,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   }
 
   bft_offset_t offset;
-  ret = bft_find_free_table_entry(&level->bft, offset);
+  ret = bft_find_free_table_entry(&level->bft, &offset);
   if (ret < 0) {
     goto cleanup_after_metadata;
   }
