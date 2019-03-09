@@ -319,6 +319,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   bft_offset_t existing_ent;
   if (!bft_find_table_entry(level->bft, name, &existing_ent)) {
     ret = -EEXIST;
+    bft_entry_destroy(&existing_ent);
     goto cleanup_after_metadata;
   }
 
