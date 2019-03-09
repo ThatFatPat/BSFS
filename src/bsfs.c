@@ -316,8 +316,8 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   }
 
   // Check if file exists
-  bft_offset_t existing_ent;
-  if (!bft_find_table_entry(level->bft, name, &existing_ent)) {
+  bft_offset_t existing_ent_index;
+  if (!bft_find_table_entry(level->bft, name, &existing_ent_index)) {
     ret = -EEXIST;
     goto cleanup_after_metadata;
   }
