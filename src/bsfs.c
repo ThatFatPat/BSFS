@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+
 
 /**
  * Initialize an open level
@@ -480,7 +482,46 @@ int bsfs_ftruncate(bs_file_t file, off_t size) {
 
 int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
                 unsigned int flags) {
-  return -ENOSYS;
+  bs_open_level_t level;
+  bft_offset_t index;
+
+  int ret = get_locked_level_and_index(fs, src_path, false, &level, &index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  if(!bs_oft_get(level->open_files, &level, index)){
+      ret = -EBUSY;
+      goto cleanup;
+  }
+
+
+  // Check if new file exists
+  if (flags & RENAME_NOREPLACE){
+    bft_offset_t existing_ent;
+    if (!bft_find_table_entry(level->bft, new_name, &existing_ent)) {
+      ret = -EEXIST;
+      goto cleanup;
+    }
+  }
+
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    goto cleanup;
+  }
+  
+  ent.name = new_name; // Change name
+
+  ret = bft_write_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+cleanup:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+
 }
 
 int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
