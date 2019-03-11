@@ -207,9 +207,8 @@ static void getattr_fs_setup(void) {
   ck_assert_int_eq(fs_write_bitmap(&getattr_key, tmp_fs->disk, zero), 0);
   free(zero);
 
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/getattrlvl/file1", S_IFREG), 0);
   ck_assert_int_eq(
-      bsfs_mknod(tmp_fs, "/getattrlvl/file2", S_IFREG | S_IRUSR | S_IWUSR), 0);
+      bsfs_mknod(tmp_fs, "/getattrlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
 }
 
 static void getattr_fs_teardown(void) {
@@ -221,7 +220,14 @@ START_TEST(test_getattr) {
   ck_assert_int_eq(bsfs_getattr(tmp_fs, "getattrlvl/file1", &st), 0);
 
   ck_assert_uint_eq(st.st_size, 0);
-  ck_assert_int_eq(st.st_mode, S_IFREG);
+  ck_assert_int_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+  ck_assert_int_eq(st.st_nlink, 1);
+}
+END_TEST
+
+START_TEST(test_getattr_noent) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "getattrlvl/asjkdl", &st), -ENOENT);
   ck_assert_int_eq(st.st_nlink, 1);
 }
 END_TEST
@@ -263,6 +269,7 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(getattr_tcase, getattr_fs_setup,
                             getattr_fs_teardown);
   tcase_add_test(getattr_tcase, test_getattr);
+  tcase_add_test(getattr_tcase, test_getattr_noent);
   suite_add_tcase(suite, getattr_tcase);
 
   return suite;
