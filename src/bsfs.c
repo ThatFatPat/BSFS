@@ -242,6 +242,13 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
+static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {
+  *st = (struct stat){ .st_size = ent->size,
+                       .st_mode = ent->mode,
+                       .st_atim.tv_sec = ent->atim,
+                       .st_mtim.tv_sec = ent->mtim };
+}
+
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
@@ -443,6 +450,18 @@ int bsfs_fsync(bs_file_t file, bool datasync) {
   if (!datasync) {
     return level_flush_metadata(file->level);
   }
+  return 0;
+}
+
+static int getattr_common(bs_open_level_t level, bft_offset_t index,
+                          struct stat* st) {
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+  stat_from_bft_ent(st, &ent);
+  bft_entry_destroy(&ent);
   return 0;
 }
 
