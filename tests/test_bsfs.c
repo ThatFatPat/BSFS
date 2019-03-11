@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #define FS_DISK_SIZE                                                           \
-  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x1000))
+  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x2000))
 
 static int create_tmp_file(size_t size) {
   int fd = syscall(SYS_memfd_create, "test_bsfs.bsf", 0);
