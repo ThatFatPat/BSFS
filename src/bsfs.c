@@ -454,14 +454,6 @@ int bsfs_fgetattr(bs_file_t file, struct stat* st) {
   return -ENOSYS;
 }
 
-int bsfs_setattr(bs_bsfs_t fs, const char* path, const struct stat* st) {
-  return -ENOSYS;
-}
-
-int bsfs_fsetattr(bs_file_t file, const struct stat* st) {
-  return -ENOSYS;
-}
-
 int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
   return -ENOSYS;
 }
