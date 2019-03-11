@@ -238,17 +238,6 @@ cleanup:
   return ret;
 }
 
-static size_t count_clusters_from_disk(bs_disk_t disk) {
-  return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
-}
-
-static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {
-  *st = (struct stat){ .st_size = ent->size,
-                       .st_mode = ent->mode,
-                       .st_atim.tv_sec = ent->atim,
-                       .st_mtim.tv_sec = ent->mtim };
-}
-
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
@@ -296,6 +285,10 @@ void bsfs_destroy(bs_bsfs_t fs) {
   pthread_mutex_destroy(&fs->level_lock);
   disk_free(fs->disk);
   free(fs);
+}
+
+static size_t count_clusters_from_disk(bs_disk_t disk) {
+  return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
@@ -451,6 +444,13 @@ int bsfs_fsync(bs_file_t file, bool datasync) {
     return level_flush_metadata(file->level);
   }
   return 0;
+}
+
+static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {
+  *st = (struct stat){ .st_size = ent->size,
+                       .st_mode = ent->mode,
+                       .st_atim.tv_sec = ent->atim,
+                       .st_mtim.tv_sec = ent->mtim };
 }
 
 static int getattr_common(bs_open_level_t level, bft_offset_t index,
