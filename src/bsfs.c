@@ -466,11 +466,32 @@ static int getattr_common(bs_open_level_t level, bft_offset_t index,
 }
 
 int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
-  return -ENOSYS;
+  bs_open_level_t level;
+  bft_offset_t index;
+
+  int ret = get_locked_level_and_index(fs, path, false, &level, &index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = getattr_common(level, index, st);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 int bsfs_fgetattr(bs_file_t file, struct stat* st) {
-  return -ENOSYS;
+  bs_open_level_t level = file->level;
+
+  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = getattr_common(level, file->index, st);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
