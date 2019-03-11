@@ -447,8 +447,9 @@ int bsfs_fsync(bs_file_t file, bool datasync) {
 }
 
 static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {
-  *st = (struct stat){ .st_size = ent->size,
+  *st = (struct stat){ .st_nlink = 1,
                        .st_mode = ent->mode,
+                       .st_size = ent->size,
                        .st_atim.tv_sec = ent->atim,
                        .st_mtim.tv_sec = ent->mtim };
 }
