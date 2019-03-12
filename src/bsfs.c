@@ -7,10 +7,9 @@
 #include "stego.h"
 #include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-
 
 /**
  * Initialize an open level
@@ -480,51 +479,67 @@ int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
 }
 
-int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
+// TODO: Extract guts of unlink to enable removal using bft_offset as well as
+// path.
+
+int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
                 unsigned int flags) {
   bs_open_level_t level;
   bft_offset_t index;
+
+  if (flags & RENAME_WHITEOUT) {
+    return -ENOTSUP;
+  }
 
   int ret = get_locked_level_and_index(fs, src_path, false, &level, &index);
   if (ret < 0) {
     return ret;
   }
 
-  if(!bs_oft_get(level->open_files, &level, index)){
-      ret = -EBUSY;
-      goto cleanup;
-  }
+  // TODO: Make sure files are on same level, other wise return -EXDEV.
 
+  // Logic: Implement RENAME_EXCHANGE case here.
+
+  // Logic: Implement normal rename here.
+
+  // LOGIC CHECK FORM RENAME_NOREPLACE.
 
   // Check if new file exists
-  if (flags & RENAME_NOREPLACE){
-    bft_offset_t existing_ent;
-    if (!bft_find_table_entry(level->bft, new_name, &existing_ent)) {
-      ret = -EEXIST;
+  bft_offset_t existing_ent;
+  int not_file_exists =
+      bft_find_table_entry(level->bft, new_name,
+                           &existing_ent) { // TODO: Get new_name from level.
+    switch (flags) {
+    case RENAME_NOREPLACE:
+      if (file_exists) {
+        ret = -EEXIST;
+        goto cleanup;
+      }
+    case RENAME_EXCHANGE:
+      // TODO: Implement helper functions for name switching.
+    default:
+    }
+    // TODO: Return -EBUSY if file to be delete is currently open.
+
+    bft_entry_t ent;
+    ret = bft_read_table_entry(level->bft, &ent, index);
+    if (ret < 0) {
       goto cleanup;
     }
+
+    ent.name = new_name; // Change name
+
+    ret = bft_write_table_entry(level->bft, &ent, index);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+  cleanup:
+    pthread_rwlock_unlock(&level->metadata_lock);
+    return ret;
   }
 
-  bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup;
+  int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
+                   void* ctx) {
+    return -ENOSYS;
   }
-  
-  ent.name = new_name; // Change name
-
-  ret = bft_write_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-cleanup:
-  pthread_rwlock_unlock(&level->metadata_lock);
-  return ret;
-
-}
-
-int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
-                 void* ctx) {
-  return -ENOSYS;
-}

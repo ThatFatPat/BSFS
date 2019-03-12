@@ -12,9 +12,6 @@
 #ifndef RENAME_EXCHANGE
 #define RENAME_EXCHANGE		(1 << 1)	/* Exchange source and dest */
 #endif
-#ifndef RENAME_WHITEOUT
-#define RENAME_WHITEOUT	(1 << 2) /* Whiteout source */
-#endif
 
 typedef struct bs_file_impl* bs_file_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
