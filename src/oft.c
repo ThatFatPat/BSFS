@@ -97,8 +97,11 @@ static int oft_rehash(bs_oft_t* table, size_t new_bucket_count) {
   }
 
   for (size_t old_bucket = 0; old_bucket < table->bucket_count; old_bucket++) {
-    for (bs_file_t file = table->buckets[old_bucket]; file; file = file->next) {
+    bs_file_t file = table->buckets[old_bucket];
+    while (file) {
+      bs_file_t next = file->next;
       oft_do_insert(new_buckets, new_bucket_count, file);
+      file = next;
     }
   }
 
