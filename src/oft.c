@@ -172,12 +172,14 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
 
 int bs_oft_init(bs_oft_t* table) {
   memset(table, 0, sizeof(bs_oft_t));
-  int ret = oft_realloc_buckets(table, OFT_INITIAL_BUCKET_COUNT);
-  if (ret < 0) {
-    return ret;
-  }
 
-  ret = -pthread_mutex_init(&table->lock, NULL);
+  table->buckets = calloc(OFT_INITIAL_BUCKET_COUNT, sizeof(bs_file_t));
+  if (!table->buckets) {
+    return -ENOMEM;
+  }
+  table->bucket_count = OFT_INITIAL_BUCKET_COUNT;
+
+  int ret = -pthread_mutex_init(&table->lock, NULL);
   if (ret < 0) {
     free(table->buckets);
   }
