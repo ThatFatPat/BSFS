@@ -203,7 +203,6 @@ START_TEST(test_oft_remove_empty) {
   ck_assert_int_eq(bs_oft_get(&table, NULL, 123, &file), 0);
   ck_assert_int_eq(bs_oft_release(&table, file), 0);
 
-  ck_assert_ptr_eq(table.head, NULL);
   for (size_t i = 0; i < table.bucket_count; i++) {
     ck_assert_ptr_eq(table.buckets[i], NULL);
   }
