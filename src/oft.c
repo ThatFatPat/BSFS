@@ -55,29 +55,6 @@ static size_t oft_bucket_of(bft_offset_t index, size_t bucket_count) {
          (bucket_count - 1); // Assumes power-of-2 bucket count.
 }
 
-static bool oft_matches_bucket(bs_file_t file, size_t bucket,
-                               size_t bucket_count) {
-  return file && oft_bucket_of(file->index, bucket_count) == bucket;
-}
-
-static bs_file_t* oft_find_prev(bs_oft_t* table, bft_offset_t index) {
-  size_t bucket = oft_bucket_of(index, table->bucket_count);
-  bs_file_t* prev_link = table->buckets[bucket];
-
-  if (!prev_link) {
-    return NULL;
-  }
-
-  for (; oft_matches_bucket(*prev_link, bucket, table->bucket_count);
-       prev_link = &(*prev_link)->next) {
-    if ((*prev_link)->index == index) {
-      return prev_link;
-    }
-  }
-
-  return NULL;
-}
-
 static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
   bs_file_t iter = table->buckets[oft_bucket_of(index, table->bucket_count)];
   for (; iter; iter = iter->next) {
