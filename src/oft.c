@@ -98,32 +98,19 @@ static void oft_do_insert(bs_file_t* buckets, size_t bucket_count,
 static int oft_remove(bs_oft_t* table, bs_file_t file) {
   size_t bucket = oft_bucket_of(file->index, table->bucket_count);
 
-  bs_file_t* prev_link = oft_find_prev(table, file->index);
-  if (!prev_link) {
-    return -EINVAL;
-  }
-
-  if (*table->buckets[bucket] == file &&
-      !oft_matches_bucket(file->next, bucket, table->bucket_count)) {
-    // `file` was the only entry in the bucket - empty it.
-    table->buckets[bucket] = NULL;
-  }
-
-  *prev_link = file->next;
-
-  if (*prev_link) {
-    size_t next_bucket =
-        oft_bucket_of((*prev_link)->index, table->bucket_count);
-
-    if (next_bucket != bucket) {
-      // The next item is in a different bucket - patch it with new next
-      // pointer.
-      table->buckets[next_bucket] = prev_link;
+  bs_file_t* iter = &table->buckets[bucket];
+  for (; *iter; iter = &(*iter)->next) {
+    if (*iter == file) {
+      break;
     }
   }
 
-  table->size--;
+  if (!*iter) {
+    return -EINVAL;
+  }
 
+  *iter = (*iter)->next;
+  table->size--;
   return 0;
 }
 
