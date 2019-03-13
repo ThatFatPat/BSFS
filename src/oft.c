@@ -48,13 +48,13 @@ static int alloc_buckets(size_t bucket_count, bs_file_t** out_buckets) {
   return 0;
 }
 
-static size_t oft_bucket_of(bft_offset_t index, size_t bucket_count) {
+static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
   return (size_t) index &
          (bucket_count - 1); // Assumes power-of-2 bucket count.
 }
 
 static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
-  bs_file_t iter = table->buckets[oft_bucket_of(index, table->bucket_count)];
+  bs_file_t iter = table->buckets[bucket_of(index, table->bucket_count)];
   for (; iter; iter = iter->next) {
     if (iter->index == index) {
       break;
@@ -65,13 +65,13 @@ static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
 
 static void oft_do_insert(bs_file_t* buckets, size_t bucket_count,
                           bs_file_t file) {
-  size_t bucket = oft_bucket_of(file->index, bucket_count);
+  size_t bucket = bucket_of(file->index, bucket_count);
   file->next = buckets[bucket];
   buckets[bucket] = file;
 }
 
 static int oft_remove(bs_oft_t* table, bs_file_t file) {
-  size_t bucket = oft_bucket_of(file->index, table->bucket_count);
+  size_t bucket = bucket_of(file->index, table->bucket_count);
 
   bs_file_t* iter = &table->buckets[bucket];
   for (; *iter; iter = &(*iter)->next) {
