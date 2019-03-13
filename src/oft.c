@@ -162,11 +162,13 @@ void bs_oft_destroy(bs_oft_t* table) {
   pthread_mutex_destroy(&table->lock);
   free(table->buckets);
 
-  bs_file_t iter = table->head;
-  while (iter) {
-    bs_file_t next = iter->next;
-    destroy_open_file(iter);
-    iter = next;
+  for (size_t bucket = 0; bucket < table->bucket_count; bucket++) {
+    bs_file_t file = table->buckets[bucket];
+    while (file) {
+      bs_file_t next = file->next;
+      destroy_open_file(file);
+      file = next;
+    }
   }
 }
 
