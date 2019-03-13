@@ -194,6 +194,18 @@ unlock:
   return ret;
 }
 
+int bs_oft_has(bs_oft_t* table, bft_offset_t index, bool* out) {
+  int ret = -pthread_mutex_lock(&table->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  *out = oft_find(table, index) != NULL;
+
+  pthread_mutex_unlock(&table->lock);
+  return 0;
+}
+
 int bs_oft_release(bs_oft_t* table, bs_file_t file) {
   int new_refcount =
       atomic_fetch_sub_explicit(&file->refcount, 1, memory_order_acq_rel) - 1;

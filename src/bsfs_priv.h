@@ -7,6 +7,7 @@
 #include "disk.h"
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 
 struct bs_file_impl {
   struct bs_open_level_impl* level;
@@ -46,6 +47,7 @@ void bs_oft_destroy(bs_oft_t* table);
 
 int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
                bs_file_t* file);
+int bs_oft_has(bs_oft_t* table, bft_offset_t index, bool* out);
 int bs_oft_release(bs_oft_t* table, bs_file_t file);
 
 int bs_level_get(bs_bsfs_t fs, const char* pass, bs_open_level_t* out);
