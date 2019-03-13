@@ -33,23 +33,6 @@ static void destroy_open_file(bs_file_t file) {
   free(file);
 }
 
-static int oft_realloc_buckets(bs_oft_t* table, size_t bucket_count) {
-  if (!bucket_count || bucket_count & (bucket_count - 1)) {
-    // Not a power of 2
-    return -EINVAL;
-  }
-
-  bs_file_t** new_buckets =
-      (bs_file_t**) calloc(bucket_count, sizeof(bs_file_t*));
-  if (!new_buckets) {
-    return -ENOMEM;
-  }
-  free(table->buckets);
-  table->buckets = new_buckets;
-  table->bucket_count = bucket_count;
-  return 0;
-}
-
 static int alloc_buckets(size_t bucket_count, bs_file_t** out_buckets) {
   if (!bucket_count || bucket_count & (bucket_count - 1)) {
     // Not a power of 2.
