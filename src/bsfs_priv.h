@@ -20,7 +20,7 @@ struct bs_file_impl {
 
 typedef struct bs_oft {
   bs_file_t head;
-  bs_file_t** buckets; // Array of next pointers
+  bs_file_t* buckets;
   size_t bucket_count;
   size_t size;
   pthread_mutex_t lock; // Protects all table operations
