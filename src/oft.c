@@ -54,12 +54,15 @@ static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
 }
 
 static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
-  bs_file_t iter = table->buckets[bucket_of(index, table->bucket_count)];
+  size_t bucket = bucket_of(index, table->bucket_count);
+
+  bs_file_t iter = table->buckets[bucket];
   for (; iter; iter = iter->next) {
     if (iter->index == index) {
       break;
     }
   }
+
   return iter;
 }
 
