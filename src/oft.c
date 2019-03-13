@@ -50,6 +50,21 @@ static int oft_realloc_buckets(bs_oft_t* table, size_t bucket_count) {
   return 0;
 }
 
+static int alloc_buckets(size_t bucket_count, bs_file_t** out_buckets) {
+  if (!bucket_count || bucket_count & (bucket_count - 1)) {
+    // Not a power of 2.
+    return -EINVAL;
+  }
+
+  bs_file_t* buckets = (bs_file_t*) calloc(bucket_count, sizeof(bs_file_t));
+  if (!buckets) {
+    return -ENOMEM;
+  }
+
+  *out_buckets = buckets;
+  return 0;
+}
+
 static size_t oft_bucket_of(bft_offset_t index, size_t bucket_count) {
   return (size_t) index &
          (bucket_count - 1); // Assumes power-of-2 bucket count.
@@ -127,13 +142,13 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
 int bs_oft_init(bs_oft_t* table) {
   memset(table, 0, sizeof(bs_oft_t));
 
-  table->buckets = calloc(OFT_INITIAL_BUCKET_COUNT, sizeof(bs_file_t));
-  if (!table->buckets) {
-    return -ENOMEM;
+  int ret = alloc_buckets(OFT_INITIAL_BUCKET_COUNT, &table->buckets);
+  if (ret < 0) {
+    return ret;
   }
   table->bucket_count = OFT_INITIAL_BUCKET_COUNT;
 
-  int ret = -pthread_mutex_init(&table->lock, NULL);
+  ret = -pthread_mutex_init(&table->lock, NULL);
   if (ret < 0) {
     free(table->buckets);
   }
