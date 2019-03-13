@@ -454,8 +454,8 @@ static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {
                        .st_mtim.tv_sec = ent->mtim };
 }
 
-static int getattr_common(bs_open_level_t level, bft_offset_t index,
-                          struct stat* st) {
+static int do_getattr(bs_open_level_t level, bft_offset_t index,
+                      struct stat* st) {
   bft_entry_t ent;
   int ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
@@ -475,7 +475,7 @@ int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
     return ret;
   }
 
-  ret = getattr_common(level, index, st);
+  ret = do_getattr(level, index, st);
 
   pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
@@ -489,7 +489,7 @@ int bsfs_fgetattr(bs_file_t file, struct stat* st) {
     return ret;
   }
 
-  ret = getattr_common(level, file->index, st);
+  ret = do_getattr(level, file->index, st);
 
   pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
