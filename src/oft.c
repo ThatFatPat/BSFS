@@ -143,7 +143,6 @@ int bs_oft_init(bs_oft_t* table) {
 
 void bs_oft_destroy(bs_oft_t* table) {
   pthread_mutex_destroy(&table->lock);
-  free(table->buckets);
 
   for (size_t bucket = 0; bucket < table->bucket_count; bucket++) {
     bs_file_t file = table->buckets[bucket];
@@ -153,6 +152,8 @@ void bs_oft_destroy(bs_oft_t* table) {
       file = next;
     }
   }
+
+  free(table->buckets);
 }
 
 int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
