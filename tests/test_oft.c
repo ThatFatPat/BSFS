@@ -195,6 +195,67 @@ START_TEST(test_oft_insert_after_rehash) {
 }
 END_TEST
 
+START_TEST(test_oft_has) {
+  bs_oft_t table;
+  ck_assert_int_eq(bs_oft_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
+
+  bool has;
+  ck_assert_int_eq(bs_oft_has(&table, 0, &has), 0);
+  ck_assert(has);
+
+  bs_oft_destroy(&table);
+}
+END_TEST
+
+START_TEST(test_oft_has_not) {
+  bs_oft_t table;
+  ck_assert_int_eq(bs_oft_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
+
+  bool has;
+  ck_assert_int_eq(bs_oft_has(&table, 123, &has), 0);
+  ck_assert(!has);
+
+  bs_oft_destroy(&table);
+}
+END_TEST
+
+START_TEST(test_oft_has_same_bucket) {
+  bs_oft_t table;
+  ck_assert_int_eq(bs_oft_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
+  ck_assert_int_eq(bs_oft_get(&table, NULL, table.bucket_count, &file), 0);
+
+  bool has;
+  ck_assert_int_eq(bs_oft_has(&table, 0, &has), 0);
+  ck_assert(has);
+
+  bs_oft_destroy(&table);
+}
+END_TEST
+
+START_TEST(test_oft_has_not_same_bucket) {
+  bs_oft_t table;
+  ck_assert_int_eq(bs_oft_init(&table), 0);
+
+  bs_file_t file;
+  ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
+
+  bool has;
+  ck_assert_int_eq(bs_oft_has(&table, table.bucket_count, &has), 0);
+  ck_assert(!has);
+
+  bs_oft_destroy(&table);
+}
+END_TEST
+
 START_TEST(test_oft_remove_empty) {
   bs_oft_t table;
   ck_assert_int_eq(bs_oft_init(&table), 0);
@@ -361,6 +422,13 @@ Suite* oft_suite(void) {
   tcase_add_test(rehash_tcase, test_oft_rehash);
   tcase_add_test(rehash_tcase, test_oft_insert_after_rehash);
   suite_add_tcase(suite, rehash_tcase);
+
+  TCase* has_tcase = tcase_create("has");
+  tcase_add_test(has_tcase, test_oft_has);
+  tcase_add_test(has_tcase, test_oft_has_not);
+  tcase_add_test(has_tcase, test_oft_has_same_bucket);
+  tcase_add_test(has_tcase, test_oft_has_not_same_bucket);
+  suite_add_tcase(suite, has_tcase);
 
   TCase* remove_tcase = tcase_create("remove");
   tcase_add_test(remove_tcase, test_oft_remove_empty);
