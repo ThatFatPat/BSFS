@@ -107,19 +107,21 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
 }
 
 static int oft_rehash(bs_oft_t* table, size_t new_bucket_count) {
-  int ret = oft_realloc_buckets(table, new_bucket_count);
+  bs_file_t* new_buckets;
+  int ret = alloc_buckets(new_bucket_count, &new_buckets);
   if (ret < 0) {
     return ret;
   }
 
-  bs_file_t iter = table->head;
-  table->head = NULL;
-
-  while (iter) {
-    bs_file_t next = iter->next;
-    oft_do_insert(table, iter);
-    iter = next;
+  for (size_t old_bucket = 0; old_bucket < table->bucket_count; old_bucket++) {
+    for (bs_file_t file = table->buckets[old_bucket]; file; file = file->next) {
+      oft_do_insert(new_buckets, new_bucket_count, file);
+    }
   }
+
+  free(table->buckets);
+  table->buckets = new_buckets;
+  table->bucket_count = new_bucket_count;
 
   return 0;
 }
