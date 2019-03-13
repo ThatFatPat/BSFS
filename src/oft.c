@@ -79,30 +79,20 @@ static bs_file_t* oft_find_prev(bs_oft_t* table, bft_offset_t index) {
 }
 
 static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
-  bs_file_t* prev_link = oft_find_prev(table, index);
-  return prev_link ? *prev_link : NULL;
-}
-
-static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
-  size_t bucket = oft_bucket_of(file->index, table->bucket_count);
-  if (table->buckets[bucket]) {
-    // Insert at head of existing bucket.
-    bs_file_t* prev_link = table->buckets[bucket];
-    file->next = *prev_link;
-    *prev_link = file;
-  } else {
-    // Insert at head of table.
-    file->next = table->head;
-    table->head = file;
-    table->buckets[bucket] = &table->head;
-
-    if (file->next) {
-      // Patch other bucket with new next pointer.
-      size_t next_bucket =
-          oft_bucket_of(file->next->index, table->bucket_count);
-      table->buckets[next_bucket] = &file->next;
+  bs_file_t iter = table->buckets[oft_bucket_of(index, table->bucket_count)];
+  for (; iter; iter = iter->next) {
+    if (iter->index == index) {
+      break;
     }
   }
+  return iter;
+}
+
+static void oft_do_insert(bs_file_t* buckets, size_t bucket_count,
+                          bs_file_t file) {
+  size_t bucket = oft_bucket_of(file->index, bucket_count);
+  file->next = buckets[bucket];
+  buckets[bucket] = file;
 }
 
 static int oft_remove(bs_oft_t* table, bs_file_t file) {
@@ -164,7 +154,7 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
     }
   }
 
-  oft_do_insert(table, file);
+  oft_do_insert(table->buckets, table->bucket_count, file);
   table->size++;
 
   return 0;
