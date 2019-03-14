@@ -244,6 +244,22 @@ START_TEST(test_rename_noreplace) {
 }
 END_TEST
 
+START_TEST(test_rename_whiteout) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_WHITEOUT),
+                   -ENOTSUP);
+}
+END_TEST
+
+// TODO: Add test with replace. Can't before write and read are implemented!
+// TODO: Add test with exchange. Can't before write and read are implemented!
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -281,6 +297,7 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
   tcase_add_test(rename_tcase, test_rename);
   tcase_add_test(rename_tcase, test_rename_noreplace);
+  tcase_add_test(rename_tcase, test_rename_whiteout);
   suite_add_tcase(suite, rename_tcase);
 
   return suite;
