@@ -277,10 +277,16 @@ START_TEST(test_rename) {
   char path[256];
   strcpy(path, rename_level_name);
   strcat(path, "/bla");
+
   char new_path[256];
   strcpy(new_path, rename_level_name);
   strcat(new_path, "/bla1");
+
   ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
+
+  bs_file_t old_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &old_file), -ENOENT);
+
   bs_file_t rename_file;
   ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
   ck_assert_int_eq(bsfs_release(rename_file), 0);
@@ -291,9 +297,11 @@ START_TEST(test_rename_noreplace) {
   char path[256];
   strcpy(path, rename_level_name);
   strcat(path, "/bla");
+
   char new_path[256];
   strcpy(new_path, rename_level_name);
   strcat(new_path, "/bla1");
+
   ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_NOREPLACE),
                    -EEXIST);
@@ -304,15 +312,41 @@ START_TEST(test_rename_whiteout) {
   char path[256];
   strcpy(path, rename_level_name);
   strcat(path, "/bla");
+
   char new_path[256];
   strcpy(new_path, rename_level_name);
   strcat(new_path, "/bla1");
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG), 0);
+
   ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_WHITEOUT),
                    -ENOTSUP);
 }
 END_TEST
 
+START_TEST(test_rename_replace) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
+
+  bs_file_t old_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &old_file), -ENOENT);
+
+  bs_file_t rename_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(rename_file, &st), 0);
+  ck_assert_int_eq(st.st_mode, S_IFREG);
+
+  ck_assert_int_eq(bsfs_release(rename_file), 0);
+}
+END_TEST
 // TODO: Add test with replace. Can't before write and read are implemented!
 // TODO: Add test with exchange. Can't before write and read are implemented!
 
@@ -362,6 +396,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(rename_tcase, test_rename);
   tcase_add_test(rename_tcase, test_rename_noreplace);
   tcase_add_test(rename_tcase, test_rename_whiteout);
+  tcase_add_test(rename_tcase, test_rename_replace);
   suite_add_tcase(suite, rename_tcase);
 
   return suite;
