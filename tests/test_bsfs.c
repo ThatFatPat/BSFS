@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #define FS_DISK_SIZE                                                           \
-  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x1000))
+  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x2000))
 
 static int create_tmp_file(size_t size) {
   int fd = syscall(SYS_memfd_create, "test_bsfs.bsf", 0);
@@ -191,6 +191,62 @@ START_TEST(test_unlink_noent) {
 }
 END_TEST
 
+static stego_key_t getattr_key;
+static const char* getattr_level_name = "getattrlvl";
+
+static void getattr_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&getattr_key, 1), 0);
+  ck_assert_int_eq(
+      keytab_store(tmp_fs->disk, 0, getattr_level_name, &getattr_key), 0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&getattr_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&getattr_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/getattrlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
+}
+
+static void getattr_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+START_TEST(test_getattr) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "getattrlvl/file1", &st), 0);
+
+  ck_assert_uint_eq(st.st_size, 0);
+  ck_assert_int_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+  ck_assert_int_eq(st.st_nlink, 1);
+}
+END_TEST
+
+START_TEST(test_getattr_noent) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "getattrlvl/asjkdl", &st), -ENOENT);
+}
+END_TEST
+
+START_TEST(test_fgetattr) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "getattrlvl/file1", &file), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+
+  ck_assert_uint_eq(st.st_size, 0);
+  ck_assert_int_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+  ck_assert_int_eq(st.st_nlink, 1);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
 stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
@@ -292,6 +348,14 @@ Suite* bsfs_suite(void) {
   tcase_add_test(mknod_unlink_tcase, test_unlink);
   tcase_add_test(mknod_unlink_tcase, test_unlink_noent);
   suite_add_tcase(suite, mknod_unlink_tcase);
+
+  TCase* getattr_tcase = tcase_create("getattr");
+  tcase_add_checked_fixture(getattr_tcase, getattr_fs_setup,
+                            getattr_fs_teardown);
+  tcase_add_test(getattr_tcase, test_getattr);
+  tcase_add_test(getattr_tcase, test_getattr_noent);
+  tcase_add_test(getattr_tcase, test_fgetattr);
+  suite_add_tcase(suite, getattr_tcase);
 
   TCase* rename_tcase = tcase_create("rename");
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);

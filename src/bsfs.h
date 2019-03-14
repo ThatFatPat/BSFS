@@ -36,9 +36,6 @@ int bsfs_fsync(bs_file_t file, bool datasync);
 int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st);
 int bsfs_fgetattr(bs_file_t file, struct stat* st);
 
-int bsfs_setattr(bs_bsfs_t fs, const char* path, const struct stat* st);
-int bsfs_fsetattr(bs_file_t file, const struct stat* st);
-
 int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode);
 int bsfs_fchmod(bs_file_t file, mode_t mode);
 
