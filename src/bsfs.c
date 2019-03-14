@@ -243,84 +243,6 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
-static int unlink_with_offset(bs_open_level_t level, bft_offset_t index) {
-
-  // Assumes metadata_lock is locked!!!!
-
-  bft_entry_t ent;
-  int ret = bft_read_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup;
-  }
-  cluster_offset_t init_cluster_idx = ent.initial_cluster;
-
-  // Remove BFT entry
-  ret = bft_remove_table_entry(level->bft, index);
-  bft_entry_destroy(&ent);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-  cluster_offset_t cluster_idx = init_cluster_idx;
-  uint8_t cluster[CLUSTER_SIZE];
-  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
-
-  // Dealloc clusters
-  while (cluster_idx != CLUSTER_OFFSET_EOF) {
-    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    cluster_idx = fs_next_cluster(cluster);
-  }
-
-cleanup:
-  return ret;
-}
-
-static int exchange_filenames(bs_open_level_t level, bft_offset_t src,
-                              bft_offset_t dest) {
-  bft_entry_t src_entry;
-  bft_entry_t dest_entry;
-
-  int ret = bft_read_table_entry(&level->bft, &src_entry, src);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = bft_read_table_entry(&level->bft, &dest_entry, dest);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-  char* temp = src_entry.name;
-  src_entry.name = dest_entry.name;
-  dest_entry.name = temp;
-
-  ret = bft_write_table_entry(&level->bft, &src_entry, src);
-  if (ret < 0) {
-    goto new_cleanup;
-  }
-
-  ret = bft_write_table_entry(&level->bft, &dest_entry, dest);
-  if (ret < 0) {
-    goto new_cleanup;
-  }
-
-new_cleanup:
-  free(temp);
-  bft_entry_destroy(&dest_entry);
-cleanup:
-  bft_entry_destroy(&src_entry);
-  return ret;
-}
-
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
@@ -445,6 +367,46 @@ cleanup:
   return ret;
 }
 
+static int do_unlink(bs_open_level_t level, bft_offset_t index) {
+
+  // Assumes metadata_lock is locked!!!!
+
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+  cluster_offset_t init_cluster_idx = ent.initial_cluster;
+
+  // Remove BFT entry
+  ret = bft_remove_table_entry(level->bft, index);
+  bft_entry_destroy(&ent);
+  if (ret < 0) {
+    return ret;
+  }
+
+  cluster_offset_t cluster_idx = init_cluster_idx;
+  uint8_t cluster[CLUSTER_SIZE];
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+
+  // Dealloc clusters
+  while (cluster_idx != CLUSTER_OFFSET_EOF) {
+    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+  }
+
+  return ret;
+}
+
 int bsfs_unlink(bs_bsfs_t fs, const char* path) {
   bs_open_level_t level;
   bft_offset_t index;
@@ -454,7 +416,7 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
     return ret;
   }
 
-  ret = unlink_with_offset(level, index);
+  ret = do_unlink(level, index);
   pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
@@ -524,102 +486,135 @@ int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
 }
 
-int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
-                unsigned int flags) {
-  bs_open_level_t level;
-  bft_offset_t index;
+static int do_exchange(bs_open_level_t level, bft_offset_t src,
+                       bft_offset_t dest) {
+  bft_entry_t src_entry;
+  bft_entry_t dest_entry;
 
-  if (flags & RENAME_WHITEOUT) {
-    return -ENOTSUP;
-  }
-
-  int ret = get_locked_level_and_index(fs, src_path, false, &level, &index);
+  int ret = bft_read_table_entry(&level->bft, &src_entry, src);
   if (ret < 0) {
     return ret;
   }
 
-  bft_offset_t new_path_index;
-  bool new_path_exists;
-  char* new_name;
-  char* new_pass;
-  char* name;
-  char* pass;
-
-  ret = bs_split_path(new_path, &new_pass, &new_name);
+  ret = bft_read_table_entry(&level->bft, &dest_entry, dest);
   if (ret < 0) {
-    ret = -EINVAL;
-    goto cleanup;
+    goto cleanup_src;
   }
 
-  ret = bs_split_path(src_path, &pass, &name);
-  if (ret < 0) {
-    ret = -ENOENT;
-    goto cleanup_after_old_alloc;
+  const char* temp = src_entry.name;
+  src_entry.name = dest_entry.name;
+  dest_entry.name = temp;
+
+  ret = bft_write_table_entry(&level->bft, &src_entry, src);
+  if (ret >= 0) {
+    ret = bft_write_table_entry(&level->bft, &dest_entry, dest);
   }
 
-  if (strcmp(pass, new_pass)) {
-    ret = -EXDEV;
-    goto cleanup_after_old_alloc;
-  }
+  bft_entry_destroy(&dest_entry);
 
-  int ret_new_file =
-      bft_find_table_entry(level->bft, new_name, &new_path_index);
-  if (ret_new_file < 0) {
-    new_path_exists = false;
-  }
+cleanup_src:
+  bft_entry_destroy(&src_entry);
+  return ret;
+}
 
-  if (new_path_index) {
-    new_path_exists = true;
-  }
-
-  // Logic: Implement RENAME_EXCHANGE case here.
-  if (flags & RENAME_EXCHANGE) {
-    ret = exchange_filenames(level, index, new_path_index);
-    goto cleanup_after_old_alloc;
-  }
-
-  // Handle NOREPLACE
-  if (new_path_exists)
-    if (flags & RENAME_NOREPLACE) {
-      ret = -EEXIST;
-      goto cleanup_after_old_alloc;
-    }
-
-  bool is_open;
-  ret = bs_oft_has(&level->open_files, index, &is_open);
-  if (ret < 0) {
-    goto cleanup_after_old_alloc;
-  }
-
-  if (is_open) {
-    ret = -EBUSY;
-    goto cleanup_after_old_alloc;
-  }
-
+static int do_rename(bs_open_level_t level, bft_offset_t index,
+                     const char* new_name) {
   bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, index);
+  int ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
-    goto cleanup_after_old_alloc;
+    return ret;
   }
 
-  ent.name = new_name; // Change name
-
-  if (new_path_exists) {
-    unlink_with_offset(level, index);
-  }
+  // Manually destroy old name and set new name.
+  free((void*) ent.name);
+  ent.name = new_name;
 
   ret = bft_write_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup_after_old_alloc;
+
+  // Note: no bft_entry_destroy here, as the name isn't owned by the entry.
+
+  return ret;
+}
+
+int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
+                unsigned int flags) {
+  if (flags & RENAME_WHITEOUT) {
+    return -ENOTSUP;
   }
 
-cleanup_after_old_alloc:
-  free(name);
-  free(pass);
+  char* new_name = NULL;
+  char* new_pass = NULL;
+  char* old_name = NULL;
+  char* old_pass = NULL;
+
+  int ret = bs_split_path(new_path, &new_pass, &new_name);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = bs_split_path(old_path, &old_pass, &old_name);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  if (strcmp(old_pass, new_pass)) {
+    ret = -EXDEV;
+    goto cleanup_after_alloc;
+  }
+
+  bs_open_level_t level;
+  ret = bs_level_get(fs, old_pass, &level);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  bft_offset_t old_index;
+  ret = bft_find_table_entry(level->bft, old_name, &old_index);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  bft_offset_t new_index;
+  int ret_new_index = bft_find_table_entry(level->bft, new_name, &new_index);
+  if (ret_new_index < 0 && ret_new_index != -ENOENT) {
+    ret = ret_new_index;
+    goto unlock;
+  }
+
+  bool new_exists = !ret_new_index;
+
+  if (flags & RENAME_EXCHANGE) {
+    if (!new_exists) {
+      ret = -ENOENT;
+      goto unlock;
+    }
+
+    ret = do_exchange(level, old_index, new_index);
+  } else {
+    if (new_exists) {
+      if (flags & RENAME_NOREPLACE) {
+        ret = -EEXIST;
+        goto unlock;
+      } else {
+        do_unlink(level, new_index);
+      }
+    }
+
+    ret = do_rename(level, old_index, new_name);
+  }
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+cleanup_after_alloc:
+  free(old_name);
+  free(old_pass);
   free(new_name);
   free(new_pass);
-cleanup:
-  pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
 
