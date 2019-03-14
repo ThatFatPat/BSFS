@@ -524,12 +524,12 @@ static int do_exchange(bs_open_level_t level, bft_offset_t src,
   bft_entry_t src_entry;
   bft_entry_t dest_entry;
 
-  int ret = bft_read_table_entry(&level->bft, &src_entry, src);
+  int ret = bft_read_table_entry(level->bft, &src_entry, src);
   if (ret < 0) {
     return ret;
   }
 
-  ret = bft_read_table_entry(&level->bft, &dest_entry, dest);
+  ret = bft_read_table_entry(level->bft, &dest_entry, dest);
   if (ret < 0) {
     goto cleanup_src;
   }
@@ -538,9 +538,9 @@ static int do_exchange(bs_open_level_t level, bft_offset_t src,
   src_entry.name = dest_entry.name;
   dest_entry.name = temp;
 
-  ret = bft_write_table_entry(&level->bft, &src_entry, src);
+  ret = bft_write_table_entry(level->bft, &src_entry, src);
   if (ret >= 0) {
-    ret = bft_write_table_entry(&level->bft, &dest_entry, dest);
+    ret = bft_write_table_entry(level->bft, &dest_entry, dest);
   }
 
   bft_entry_destroy(&dest_entry);

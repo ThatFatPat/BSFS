@@ -337,18 +337,33 @@ START_TEST(test_rename_replace) {
   bs_file_t old_file;
   ck_assert_int_eq(bsfs_open(tmp_fs, path, &old_file), -ENOENT);
 
-  bs_file_t rename_file;
-  ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
-
   struct stat st;
-  ck_assert_int_eq(bsfs_fgetattr(rename_file, &st), 0);
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, new_path, &st), 0);
   ck_assert_int_eq(st.st_mode, S_IFREG);
-
-  ck_assert_int_eq(bsfs_release(rename_file), 0);
 }
 END_TEST
-// TODO: Add test with replace. Can't before write and read are implemented!
-// TODO: Add test with exchange. Can't before write and read are implemented!
+
+START_TEST(test_rename_exchange) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_EXCHANGE), 0);
+
+  struct stat st_old;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, path, &st_old), 0);
+  ck_assert_int_eq(st_old.st_mode, S_IFREG | S_IRUSR);
+
+  struct stat st_new;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, new_path, &st_new), 0);
+  ck_assert_int_eq(st_new.st_mode, S_IFREG);
+}
+END_TEST
 
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
@@ -397,6 +412,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(rename_tcase, test_rename_noreplace);
   tcase_add_test(rename_tcase, test_rename_whiteout);
   tcase_add_test(rename_tcase, test_rename_replace);
+  tcase_add_test(rename_tcase, test_rename_exchange);
   suite_add_tcase(suite, rename_tcase);
 
   return suite;
