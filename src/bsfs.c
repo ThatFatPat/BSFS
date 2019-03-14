@@ -246,7 +246,6 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
 static int unlink_with_offset(bs_open_level_t level, bft_offset_t index) {
 
   // Assumes metadata_lock is locked!!!!
-  // TODO: Remove fs and replace instances with level->fs
 
   bft_entry_t ent;
   int ret = bft_read_table_entry(level->bft, &ent, index);
@@ -524,9 +523,6 @@ int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size) {
 int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
 }
-
-// TODO: Extract guts of unlink to enable removal using bft_offset as well as
-// path.
 
 int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
                 unsigned int flags) {
