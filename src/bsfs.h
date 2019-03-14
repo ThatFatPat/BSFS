@@ -7,10 +7,13 @@
 #include <sys/types.h>
 
 #ifndef RENAME_NOREPLACE
-#define RENAME_NOREPLACE	(1 << 0)	/* Don't overwrite target */
+#define RENAME_NOREPLACE (1 << 0) /* Don't overwrite target */
 #endif
 #ifndef RENAME_EXCHANGE
-#define RENAME_EXCHANGE		(1 << 1)	/* Exchange source and dest */
+#define RENAME_EXCHANGE (1 << 1) /* Exchange source and dest */
+#endif
+#ifndef RENAME_WHITEOUT
+#define RENAME_WHITEOUT (1 << 2)
 #endif
 
 typedef struct bs_file_impl* bs_file_t;

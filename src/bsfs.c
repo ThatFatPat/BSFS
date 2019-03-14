@@ -243,6 +243,43 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
+static int exchange_filenames(bs_open_level_t level, bft_offset_t src,
+                              bft_offset_t dest) {
+  bft_entry_t src_entry;
+  bft_entry_t dest_entry;
+
+  int ret = bft_read_table_entry(&level->bft, &src_entry, src);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = bft_read_table_entry(&level->bft, &dest_entry, dest);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  char* temp = src_entry.name;
+  src_entry.name = dest_entry.name;
+  dest_entry.name = temp;
+
+  ret = bft_write_table_entry(&level->bft, &src_entry, src);
+  if (ret < 0) {
+    goto new_cleanup;
+  }
+
+  ret = bft_write_table_entry(&level->bft, &dest_entry, dest);
+  if (ret < 0) {
+    goto new_cleanup;
+  }
+
+new_cleanup:
+  free(temp);
+  bft_entry_destroy(&dest_entry);
+cleanup:
+  bft_entry_destroy(&src_entry);
+  return ret;
+}
+
 int bsfs_init(int fd, bs_bsfs_t* out) {
   bs_bsfs_t fs = calloc(1, sizeof(*fs));
   if (!fs) {
@@ -496,50 +533,80 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
     return ret;
   }
 
-  // TODO: Make sure files are on same level, other wise return -EXDEV.
+  bs_open_level_t new_path_level;
+  bft_offset_t new_path_index;
+  bool new_path_exists;
+  char* new_name;
+  char* new_pass;
 
+  ret = bs_split_path(new_path, &new_pass, &new_name);
+  if (ret < 0) {
+    ret = -EINVAL;
+    goto cleanup;
+  }
+
+  int ret_new_file = get_locked_level_and_index(
+      fs, new_path, false, &new_path_level, &new_path_index);
+  pthread_rwlock_unlock(&level->metadata_lock);
+  if (ret_new_file < 0) {
+    new_path_exists = false;
+  }
+
+  if (!(&level == &new_path_level)) {
+    ret = -EXDEV;
+    goto cleanup_after_new_alloc;
+  }
+
+  if (new_path_index) {
+    new_path_exists = true;
+  }
   // Logic: Implement RENAME_EXCHANGE case here.
+  char* name;
+  char* pass;
 
-  // Logic: Implement normal rename here.
-
-  // LOGIC CHECK FORM RENAME_NOREPLACE.
-
-  // Check if new file exists
-  bft_offset_t existing_ent;
-  int not_file_exists =
-      bft_find_table_entry(level->bft, new_name,
-                           &existing_ent) { // TODO: Get new_name from level.
-    switch (flags) {
-    case RENAME_NOREPLACE:
-      if (file_exists) {
-        ret = -EEXIST;
-        goto cleanup;
-      }
-    case RENAME_EXCHANGE:
-      // TODO: Implement helper functions for name switching.
-    default:
-    }
-    // TODO: Return -EBUSY if file to be delete is currently open.
-
-    bft_entry_t ent;
-    ret = bft_read_table_entry(level->bft, &ent, index);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    ent.name = new_name; // Change name
-
-    ret = bft_write_table_entry(level->bft, &ent, index);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-  cleanup:
-    pthread_rwlock_unlock(&level->metadata_lock);
-    return ret;
+  ret = bs_split_path(src_path, &pass, &name);
+  if (ret < 0) {
+    ret = -ENOENT;
+    goto cleanup_after_old_alloc;
+  }
+  if (flags & RENAME_EXCHANGE) {
+    ret = exchange_filenames(level, index, new_path_index);
+    goto cleanup_after_old_alloc;
   }
 
-  int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
-                   void* ctx) {
-    return -ENOSYS;
+  // Handle NOREPLACE
+  if (new_path_exists)
+    if (flags & RENAME_NOREPLACE) {
+      ret = -EEXIST;
+      goto cleanup_after_old_alloc;
+    }
+
+  // TODO: Return -EBUSY if file to be delete is currently open.
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    goto cleanup_after_old_alloc;
   }
+
+  ent.name = new_name; // Change name
+
+  ret = bft_write_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    goto cleanup_after_old_alloc;
+  }
+
+cleanup_after_old_alloc:
+  free(name);
+  free(pass);
+cleanup_after_new_alloc:
+  free(new_name);
+  free(new_pass);
+cleanup:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
+int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
+                 void* ctx) {
+  return -ENOSYS;
+}
