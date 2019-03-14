@@ -243,6 +243,49 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
+static int unlink_with_offset(bs_bsfs_t fs, bs_open_level_t level,
+                              bft_offset_t index) {
+
+  // Assumes metadata_lock is locked!!!!
+
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    goto cleanup;
+  }
+  cluster_offset_t init_cluster_idx = ent.initial_cluster;
+
+  // Remove BFT entry
+  ret = bft_remove_table_entry(level->bft, index);
+  bft_entry_destroy(&ent);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  cluster_offset_t cluster_idx = init_cluster_idx;
+  uint8_t cluster[CLUSTER_SIZE];
+  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
+
+  // Dealloc clusters
+  while (cluster_idx != CLUSTER_OFFSET_EOF) {
+    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+    ret = fs_read_cluster(&level->key, fs->disk, cluster, cluster_idx);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+  }
+
+cleanup:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
 static int exchange_filenames(bs_open_level_t level, bft_offset_t src,
                               bft_offset_t dest) {
   bft_entry_t src_entry;
@@ -413,41 +456,7 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
     return ret;
   }
 
-  bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup;
-  }
-  cluster_offset_t init_cluster_idx = ent.initial_cluster;
-
-  // Remove BFT entry
-  ret = bft_remove_table_entry(level->bft, index);
-  bft_entry_destroy(&ent);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-  cluster_offset_t cluster_idx = init_cluster_idx;
-  uint8_t cluster[CLUSTER_SIZE];
-  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
-
-  // Dealloc clusters
-  while (cluster_idx != CLUSTER_OFFSET_EOF) {
-    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    ret = fs_read_cluster(&level->key, fs->disk, cluster, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    cluster_idx = fs_next_cluster(cluster);
-  }
-
-cleanup:
-  pthread_rwlock_unlock(&level->metadata_lock);
+  ret = unlink_with_offset(fs, level, index);
   return ret;
 }
 
@@ -581,7 +590,17 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
       goto cleanup_after_old_alloc;
     }
 
-  // TODO: Return -EBUSY if file to be delete is currently open.
+  bool is_open;
+  ret = bs_oft_has(&level->open_files, index, &is_open);
+  if (ret < 0) {
+    goto cleanup_after_old_alloc;
+  }
+
+  if (is_open) {
+    ret = -EBUSY;
+    goto cleanup_after_old_alloc;
+  }
+
   bft_entry_t ent;
   ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
@@ -589,6 +608,10 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
   }
 
   ent.name = new_name; // Change name
+
+  if (new_path_exists) {
+    unlink_with_offset(level->fs, level, index);
+  }
 
   ret = bft_write_table_entry(level->bft, &ent, index);
   if (ret < 0) {

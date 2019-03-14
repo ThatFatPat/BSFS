@@ -179,6 +179,7 @@ START_TEST(test_unlink) {
   strcat(path, "/bla");
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_unlink(tmp_fs, path), 0);
+  // TODO: Make sure file doesn't exist!
 }
 END_TEST
 
@@ -198,8 +199,8 @@ static void rename_fs_setup(void) {
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
 
   ck_assert_int_eq(stego_gen_user_keys(&rename_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, rename_level_name, &rename_key),
-                   0);
+  ck_assert_int_eq(
+      keytab_store(tmp_fs->disk, 0, rename_level_name, &rename_key), 0);
 
   void* zero = calloc(1, BFT_SIZE);
   ck_assert(zero);
@@ -220,11 +221,10 @@ START_TEST(test_rename) {
   char path[256];
   strcpy(path, rename_level_name);
   strcat(path, "/bla");
-  char new_name[256] = "bla1";
   char new_path[256];
-  strcpy(path, rename_level_name);
-  strcat(path, "/bla1");
-  ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
   bs_file_t rename_file;
   ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
 }
@@ -264,8 +264,7 @@ Suite* bsfs_suite(void) {
   suite_add_tcase(suite, mknod_unlink_tcase);
 
   TCase* rename_tcase = tcase_create("rename");
-  tcase_add_checked_fixture(rename_tcase, rename_fs_setup,
-                            rename_fs_teardown);
+  tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
   tcase_add_test(rename_tcase, test_rename);
   suite_add_tcase(suite, rename_tcase);
 
