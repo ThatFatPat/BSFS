@@ -542,15 +542,6 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
     return ret;
   }
 
-  char* name;
-  char* pass;
-
-  ret = bs_split_path(src_path, &pass, &name);
-  if (ret < 0) {
-    ret = -ENOENT;
-    goto cleanup_after_old_alloc;
-  }
-
   bs_open_level_t new_path_level;
   bft_offset_t new_path_index;
   bool new_path_exists;
@@ -563,9 +554,18 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
     goto cleanup;
   }
 
+  char* name;
+  char* pass;
+
+  ret = bs_split_path(src_path, &pass, &name);
+  if (ret < 0) {
+    ret = -ENOENT;
+    goto cleanup_after_old_alloc;
+  }
+
   if (!(&pass == &new_pass)) {
     ret = -EXDEV;
-    goto cleanup_after_new_alloc;
+    goto cleanup_after_old_alloc;
   }
 
   int ret_new_file =
