@@ -195,7 +195,7 @@ stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
 static void rename_fs_setup(void) {
-  int fd = create_tmp_file(FS_DISK_SIZE);
+  int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
 
   ck_assert_int_eq(stego_gen_user_keys(&rename_key, 1), 0);
@@ -227,6 +227,20 @@ START_TEST(test_rename) {
   ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
   bs_file_t rename_file;
   ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
+  ck_assert_int_eq(bsfs_release(rename_file), 0);
+}
+END_TEST
+
+START_TEST(test_rename_noreplace) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_NOREPLACE),
+                   -EEXIST);
 }
 END_TEST
 
@@ -266,6 +280,7 @@ Suite* bsfs_suite(void) {
   TCase* rename_tcase = tcase_create("rename");
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
   tcase_add_test(rename_tcase, test_rename);
+  tcase_add_test(rename_tcase, test_rename_noreplace);
   suite_add_tcase(suite, rename_tcase);
 
   return suite;

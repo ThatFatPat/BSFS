@@ -243,10 +243,10 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
-static int unlink_with_offset(bs_bsfs_t fs, bs_open_level_t level,
-                              bft_offset_t index) {
+static int unlink_with_offset(bs_open_level_t level, bft_offset_t index) {
 
   // Assumes metadata_lock is locked!!!!
+  // TODO: Remove fs and replace instances with level->fs
 
   bft_entry_t ent;
   int ret = bft_read_table_entry(level->bft, &ent, index);
@@ -264,7 +264,7 @@ static int unlink_with_offset(bs_bsfs_t fs, bs_open_level_t level,
 
   cluster_offset_t cluster_idx = init_cluster_idx;
   uint8_t cluster[CLUSTER_SIZE];
-  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
 
   // Dealloc clusters
   while (cluster_idx != CLUSTER_OFFSET_EOF) {
@@ -273,7 +273,7 @@ static int unlink_with_offset(bs_bsfs_t fs, bs_open_level_t level,
       goto cleanup;
     }
 
-    ret = fs_read_cluster(&level->key, fs->disk, cluster, cluster_idx);
+    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
     if (ret < 0) {
       goto cleanup;
     }
@@ -282,7 +282,6 @@ static int unlink_with_offset(bs_bsfs_t fs, bs_open_level_t level,
   }
 
 cleanup:
-  pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
 
@@ -456,7 +455,8 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
     return ret;
   }
 
-  ret = unlink_with_offset(fs, level, index);
+  ret = unlink_with_offset(level, index);
+  pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
 
@@ -542,11 +542,12 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
     return ret;
   }
 
-  bs_open_level_t new_path_level;
   bft_offset_t new_path_index;
   bool new_path_exists;
   char* new_name;
   char* new_pass;
+  char* name;
+  char* pass;
 
   ret = bs_split_path(new_path, &new_pass, &new_name);
   if (ret < 0) {
@@ -554,16 +555,13 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
     goto cleanup;
   }
 
-  char* name;
-  char* pass;
-
   ret = bs_split_path(src_path, &pass, &name);
   if (ret < 0) {
     ret = -ENOENT;
     goto cleanup_after_old_alloc;
   }
 
-  if (!(&pass == &new_pass)) {
+  if (strcmp(pass, new_pass)) {
     ret = -EXDEV;
     goto cleanup_after_old_alloc;
   }
@@ -611,7 +609,7 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
   ent.name = new_name; // Change name
 
   if (new_path_exists) {
-    unlink_with_offset(level->fs, level, index);
+    unlink_with_offset(level, index);
   }
 
   ret = bft_write_table_entry(level->bft, &ent, index);
@@ -622,7 +620,6 @@ int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_path,
 cleanup_after_old_alloc:
   free(name);
   free(pass);
-cleanup_after_new_alloc:
   free(new_name);
   free(new_pass);
 cleanup:
