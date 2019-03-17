@@ -57,10 +57,8 @@ static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
   size_t bucket = bucket_of(index, table->bucket_count);
 
   bs_file_t iter = table->buckets[bucket];
-  for (; iter; iter = iter->next) {
-    if (iter->index == index) {
-      break;
-    }
+  while (iter && iter->index != index) {
+    iter = iter->next;
   }
 
   return iter;
@@ -77,10 +75,8 @@ static int oft_remove(bs_oft_t* table, bs_file_t file) {
   size_t bucket = bucket_of(file->index, table->bucket_count);
 
   bs_file_t* iter = &table->buckets[bucket];
-  for (; *iter; iter = &(*iter)->next) {
-    if (*iter == file) {
-      break;
-    }
+  while (*iter && *iter != file) {
+    iter = &(*iter)->next;
   }
 
   if (!*iter) {
