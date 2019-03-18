@@ -293,6 +293,19 @@ START_TEST(test_rename) {
 }
 END_TEST
 
+START_TEST(test_rename_noent) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/blabla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), -ENOENT);
+}
+END_TEST
+
 START_TEST(test_rename_noreplace) {
   char path[256];
   strcpy(path, rename_level_name);
@@ -423,6 +436,7 @@ Suite* bsfs_suite(void) {
   TCase* rename_tcase = tcase_create("rename");
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
   tcase_add_test(rename_tcase, test_rename);
+  tcase_add_test(rename_tcase, test_rename_noent);
   tcase_add_test(rename_tcase, test_rename_noreplace);
   tcase_add_test(rename_tcase, test_rename_whiteout);
   tcase_add_test(rename_tcase, test_rename_replace);
