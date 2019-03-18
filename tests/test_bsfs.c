@@ -365,6 +365,20 @@ START_TEST(test_rename_exchange) {
 }
 END_TEST
 
+START_TEST(test_rename_exchange_no_dest) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_EXCHANGE),
+                   -ENOENT);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -413,6 +427,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(rename_tcase, test_rename_whiteout);
   tcase_add_test(rename_tcase, test_rename_replace);
   tcase_add_test(rename_tcase, test_rename_exchange);
+  tcase_add_test(rename_tcase, test_rename_exchange_no_dest);
   suite_add_tcase(suite, rename_tcase);
 
   return suite;
