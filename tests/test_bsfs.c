@@ -291,6 +291,8 @@ START_TEST(test_fchmod) {
   ck_assert_int_eq(bsfs_fchmod(file, S_IFREG | S_IRUSR), 0);
   ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
   ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
 }
 END_TEST
 
