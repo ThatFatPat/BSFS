@@ -495,6 +495,21 @@ int bsfs_fgetattr(bs_file_t file, struct stat* st) {
   return ret;
 }
 
+static int do_chmod(bs_open_level_t level, bft_offset_t index, mode_t mode) {
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ent.mode = mode;
+
+  ret = bft_write_table_entry(level->bft, &ent, index);
+  bft_entry_destroy(&ent);
+
+  return ret;
+}
+
 int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
   return -ENOSYS;
 }
