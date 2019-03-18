@@ -511,11 +511,32 @@ static int do_chmod(bs_open_level_t level, bft_offset_t index, mode_t mode) {
 }
 
 int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
-  return -ENOSYS;
+  bs_open_level_t level;
+  bft_offset_t index;
+
+  int ret = get_locked_level_and_index(fs, path, true, &level, &index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = do_chmod(level, index, mode);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 int bsfs_fchmod(bs_file_t file, mode_t mode) {
-  return -ENOSYS;
+  bs_open_level_t level = file->level;
+
+  int ret = pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = do_chmod(level, file->index, mode);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size) {
