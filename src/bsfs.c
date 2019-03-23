@@ -502,7 +502,7 @@ static int do_chmod(bs_open_level_t level, bft_offset_t index, mode_t mode) {
     return ret;
   }
 
-  ent.mode = mode;
+  ent.mode = (mode & 07777) | S_IFREG;
 
   ret = bft_write_table_entry(level->bft, &ent, index);
   bft_entry_destroy(&ent);
