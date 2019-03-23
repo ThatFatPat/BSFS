@@ -296,6 +296,17 @@ START_TEST(test_fchmod) {
 }
 END_TEST
 
+START_TEST(test_chmod_file_type) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+
+  ck_assert_int_eq(bsfs_chmod(tmp_fs, "/chmodlvl/file1", S_IFDIR | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -341,6 +352,7 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(chmod_tcase, chmod_fs_setup, chmod_fs_teardown);
   tcase_add_test(chmod_tcase, test_chmod);
   tcase_add_test(chmod_tcase, test_fchmod);
+  tcase_add_test(chmod_tcase, test_chmod_file_type);
   suite_add_tcase(suite, chmod_tcase);
 
   return suite;
