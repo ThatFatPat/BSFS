@@ -6,6 +6,22 @@
 
 #define LONG_TIMEOUT 500000 // Arbitrarily long timeout
 
+static bs_bsfs_t get_fs(void) {
+  return (bs_bsfs_t) fuse_get_context()->private_data;
+}
+
+static bs_file_t get_file(struct fuse_file_info* fi) {
+  return (bs_file_t) fi->fh;
+}
+
+static bs_file_t try_get_file(struct fuse_file_info* fi) {
+  return fi ? get_file(fi) : NULL;
+}
+
+static void set_file(struct fuse_file_info* fi, bs_file_t file) {
+  fi->fh = (uint64_t) file;
+}
+
 int bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
   conn->time_gran = 1000000000; // 1 second
   conn->want |= FUSE_CAP_WRITEBACK_CACHE;
