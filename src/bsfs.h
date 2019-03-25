@@ -1,17 +1,11 @@
 #ifndef BS_BSFS_H
 #define BS_BSFS_H
 
+#include <linux/fs.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#ifndef RENAME_NOREPLACE
-#define RENAME_NOREPLACE (1 << 0) /* Don't overwrite target */
-#endif
-#ifndef RENAME_EXCHANGE
-#define RENAME_EXCHANGE (1 << 1) /* Exchange source and dest */
-#endif
 
 typedef struct bs_file_impl* bs_file_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
