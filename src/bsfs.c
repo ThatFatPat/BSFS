@@ -571,8 +571,8 @@ static int do_rename(bs_open_level_t level, bft_offset_t index,
 
 int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
                 unsigned int flags) {
-  if (flags & RENAME_WHITEOUT) {
-    return -ENOTSUP;
+  if (flags && flags != RENAME_NOREPLACE && flags != RENAME_EXCHANGE) {
+    return -EINVAL;
   }
 
   char* new_name = NULL;
@@ -621,7 +621,7 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
 
   bool new_exists = !ret_new_index;
 
-  if (flags & RENAME_EXCHANGE) {
+  if (flags == RENAME_EXCHANGE) {
     if (!new_exists) {
       ret = -ENOENT;
       goto unlock;
@@ -630,7 +630,7 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
     ret = do_exchange(level, old_index, new_index);
   } else {
     if (new_exists) {
-      if (flags & RENAME_NOREPLACE) {
+      if (flags == RENAME_NOREPLACE) {
         ret = -EEXIST;
         goto unlock;
       } else {
