@@ -305,6 +305,8 @@ START_TEST(test_chmod_file_type) {
   ck_assert_int_eq(bsfs_chmod(tmp_fs, "/chmodlvl/file1", S_IFDIR | S_IRUSR), 0);
   ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
   ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+}
+END_TEST
 
 stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
