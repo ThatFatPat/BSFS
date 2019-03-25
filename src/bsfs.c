@@ -368,9 +368,6 @@ cleanup:
 }
 
 static int do_unlink(bs_open_level_t level, bft_offset_t index) {
-
-  // Assumes metadata_lock is locked!!!!
-
   bft_entry_t ent;
   int ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
