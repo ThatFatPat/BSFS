@@ -708,7 +708,44 @@ cleanup_after_alloc:
   return ret;
 }
 
-int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
-                 void* ctx) {
-  return -ENOSYS;
+struct readdir_ctx {
+  bs_dir_iter_t user_iter;
+  void* user_ctx;
+};
+
+static bool bft_readdir_iter(bft_offset_t off, const bft_entry_t* ent,
+                             void* raw_ctx) {
+  (void) off;
+
+  struct stat st;
+  stat_from_bft_ent(&st, ent);
+
+  struct readdir_ctx* ctx = (struct readdir_ctx*) raw_ctx;
+  ctx->user_iter(ent->name, &st, ctx->user_ctx);
+
+  return true;
+}
+
+int bsfs_readdir(bs_bsfs_t fs, const char* path, bs_dir_iter_t iter,
+                 void* user_ctx) {
+  char* pass;
+  int ret = bs_get_dirname(path, &pass);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bs_open_level_t level;
+  ret = bs_level_get(fs, pass, &level);
+  free(pass);
+  if (ret < 0) {
+    return ret;
+  }
+
+  pthread_rwlock_rdlock(&level->metadata_lock);
+
+  struct readdir_ctx ctx = { .user_iter = iter, .user_ctx = user_ctx };
+  ret = bft_iter_table_entries(level->bft, bft_readdir_iter, &ctx);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
