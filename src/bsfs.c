@@ -754,11 +754,26 @@ int bsfs_readdir(bs_bsfs_t fs, const char* path, bs_dir_iter_t iter,
     return ret;
   }
 
-  bs_open_level_t level;
-  ret = bs_level_get(fs, pass, &level);
-  free(pass);
+  bs_open_level_t level = NULL;
+  if (*pass) {
+    ret = bs_level_get(fs, pass, &level);
+    free(pass);
+    if (ret < 0) {
+      return ret;
+    }
+  }
+
+  ret = iter(".", NULL, user_ctx);
   if (ret < 0) {
     return ret;
+  }
+  ret = iter("..", NULL, user_ctx);
+  if (ret < 0) {
+    return ret;
+  }
+
+  if (!level) {
+    return 0;
   }
 
   pthread_rwlock_rdlock(&level->metadata_lock);
