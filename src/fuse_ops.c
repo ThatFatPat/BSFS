@@ -64,17 +64,17 @@ int bsfs_fuse_open(const char* path, struct fuse_file_info* fi) {
   return 0;
 }
 
+int bsfs_fuse_release(const char* path, struct fuse_file_info* fi) {
+  (void) path;
+  return bsfs_release(get_file(fi));
+}
+
 int bsfs_fuse_opendir(const char* path, struct fuse_file_info* fi) {
   // All checks will be performed by the kernel - just make sure there's no
   // associated BSFS file so that `getattr` isn't confused.
   (void) path;
   set_file(fi, NULL);
   return 0;
-}
-
-int bsfs_fuse_release(const char* path, struct fuse_file_info* fi) {
-  (void) path;
-  return bsfs_release(get_file(fi));
 }
 
 int bsfs_fuse_read(const char* path, char* buf, size_t size, off_t off,

@@ -10,8 +10,9 @@ int bsfs_fuse_mknod(const char* path, mode_t mode, dev_t dev);
 int bsfs_fuse_unlink(const char* path);
 
 int bsfs_fuse_open(const char* path, struct fuse_file_info* fi);
-int bsfs_fuse_opendir(const char* path, struct fuse_file_info* fi);
 int bsfs_fuse_release(const char* path, struct fuse_file_info* fi);
+
+int bsfs_fuse_opendir(const char* path, struct fuse_file_info* fi);
 
 int bsfs_fuse_read(const char* path, char* buf, size_t size, off_t off,
                    struct fuse_file_info* fi);
