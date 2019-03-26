@@ -179,6 +179,7 @@ START_TEST(test_unlink) {
   strcat(path, "/bla");
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_unlink(tmp_fs, path), 0);
+  // TODO: Make sure file doesn't exist!
 }
 END_TEST
 
@@ -304,6 +305,154 @@ START_TEST(test_chmod_file_type) {
   ck_assert_int_eq(bsfs_chmod(tmp_fs, "/chmodlvl/file1", S_IFDIR | S_IRUSR), 0);
   ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
   ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+
+stego_key_t rename_key;
+const char* rename_level_name = "renamelvl";
+
+static void rename_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&rename_key, 1), 0);
+  ck_assert_int_eq(
+      keytab_store(tmp_fs->disk, 0, rename_level_name, &rename_key), 0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&rename_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&rename_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  char path[256];
+  strcpy(path, rename_level_name);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/bla"), S_IFREG), 0);
+}
+
+static void rename_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+START_TEST(test_rename) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
+
+  bs_file_t old_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &old_file), -ENOENT);
+
+  bs_file_t rename_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, new_path, &rename_file), 0);
+  ck_assert_int_eq(bsfs_release(rename_file), 0);
+}
+END_TEST
+
+START_TEST(test_rename_noent) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/blabla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), -ENOENT);
+}
+END_TEST
+
+START_TEST(test_rename_cross_level) {
+  ck_assert_int_eq(bsfs_rename(tmp_fs, "renamelvl/file1", "otherlvl/file1", 0),
+                   -EXDEV);
+}
+END_TEST
+
+START_TEST(test_rename_noreplace) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_NOREPLACE),
+                   -EEXIST);
+}
+END_TEST
+
+START_TEST(test_rename_invalid_flags) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0x1234), -EINVAL);
+}
+END_TEST
+
+START_TEST(test_rename_replace) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, 0), 0);
+
+  bs_file_t old_file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &old_file), -ENOENT);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, new_path, &st), 0);
+  ck_assert_int_eq(st.st_mode, S_IFREG);
+}
+END_TEST
+
+START_TEST(test_rename_exchange) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, new_path, S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_EXCHANGE), 0);
+
+  struct stat st_old;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, path, &st_old), 0);
+  ck_assert_int_eq(st_old.st_mode, S_IFREG | S_IRUSR);
+
+  struct stat st_new;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, new_path, &st_new), 0);
+  ck_assert_int_eq(st_new.st_mode, S_IFREG);
+}
+END_TEST
+
+START_TEST(test_rename_exchange_no_dest) {
+  char path[256];
+  strcpy(path, rename_level_name);
+  strcat(path, "/bla");
+
+  char new_path[256];
+  strcpy(new_path, rename_level_name);
+  strcat(new_path, "/bla1");
+
+  ck_assert_int_eq(bsfs_rename(tmp_fs, path, new_path, RENAME_EXCHANGE),
+                   -ENOENT);
 }
 END_TEST
 
@@ -354,6 +503,18 @@ Suite* bsfs_suite(void) {
   tcase_add_test(chmod_tcase, test_fchmod);
   tcase_add_test(chmod_tcase, test_chmod_file_type);
   suite_add_tcase(suite, chmod_tcase);
+
+  TCase* rename_tcase = tcase_create("rename");
+  tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
+  tcase_add_test(rename_tcase, test_rename);
+  tcase_add_test(rename_tcase, test_rename_noent);
+  tcase_add_test(rename_tcase, test_rename_cross_level);
+  tcase_add_test(rename_tcase, test_rename_noreplace);
+  tcase_add_test(rename_tcase, test_rename_invalid_flags);
+  tcase_add_test(rename_tcase, test_rename_replace);
+  tcase_add_test(rename_tcase, test_rename_exchange);
+  tcase_add_test(rename_tcase, test_rename_exchange_no_dest);
+  suite_add_tcase(suite, rename_tcase);
 
   return suite;
 }

@@ -33,124 +33,80 @@ static void destroy_open_file(bs_file_t file) {
   free(file);
 }
 
-static int oft_realloc_buckets(bs_oft_t* table, size_t bucket_count) {
+static int alloc_buckets(size_t bucket_count, bs_file_t** out_buckets) {
   if (!bucket_count || bucket_count & (bucket_count - 1)) {
-    // Not a power of 2
+    // Not a power of 2.
     return -EINVAL;
   }
 
-  bs_file_t** new_buckets =
-      (bs_file_t**) calloc(bucket_count, sizeof(bs_file_t*));
-  if (!new_buckets) {
+  bs_file_t* buckets = (bs_file_t*) calloc(bucket_count, sizeof(bs_file_t));
+  if (!buckets) {
     return -ENOMEM;
   }
-  free(table->buckets);
-  table->buckets = new_buckets;
-  table->bucket_count = bucket_count;
+
+  *out_buckets = buckets;
   return 0;
 }
 
-static size_t oft_bucket_of(bft_offset_t index, size_t bucket_count) {
+static size_t bucket_of(bft_offset_t index, size_t bucket_count) {
   return (size_t) index &
          (bucket_count - 1); // Assumes power-of-2 bucket count.
 }
 
-static bool oft_matches_bucket(bs_file_t file, size_t bucket,
-                               size_t bucket_count) {
-  return file && oft_bucket_of(file->index, bucket_count) == bucket;
-}
-
-static bs_file_t* oft_find_prev(bs_oft_t* table, bft_offset_t index) {
-  size_t bucket = oft_bucket_of(index, table->bucket_count);
-  bs_file_t* prev_link = table->buckets[bucket];
-
-  if (!prev_link) {
-    return NULL;
-  }
-
-  for (; oft_matches_bucket(*prev_link, bucket, table->bucket_count);
-       prev_link = &(*prev_link)->next) {
-    if ((*prev_link)->index == index) {
-      return prev_link;
-    }
-  }
-
-  return NULL;
-}
-
 static bs_file_t oft_find(bs_oft_t* table, bft_offset_t index) {
-  bs_file_t* prev_link = oft_find_prev(table, index);
-  return prev_link ? *prev_link : NULL;
+  size_t bucket = bucket_of(index, table->bucket_count);
+
+  bs_file_t iter = table->buckets[bucket];
+  while (iter && iter->index != index) {
+    iter = iter->next;
+  }
+
+  return iter;
 }
 
-static void oft_do_insert(bs_oft_t* table, bs_file_t file) {
-  size_t bucket = oft_bucket_of(file->index, table->bucket_count);
-  if (table->buckets[bucket]) {
-    // Insert at head of existing bucket.
-    bs_file_t* prev_link = table->buckets[bucket];
-    file->next = *prev_link;
-    *prev_link = file;
-  } else {
-    // Insert at head of table.
-    file->next = table->head;
-    table->head = file;
-    table->buckets[bucket] = &table->head;
-
-    if (file->next) {
-      // Patch other bucket with new next pointer.
-      size_t next_bucket =
-          oft_bucket_of(file->next->index, table->bucket_count);
-      table->buckets[next_bucket] = &file->next;
-    }
-  }
+static void oft_do_insert(bs_file_t* buckets, size_t bucket_count,
+                          bs_file_t file) {
+  size_t bucket = bucket_of(file->index, bucket_count);
+  file->next = buckets[bucket];
+  buckets[bucket] = file;
 }
 
 static int oft_remove(bs_oft_t* table, bs_file_t file) {
-  size_t bucket = oft_bucket_of(file->index, table->bucket_count);
+  size_t bucket = bucket_of(file->index, table->bucket_count);
 
-  bs_file_t* prev_link = oft_find_prev(table, file->index);
-  if (!prev_link) {
+  bs_file_t* iter = &table->buckets[bucket];
+  while (*iter && *iter != file) {
+    iter = &(*iter)->next;
+  }
+
+  if (!*iter) {
     return -EINVAL;
   }
 
-  if (*table->buckets[bucket] == file &&
-      !oft_matches_bucket(file->next, bucket, table->bucket_count)) {
-    // `file` was the only entry in the bucket - empty it.
-    table->buckets[bucket] = NULL;
-  }
-
-  *prev_link = file->next;
-
-  if (*prev_link) {
-    size_t next_bucket =
-        oft_bucket_of((*prev_link)->index, table->bucket_count);
-
-    if (next_bucket != bucket) {
-      // The next item is in a different bucket - patch it with new next
-      // pointer.
-      table->buckets[next_bucket] = prev_link;
-    }
-  }
-
+  *iter = (*iter)->next;
   table->size--;
-
   return 0;
 }
 
 static int oft_rehash(bs_oft_t* table, size_t new_bucket_count) {
-  int ret = oft_realloc_buckets(table, new_bucket_count);
+  bs_file_t* new_buckets;
+  int ret = alloc_buckets(new_bucket_count, &new_buckets);
   if (ret < 0) {
     return ret;
   }
 
-  bs_file_t iter = table->head;
-  table->head = NULL;
-
-  while (iter) {
-    bs_file_t next = iter->next;
-    oft_do_insert(table, iter);
-    iter = next;
+  for (size_t old_bucket = 0; old_bucket < table->bucket_count; old_bucket++) {
+    bs_file_t file = table->buckets[old_bucket];
+    while (file) {
+      bs_file_t next = file->next;
+      oft_do_insert(new_buckets, new_bucket_count, file);
+      file = next;
+    }
   }
+
+  free(table->buckets);
+  table->buckets = new_buckets;
+  table->bucket_count = new_bucket_count;
 
   return 0;
 }
@@ -164,7 +120,7 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
     }
   }
 
-  oft_do_insert(table, file);
+  oft_do_insert(table->buckets, table->bucket_count, file);
   table->size++;
 
   return 0;
@@ -172,10 +128,12 @@ static int oft_insert(bs_oft_t* table, bs_file_t file) {
 
 int bs_oft_init(bs_oft_t* table) {
   memset(table, 0, sizeof(bs_oft_t));
-  int ret = oft_realloc_buckets(table, OFT_INITIAL_BUCKET_COUNT);
+
+  int ret = alloc_buckets(OFT_INITIAL_BUCKET_COUNT, &table->buckets);
   if (ret < 0) {
     return ret;
   }
+  table->bucket_count = OFT_INITIAL_BUCKET_COUNT;
 
   ret = -pthread_mutex_init(&table->lock, NULL);
   if (ret < 0) {
@@ -187,14 +145,17 @@ int bs_oft_init(bs_oft_t* table) {
 
 void bs_oft_destroy(bs_oft_t* table) {
   pthread_mutex_destroy(&table->lock);
-  free(table->buckets);
 
-  bs_file_t iter = table->head;
-  while (iter) {
-    bs_file_t next = iter->next;
-    destroy_open_file(iter);
-    iter = next;
+  for (size_t bucket = 0; bucket < table->bucket_count; bucket++) {
+    bs_file_t file = table->buckets[bucket];
+    while (file) {
+      bs_file_t next = file->next;
+      destroy_open_file(file);
+      file = next;
+    }
   }
+
+  free(table->buckets);
 }
 
 int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
@@ -227,6 +188,18 @@ int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
 unlock:
   pthread_mutex_unlock(&table->lock);
   return ret;
+}
+
+int bs_oft_has(bs_oft_t* table, bft_offset_t index, bool* out) {
+  int ret = -pthread_mutex_lock(&table->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  *out = oft_find(table, index) != NULL;
+
+  pthread_mutex_unlock(&table->lock);
+  return 0;
 }
 
 int bs_oft_release(bs_oft_t* table, bs_file_t file) {
