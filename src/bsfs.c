@@ -553,8 +553,8 @@ int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
 }
 
-bool get_timestamp(const struct timespec times[2], size_t index,
-                   bft_timestamp_t* out) {
+static bool get_timestamp(const struct timespec times[2], size_t index,
+                          bft_timestamp_t* out) {
   if (!times) {
     *out = time(NULL);
     return true;
@@ -574,8 +574,8 @@ bool get_timestamp(const struct timespec times[2], size_t index,
   return true;
 }
 
-int do_utimens(bs_open_level_t level, bft_offset_t index,
-               const struct timespec times[2]) {
+static int do_utimens(bs_open_level_t level, bft_offset_t index,
+                      const struct timespec times[2]) {
   bft_timestamp_t atim;
   bft_timestamp_t mtim;
   bool needs_atim = get_timestamp(times, 0, &atim);
