@@ -576,8 +576,8 @@ static bool get_timestamp(const struct timespec times[2], size_t index,
 
 static int do_utimens(bs_open_level_t level, bft_offset_t index,
                       const struct timespec times[2]) {
-  bft_timestamp_t atim;
-  bft_timestamp_t mtim;
+  bft_timestamp_t atim; // Access time
+  bft_timestamp_t mtim; // Modification time
   bool needs_atim = get_timestamp(times, 0, &atim);
   bool needs_mtim = get_timestamp(times, 1, &mtim);
 
