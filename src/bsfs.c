@@ -163,6 +163,31 @@ unlock:
   return ret;
 }
 
+int bs_get_dirname(const char* path, char** out_pass) {
+  if (*path == '/') {
+    path++;
+  }
+
+  char* slash_loc = strchr(path, '/');
+  size_t end;
+  if (slash_loc) {
+    if (slash_loc[1]) {
+      return -ENOTDIR;
+    }
+    end = slash_loc - path;
+  } else {
+    end = strlen(path);
+  }
+
+  char* pass = strndup(path, end);
+  if (!pass) {
+    return -errno;
+  }
+
+  *out_pass = pass;
+  return 0;
+}
+
 int bs_split_path(const char* path, char** out_pass, char** out_name) {
   if (*path == '/') {
     path++;

@@ -130,6 +130,46 @@ START_TEST(test_split_path_double_slash) {
 }
 END_TEST
 
+START_TEST(test_get_dirname) {
+  const char* path = "/pass";
+  char* pass;
+
+  ck_assert_int_eq(bs_get_dirname(path, &pass), 0);
+  ck_assert_str_eq(pass, "pass");
+
+  free(pass);
+
+  ck_assert_int_eq(bs_get_dirname(path + 1, &pass), 0);
+  ck_assert_str_eq(pass, "pass");
+
+  free(pass);
+}
+END_TEST
+
+START_TEST(test_get_dirname_trailing_slash) {
+  const char* path = "/pass/";
+  char* pass;
+
+  ck_assert_int_eq(bs_get_dirname(path, &pass), 0);
+  ck_assert_str_eq(pass, "pass");
+
+  free(pass);
+
+  ck_assert_int_eq(bs_get_dirname(path + 1, &pass), 0);
+  ck_assert_str_eq(pass, "pass");
+
+  free(pass);
+}
+END_TEST
+
+START_TEST(test_get_dirname_with_file) {
+  const char* path = "/pass/name";
+  char* pass;
+  ck_assert_int_eq(bs_get_dirname(path, &pass), -ENOTDIR);
+  ck_assert_int_eq(bs_get_dirname(path + 1, &pass), -ENOTDIR);
+}
+END_TEST
+
 stego_key_t mknod_key;
 const char* mknod_level_name = "mknodlvl";
 
@@ -475,11 +515,14 @@ Suite* bsfs_suite(void) {
   tcase_add_test(level_get_tcase, test_level_get_multi);
   suite_add_tcase(suite, level_get_tcase);
 
-  TCase* split_path_tcase = tcase_create("split_path");
-  tcase_add_test(split_path_tcase, test_split_path);
-  tcase_add_test(split_path_tcase, test_split_path_no_slash);
-  tcase_add_test(split_path_tcase, test_split_path_double_slash);
-  suite_add_tcase(suite, split_path_tcase);
+  TCase* path_tcase = tcase_create("path");
+  tcase_add_test(path_tcase, test_split_path);
+  tcase_add_test(path_tcase, test_split_path_no_slash);
+  tcase_add_test(path_tcase, test_split_path_double_slash);
+  tcase_add_test(path_tcase, test_get_dirname);
+  tcase_add_test(path_tcase, test_get_dirname_trailing_slash);
+  tcase_add_test(path_tcase, test_get_dirname_with_file);
+  suite_add_tcase(suite, path_tcase);
 
   TCase* mknod_unlink_tcase = tcase_create("mknod_unlink");
   tcase_add_checked_fixture(mknod_unlink_tcase, mknod_fs_setup,
