@@ -584,6 +584,27 @@ START_TEST(test_readdir_with_file) {
 }
 END_TEST
 
+static int test_readdir_error_iter(const char* name, const struct stat* st,
+                                   void* raw_ctx) {
+  (void) name;
+  (void) st;
+
+  struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
+  if (++ctx->files == 2) {
+    return -EXDEV;
+  }
+  return 0;
+}
+
+START_TEST(test_readdir_iter_error) {
+  struct test_readdir_ctx ctx = { 0 };
+  ck_assert_int_eq(
+      bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_error_iter, &ctx),
+      -EXDEV);
+  ck_assert_int_eq(ctx.files, 2);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -653,6 +674,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(readdir_tcase, test_readdir);
   tcase_add_test(readdir_tcase, test_readdir_nonexistent);
   tcase_add_test(readdir_tcase, test_readdir_with_file);
+  tcase_add_test(readdir_tcase, test_readdir_iter_error);
   suite_add_tcase(suite, readdir_tcase);
 
   return suite;
