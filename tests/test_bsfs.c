@@ -247,6 +247,67 @@ START_TEST(test_fgetattr) {
 }
 END_TEST
 
+static stego_key_t chmod_key;
+
+static void chmod_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&chmod_key, 1), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "chmodlvl", &chmod_key), 0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&chmod_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&chmod_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/chmodlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
+}
+
+static void chmod_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+START_TEST(test_chmod) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+
+  ck_assert_int_eq(bsfs_chmod(tmp_fs, "/chmodlvl/file1", S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+}
+END_TEST
+
+START_TEST(test_fchmod) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "/chmodlvl/file1", &file), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+
+  ck_assert_int_eq(bsfs_fchmod(file, S_IFREG | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
+START_TEST(test_chmod_file_type) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+
+  ck_assert_int_eq(bsfs_chmod(tmp_fs, "/chmodlvl/file1", S_IFDIR | S_IRUSR), 0);
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/chmodlvl/file1", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR);
+}
+END_TEST
+
 stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
@@ -437,6 +498,13 @@ Suite* bsfs_suite(void) {
   tcase_add_test(getattr_tcase, test_getattr_noent);
   tcase_add_test(getattr_tcase, test_fgetattr);
   suite_add_tcase(suite, getattr_tcase);
+
+  TCase* chmod_tcase = tcase_create("chmod");
+  tcase_add_checked_fixture(chmod_tcase, chmod_fs_setup, chmod_fs_teardown);
+  tcase_add_test(chmod_tcase, test_chmod);
+  tcase_add_test(chmod_tcase, test_fchmod);
+  tcase_add_test(chmod_tcase, test_chmod_file_type);
+  suite_add_tcase(suite, chmod_tcase);
 
   TCase* rename_tcase = tcase_create("rename");
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
