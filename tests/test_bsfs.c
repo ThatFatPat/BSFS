@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #define FS_DISK_SIZE                                                           \
-  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x2000))
+  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x4000))
 
 static int create_tmp_file(size_t size) {
   int fd = syscall(SYS_memfd_create, "test_bsfs.bsf", 0);
@@ -499,15 +499,14 @@ START_TEST(test_rename_exchange_no_dest) {
 END_TEST
 
 stego_key_t readdir_key;
-const char* readdir_level_name = "readdir";
 
 static void readdir_fs_setup(void) {
   int fd = create_tmp_file(FS_DISK_SIZE);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
 
   ck_assert_int_eq(stego_gen_user_keys(&readdir_key, 1), 0);
-  ck_assert_int_eq(
-      keytab_store(tmp_fs->disk, 0, readdir_level_name, &readdir_key), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "readdirlvl", &readdir_key),
+                   0);
 
   void* zero = calloc(1, BFT_SIZE);
   ck_assert(zero);
@@ -517,27 +516,73 @@ static void readdir_fs_setup(void) {
 
   ck_assert_int_eq(
       bsfs_mknod(tmp_fs, "/readdirlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
-  ck_assert_int_eq(
-      bsfs_mknod(tmp_fs, "/readdirlvl/file2", S_IFREG | S_IRUSR | S_IWUSR), 0);
-  ck_assert_int_eq(
-      bsfs_mknod(tmp_fs, "/readdirlvl/file3", S_IFREG | S_IRUSR | S_IWUSR), 0);
-  ck_assert_int_eq(
-      bsfs_mknod(tmp_fs, "/readdirlvl/file4", S_IFREG | S_IRUSR | S_IWUSR), 0);
-  ck_assert_int_eq(
-      bsfs_mknod(tmp_fs, "/readdirlvl/file5", S_IFREG | S_IRUSR | S_IWUSR), 0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/readdirlvl/file2", S_IFREG), 0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/readdirlvl/file3",
+                              S_IFREG | S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR),
+                   0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/readdirlvl/file4", S_IFREG | S_IWUSR),
+                   0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/readdirlvl/file5", S_IFREG | S_IROTH),
+                   0);
 }
 
 static void readdir_fs_teardown(void) {
   bsfs_destroy(tmp_fs);
 }
 
-static void test_readdir_iter(const char* name, const struct stat* st,
-                              void* ctx) {
-  (void) ctx;
+struct test_readdir_ctx {
+  int files;
+};
+
+static int test_readdir_iter(const char* name, const struct stat* st,
+                             void* raw_ctx) {
+  struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
+
   if (!strcmp(name, "file1")) {
-    ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+    ck_assert_uint_eq(st->st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+    ctx->files++;
+  } else if (!strcmp(name, "file2")) {
+    ck_assert_uint_eq(st->st_mode, S_IFREG);
+    ctx->files++;
+  } else if (!strcmp(name, "file3")) {
+    ck_assert_uint_eq(st->st_mode,
+                      S_IFREG | S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR);
+    ctx->files++;
+  } else if (!strcmp(name, "file4")) {
+    ck_assert_uint_eq(st->st_mode, S_IFREG | S_IWUSR);
+    ctx->files++;
+  } else if (!strcmp(name, "file5")) {
+    ck_assert_uint_eq(st->st_mode, S_IFREG | S_IROTH);
+    ctx->files++;
+  } else {
+    ck_abort_msg("unexpected file");
   }
+
+  return 0;
 }
+
+START_TEST(test_readdir) {
+  struct test_readdir_ctx ctx = { 0 };
+
+  ck_assert_int_eq(bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_iter, &ctx),
+                   0);
+  ck_assert_int_eq(ctx.files, 5);
+}
+END_TEST
+
+START_TEST(test_readdir_nonexistent) {
+  ck_assert_int_eq(bsfs_readdir(tmp_fs, "asfasfojashfjahfgkjasgfioagsvfuhl",
+                                test_readdir_iter, NULL),
+                   -ENOENT);
+}
+END_TEST
+
+START_TEST(test_readdir_with_file) {
+  ck_assert_int_eq(
+      bsfs_readdir(tmp_fs, "readdirlvl/file1", test_readdir_iter, NULL),
+      -ENOTDIR);
+}
+END_TEST
 
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
@@ -606,6 +651,8 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(readdir_tcase, readdir_fs_setup,
                             readdir_fs_teardown);
   tcase_add_test(readdir_tcase, test_readdir);
+  tcase_add_test(readdir_tcase, test_readdir_nonexistent);
+  tcase_add_test(readdir_tcase, test_readdir_with_file);
   suite_add_tcase(suite, readdir_tcase);
 
   return suite;
