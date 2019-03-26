@@ -498,6 +498,47 @@ START_TEST(test_rename_exchange_no_dest) {
 }
 END_TEST
 
+stego_key_t readdir_key;
+const char* readdir_level_name = "readdir";
+
+static void readdir_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&readdir_key, 1), 0);
+  ck_assert_int_eq(
+      keytab_store(tmp_fs->disk, 0, readdir_level_name, &readdir_key), 0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&readdir_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&readdir_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/readdirlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/readdirlvl/file2", S_IFREG | S_IRUSR | S_IWUSR), 0);
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/readdirlvl/file3", S_IFREG | S_IRUSR | S_IWUSR), 0);
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/readdirlvl/file4", S_IFREG | S_IRUSR | S_IWUSR), 0);
+  ck_assert_int_eq(
+      bsfs_mknod(tmp_fs, "/readdirlvl/file5", S_IFREG | S_IRUSR | S_IWUSR), 0);
+}
+
+static void readdir_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+static void test_readdir_iter(const char* name, const struct stat* st,
+                              void* ctx) {
+  (void) ctx;
+  if (!strcmp(name, "file1")) {
+    ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_IWUSR);
+  }
+}
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -560,6 +601,12 @@ Suite* bsfs_suite(void) {
   tcase_add_test(rename_tcase, test_rename_exchange);
   tcase_add_test(rename_tcase, test_rename_exchange_no_dest);
   suite_add_tcase(suite, rename_tcase);
+
+  TCase* readdir_tcase = tcase_create("readdir");
+  tcase_add_checked_fixture(readdir_tcase, readdir_fs_setup,
+                            readdir_fs_teardown);
+  tcase_add_test(readdir_tcase, test_readdir);
+  suite_add_tcase(suite, readdir_tcase);
 
   return suite;
 }
