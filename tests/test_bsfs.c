@@ -396,6 +396,20 @@ START_TEST(test_utimens_now) {
 }
 END_TEST
 
+START_TEST(test_utimens_null) {
+  time_t start = time(NULL);
+  ck_assert_int_eq(bsfs_utimens(tmp_fs, "/utimenslvl/file1", NULL), 0);
+  time_t end = time(NULL);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/utimenslvl/file1", &st), 0);
+  ck_assert_int_ge(st.st_atim.tv_sec, start);
+  ck_assert_int_le(st.st_atim.tv_sec, end);
+  ck_assert_int_ge(st.st_mtim.tv_sec, start);
+  ck_assert_int_le(st.st_mtim.tv_sec, end);
+}
+END_TEST
+
 stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
