@@ -5,8 +5,10 @@
 #include "keytab.h"
 #include "stego.h"
 #include <errno.h>
+#include <linux/stat.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
+#include <time.h>
 #include <unistd.h>
 
 #define FS_DISK_SIZE                                                           \
@@ -308,6 +310,92 @@ START_TEST(test_chmod_file_type) {
 }
 END_TEST
 
+static stego_key_t utimens_key;
+
+static void utimens_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&utimens_key, 1), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "utimenslvl", &utimens_key),
+                   0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&utimens_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&utimens_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "/utimenslvl/file1", S_IFREG), 0);
+}
+
+static void utimens_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+START_TEST(test_utimens) {
+  struct timespec times[] = { { .tv_sec = 500 }, { .tv_sec = 3000 } };
+  ck_assert_int_eq(bsfs_utimens(tmp_fs, "/utimenslvl/file1", times), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/utimenslvl/file1", &st), 0);
+  ck_assert_int_eq(st.st_atim.tv_sec, 500);
+  ck_assert_int_eq(st.st_mtim.tv_sec, 3000);
+}
+END_TEST
+
+START_TEST(test_futimens) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "/utimenslvl/file1", &file), 0);
+
+  struct timespec times[] = { { .tv_sec = 500 }, { .tv_sec = 3000 } };
+  ck_assert_int_eq(bsfs_futimens(file, times), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_int_eq(st.st_atim.tv_sec, 500);
+  ck_assert_int_eq(st.st_mtim.tv_sec, 3000);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
+START_TEST(test_utimens_omit) {
+  struct timespec times[] = { { .tv_sec = 500 }, { .tv_sec = 3000 } };
+  ck_assert_int_eq(bsfs_utimens(tmp_fs, "/utimenslvl/file1", times), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/utimenslvl/file1", &st), 0);
+  ck_assert_int_eq(st.st_atim.tv_sec, 500);
+  ck_assert_int_eq(st.st_mtim.tv_sec, 3000);
+
+  struct timespec times2[] = { { .tv_sec = 700 },
+                               { .tv_sec = 4255, .tv_nsec = UTIME_OMIT } };
+  ck_assert_int_eq(bsfs_utimens(tmp_fs, "/utimenslvl/file1", times2), 0);
+
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/utimenslvl/file1", &st), 0);
+  ck_assert_int_eq(st.st_atim.tv_sec, 700);
+  ck_assert_int_eq(st.st_mtim.tv_sec, 3000);
+}
+END_TEST
+
+START_TEST(test_utimens_now) {
+  time_t start = time(NULL);
+
+  struct timespec times[] = { { .tv_sec = 500, .tv_nsec = UTIME_NOW },
+                              { .tv_sec = 3000 } };
+  ck_assert_int_eq(bsfs_utimens(tmp_fs, "/utimenslvl/file1", times), 0);
+
+  time_t end = time(NULL);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/utimenslvl/file1", &st), 0);
+  ck_assert_int_ge(st.st_atim.tv_sec, start);
+  ck_assert_int_le(st.st_atim.tv_sec, end);
+  ck_assert_int_eq(st.st_mtim.tv_sec, 3000);
+}
+END_TEST
+
 stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
@@ -505,6 +593,16 @@ Suite* bsfs_suite(void) {
   tcase_add_test(chmod_tcase, test_fchmod);
   tcase_add_test(chmod_tcase, test_chmod_file_type);
   suite_add_tcase(suite, chmod_tcase);
+
+  TCase* utimens_tcase = tcase_create("utimens");
+  tcase_add_checked_fixture(utimens_tcase, utimens_fs_setup,
+                            utimens_fs_teardown);
+  tcase_add_test(utimens_tcase, test_utimens);
+  tcase_add_test(utimens_tcase, test_futimens);
+  tcase_add_test(utimens_tcase, test_utimens_omit);
+  tcase_add_test(utimens_tcase, test_utimens_now);
+  tcase_add_test(utimens_tcase, test_utimens_null);
+  suite_add_tcase(suite, utimens_tcase);
 
   TCase* rename_tcase = tcase_create("rename");
   tcase_add_checked_fixture(rename_tcase, rename_fs_setup, rename_fs_teardown);
