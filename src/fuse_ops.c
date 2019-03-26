@@ -71,7 +71,7 @@ int bsfs_fuse_release(const char* path, struct fuse_file_info* fi) {
 
 int bsfs_fuse_opendir(const char* path, struct fuse_file_info* fi) {
   // All checks will be performed by the kernel - just make sure there's no
-  // associated BSFS file so that `getattr` isn't confused.
+  // associated BSFS file so that other ops don't mistake it for a file.
   (void) path;
   set_file(fi, NULL);
   return 0;
