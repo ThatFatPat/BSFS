@@ -22,7 +22,7 @@ static void set_file(struct fuse_file_info* fi, bs_file_t file) {
   fi->fh = (uint64_t) file;
 }
 
-int bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
+void* bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
   conn->time_gran = 1000000000; // 1 second
   conn->want |= FUSE_CAP_WRITEBACK_CACHE;
 
@@ -38,7 +38,7 @@ int bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
   cfg->attr_timeout = LONG_TIMEOUT;
   cfg->entry_timeout = LONG_TIMEOUT;
 
-  return 0;
+  return get_fs();
 }
 
 void bsfs_fuse_destroy(void* private_data) {

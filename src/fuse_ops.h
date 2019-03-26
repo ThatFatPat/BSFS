@@ -3,7 +3,7 @@
 
 #include "fuse_wrap.h"
 
-int bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg);
+void* bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg);
 void bsfs_fuse_destroy(void* private_data);
 
 int bsfs_fuse_mknod(const char* path, mode_t mode, dev_t dev);
