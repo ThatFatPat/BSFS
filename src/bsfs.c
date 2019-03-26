@@ -496,18 +496,37 @@ static int do_getattr(bs_open_level_t level, bft_offset_t index,
 }
 
 int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
-  bs_open_level_t level;
-  bft_offset_t index;
-
-  int ret = get_locked_level_and_index(fs, path, false, &level, &index);
-  if (ret < 0) {
-    return ret;
+  char* pass;
+  int get_dir_ret = bs_get_dirname(path, &pass);
+  if (get_dir_ret < 0 && get_dir_ret != -ENOTDIR) {
+    return get_dir_ret;
   }
 
-  ret = do_getattr(level, index, st);
+  if (get_dir_ret == -ENOTDIR) {
+    bs_open_level_t level;
+    bft_offset_t index;
 
-  pthread_rwlock_unlock(&level->metadata_lock);
-  return ret;
+    int ret = get_locked_level_and_index(fs, path, false, &level, &index);
+    if (ret < 0) {
+      return ret;
+    }
+
+    ret = do_getattr(level, index, st);
+
+    pthread_rwlock_unlock(&level->metadata_lock);
+    return ret;
+  } else {
+    bs_open_level_t level;
+    if (*pass) {
+      int ret = bs_level_get(fs, pass, &level);
+      if (ret < 0) {
+        return ret;
+      }
+    }
+
+    *st = (struct stat){ .st_nlink = 1, .st_mode = S_IFDIR | 0777 };
+    return 0;
+  }
 }
 
 int bsfs_fgetattr(bs_file_t file, struct stat* st) {
