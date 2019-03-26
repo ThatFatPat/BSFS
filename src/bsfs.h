@@ -1,6 +1,7 @@
 #ifndef BS_BSFS_H
 #define BS_BSFS_H
 
+#include <linux/fs.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/stat.h>

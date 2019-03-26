@@ -366,6 +366,43 @@ cleanup:
   return ret;
 }
 
+static int do_unlink(bs_open_level_t level, bft_offset_t index) {
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+  cluster_offset_t init_cluster_idx = ent.initial_cluster;
+
+  // Remove BFT entry
+  ret = bft_remove_table_entry(level->bft, index);
+  bft_entry_destroy(&ent);
+  if (ret < 0) {
+    return ret;
+  }
+
+  cluster_offset_t cluster_idx = init_cluster_idx;
+  uint8_t cluster[CLUSTER_SIZE];
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+
+  // Dealloc clusters
+  while (cluster_idx != CLUSTER_OFFSET_EOF) {
+    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+  }
+
+  return ret;
+}
+
 int bsfs_unlink(bs_bsfs_t fs, const char* path) {
   bs_open_level_t level;
   bft_offset_t index;
@@ -375,40 +412,7 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
     return ret;
   }
 
-  bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, index);
-  if (ret < 0) {
-    goto cleanup;
-  }
-  cluster_offset_t init_cluster_idx = ent.initial_cluster;
-
-  // Remove BFT entry
-  ret = bft_remove_table_entry(level->bft, index);
-  bft_entry_destroy(&ent);
-  if (ret < 0) {
-    goto cleanup;
-  }
-
-  cluster_offset_t cluster_idx = init_cluster_idx;
-  uint8_t cluster[CLUSTER_SIZE];
-  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
-
-  // Dealloc clusters
-  while (cluster_idx != CLUSTER_OFFSET_EOF) {
-    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    ret = fs_read_cluster(&level->key, fs->disk, cluster, cluster_idx);
-    if (ret < 0) {
-      goto cleanup;
-    }
-
-    cluster_idx = fs_next_cluster(cluster);
-  }
-
-cleanup:
+  ret = do_unlink(level, index);
   pthread_rwlock_unlock(&level->metadata_lock);
   return ret;
 }
@@ -511,9 +515,136 @@ int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
 }
 
-int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
+static int do_exchange(bs_open_level_t level, bft_offset_t src,
+                       bft_offset_t dest) {
+  bft_entry_t src_entry;
+  bft_entry_t dest_entry;
+
+  int ret = bft_read_table_entry(level->bft, &src_entry, src);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = bft_read_table_entry(level->bft, &dest_entry, dest);
+  if (ret < 0) {
+    goto cleanup_src;
+  }
+
+  const char* temp = src_entry.name;
+  src_entry.name = dest_entry.name;
+  dest_entry.name = temp;
+
+  ret = bft_write_table_entry(level->bft, &src_entry, src);
+  if (ret >= 0) {
+    ret = bft_write_table_entry(level->bft, &dest_entry, dest);
+  }
+
+  bft_entry_destroy(&dest_entry);
+
+cleanup_src:
+  bft_entry_destroy(&src_entry);
+  return ret;
+}
+
+static int do_rename(bs_open_level_t level, bft_offset_t index,
+                     const char* new_name) {
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Manually destroy old name and set new name.
+  free((void*) ent.name);
+  ent.name = new_name;
+
+  ret = bft_write_table_entry(level->bft, &ent, index);
+
+  // Note: no bft_entry_destroy here, as the name isn't owned by the entry.
+
+  return ret;
+}
+
+int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
                 unsigned int flags) {
-  return -ENOSYS;
+  if (flags && flags != RENAME_NOREPLACE && flags != RENAME_EXCHANGE) {
+    return -EINVAL;
+  }
+
+  char* new_name = NULL;
+  char* new_pass = NULL;
+  char* old_name = NULL;
+  char* old_pass = NULL;
+
+  int ret = bs_split_path(new_path, &new_pass, &new_name);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = bs_split_path(old_path, &old_pass, &old_name);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  if (strcmp(old_pass, new_pass)) {
+    ret = -EXDEV;
+    goto cleanup_after_alloc;
+  }
+
+  bs_open_level_t level;
+  ret = bs_level_get(fs, old_pass, &level);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  bft_offset_t old_index;
+  ret = bft_find_table_entry(level->bft, old_name, &old_index);
+  if (ret < 0) {
+    goto cleanup_after_alloc;
+  }
+
+  bft_offset_t new_index;
+  int ret_new_index = bft_find_table_entry(level->bft, new_name, &new_index);
+  if (ret_new_index < 0 && ret_new_index != -ENOENT) {
+    ret = ret_new_index;
+    goto unlock;
+  }
+
+  bool new_exists = !ret_new_index;
+
+  if (flags == RENAME_EXCHANGE) {
+    if (!new_exists) {
+      ret = -ENOENT;
+      goto unlock;
+    }
+
+    ret = do_exchange(level, old_index, new_index);
+  } else {
+    if (new_exists) {
+      if (flags == RENAME_NOREPLACE) {
+        ret = -EEXIST;
+        goto unlock;
+      } else {
+        do_unlink(level, new_index);
+      }
+    }
+
+    ret = do_rename(level, old_index, new_name);
+  }
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+cleanup_after_alloc:
+  free(old_name);
+  free(old_pass);
+  free(new_name);
+  free(new_pass);
+  return ret;
 }
 
 int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter,
