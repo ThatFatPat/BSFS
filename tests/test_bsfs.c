@@ -287,6 +287,29 @@ START_TEST(test_fgetattr) {
 }
 END_TEST
 
+START_TEST(test_getattr_root) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFDIR | 0777);
+  ck_assert_int_eq(st.st_nlink, 1);
+}
+END_TEST
+
+START_TEST(test_getattr_level) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/getattrlvl/", &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFDIR | 0777);
+  ck_assert_int_eq(st.st_nlink, 1);
+}
+END_TEST
+
+START_TEST(test_getattr_level_noent) {
+  struct stat st;
+  ck_assert_int_eq(bsfs_getattr(tmp_fs, "/ajksldfjaskldjfkljaskjf/", &st),
+                   -ENOENT);
+}
+END_TEST
+
 static stego_key_t chmod_key;
 
 static void chmod_fs_setup(void) {
@@ -537,8 +560,11 @@ struct test_readdir_ctx {
 static int test_readdir_iter(const char* name, const struct stat* st,
                              void* raw_ctx) {
   struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
-
-  if (!strcmp(name, "file1")) {
+  if (!strcmp(name, ".")) {
+    ctx->files++;
+  } else if (!strcmp(name, "..")) {
+    ctx->files++;
+  } else if (!strcmp(name, "file1")) {
     ck_assert_uint_eq(st->st_mode, S_IFREG | S_IRUSR | S_IWUSR);
     ctx->files++;
   } else if (!strcmp(name, "file2")) {
@@ -566,7 +592,7 @@ START_TEST(test_readdir) {
 
   ck_assert_int_eq(bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_iter, &ctx),
                    0);
-  ck_assert_int_eq(ctx.files, 5);
+  ck_assert_int_eq(ctx.files, 7);
 }
 END_TEST
 
@@ -590,7 +616,7 @@ static int test_readdir_error_iter(const char* name, const struct stat* st,
   (void) st;
 
   struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
-  if (++ctx->files == 2) {
+  if (++ctx->files == 4) {
     return -EXDEV;
   }
   return 0;
@@ -601,6 +627,13 @@ START_TEST(test_readdir_iter_error) {
   ck_assert_int_eq(
       bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_error_iter, &ctx),
       -EXDEV);
+  ck_assert_int_eq(ctx.files, 4);
+}
+END_TEST
+
+START_TEST(test_readdir_root) {
+  struct test_readdir_ctx ctx = { 0 };
+  ck_assert_int_eq(bsfs_readdir(tmp_fs, "/", test_readdir_iter, &ctx), 0);
   ck_assert_int_eq(ctx.files, 2);
 }
 END_TEST
@@ -647,6 +680,9 @@ Suite* bsfs_suite(void) {
   tcase_add_test(getattr_tcase, test_getattr);
   tcase_add_test(getattr_tcase, test_getattr_noent);
   tcase_add_test(getattr_tcase, test_fgetattr);
+  tcase_add_test(getattr_tcase, test_getattr_root);
+  tcase_add_test(getattr_tcase, test_getattr_level);
+  tcase_add_test(getattr_tcase, test_getattr_level_noent);
   suite_add_tcase(suite, getattr_tcase);
 
   TCase* chmod_tcase = tcase_create("chmod");
@@ -675,6 +711,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(readdir_tcase, test_readdir_nonexistent);
   tcase_add_test(readdir_tcase, test_readdir_with_file);
   tcase_add_test(readdir_tcase, test_readdir_iter_error);
+  tcase_add_test(readdir_tcase, test_readdir_root);
   suite_add_tcase(suite, readdir_tcase);
 
   return suite;
