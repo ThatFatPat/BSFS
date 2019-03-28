@@ -516,6 +516,40 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
   *local_off = off;
   return 0;
 }
+
+typedef void (*file_op_t)(void* buf, size_t buf_size, void* user_buf);
+
+static int do_file_op(file_op_t op, bs_open_level_t level,
+                      cluster_offset_t cluster_idx, off_t local_off, void* buf,
+                      size_t size) {
+  uint8_t cluster[CLUSTER_SIZE];
+
+  size_t processed = 0;
+  while (processed < size) {
+    size_t total_remaining = size - processed;
+    size_t cluster_remaining = CLUSTER_DATA_SIZE - local_off;
+    size_t cur_size = total_remaining < cluster_remaining ? total_remaining
+                                                          : cluster_remaining;
+
+    int ret =
+        fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    op(cluster + local_off, cur_size, (uint8_t*) buf + processed);
+
+    local_off = 0; // We always operate from offset 0 after the first iteration.
+    processed += cur_size;
+
+    cluster_idx = fs_next_cluster(cluster);
+    if (cluster_idx == CLUSTER_OFFSET_EOF) {
+      return -EIO;
+    }
+  }
+
+  return 0;
+}
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
