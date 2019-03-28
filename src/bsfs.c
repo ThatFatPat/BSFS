@@ -597,6 +597,66 @@ unlock:
   return ret;
 }
 
+static void do_dealloc_clusters(bs_open_level_t level,
+                                cluster_offset_t* cluster_indices,
+                                size_t count) {
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+  for (size_t i = 0; i < count; i++) {
+    // If one of these fails, we still want to free the rest.
+    fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_indices[i]);
+  }
+}
+
+static int alloc_clusters(bs_open_level_t level, size_t count,
+                          cluster_offset_t** out) {
+  cluster_offset_t* cluster_indices =
+      calloc(count + 1, sizeof(*cluster_indices));
+
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    goto fail_after_alloc;
+  }
+
+  size_t i = 0;
+  for (; i < count; i++) {
+    ret = fs_alloc_cluster(level->bitmap, bitmap_bits, cluster_indices + i);
+    if (ret < 0) {
+      goto fail_after_lock;
+    }
+  }
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+
+  cluster_indices[count] = CLUSTER_OFFSET_EOF;
+  *out = cluster_indices;
+
+  return 0;
+
+fail_after_lock:
+  if (i) {
+    do_dealloc_clusters(level, cluster_indices, i - 1);
+  }
+  pthread_rwlock_unlock(&level->metadata_lock);
+fail_after_alloc:
+  free(cluster_indices);
+  return ret;
+}
+
+static int dealloc_clusters(bs_open_level_t level,
+                            cluster_offset_t* cluster_indices, size_t count) {
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  do_dealloc_clusters(level, cluster_indices, count);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return 0;
+}
+
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
