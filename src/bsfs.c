@@ -484,6 +484,38 @@ unlock:
   return ret;
 }
 
+static void adjust_size_and_off(off_t file_size, size_t* size, off_t* off) {
+  if (*off > file_size) {
+    *off = file_size;
+  }
+
+  if (*size > (size_t)(file_size - *off)) {
+    *size = file_size - *off;
+  }
+}
+
+static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
+                        off_t off, cluster_offset_t* found, off_t* local_off) {
+  uint8_t cluster[CLUSTER_SIZE];
+  while ((size_t) off >= CLUSTER_DATA_SIZE) {
+    int ret =
+        fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+    if (cluster_idx == CLUSTER_OFFSET_EOF) {
+      return -EIO;
+    }
+
+    off -= CLUSTER_DATA_SIZE;
+  }
+
+  *found = cluster_idx;
+  *local_off = off;
+  return 0;
+}
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
