@@ -519,9 +519,9 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
 
 typedef void (*file_op_t)(void* buf, size_t buf_size, void* user_buf);
 
-static int do_file_op(file_op_t op, bs_open_level_t level,
-                      cluster_offset_t cluster_idx, off_t local_off, void* buf,
-                      size_t size) {
+static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
+                          cluster_offset_t cluster_idx, off_t local_off,
+                          void* buf, size_t size) {
   uint8_t cluster[CLUSTER_SIZE];
 
   size_t processed = 0;
@@ -548,7 +548,7 @@ static int do_file_op(file_op_t op, bs_open_level_t level,
     }
   }
 
-  return 0;
+  return processed;
 }
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   return -ENOSYS;
