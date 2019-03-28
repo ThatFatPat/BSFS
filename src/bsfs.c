@@ -484,7 +484,9 @@ unlock:
   return ret;
 }
 
-// Adjust `size` and `off` such that they fit within `file_size`
+/**
+ * Adjust `size` and `off` such that they fit within `file_size`
+ */
 static void adjust_size_and_off(off_t file_size, size_t* size, off_t* off) {
   if (*off > file_size) {
     *off = file_size;
@@ -520,6 +522,9 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
 
 typedef void (*file_op_t)(void* buf, size_t buf_size, void* user_buf);
 
+/**
+ * Iterate over a file's clusters and perform an operation on them.
+ */
 static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
                           cluster_offset_t cluster_idx, off_t local_off,
                           void* buf, size_t size) {
