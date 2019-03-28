@@ -730,7 +730,6 @@ cleanup_after_alloc:
 struct readdir_ctx {
   bs_dir_iter_t user_iter;
   void* user_ctx;
-  int retval;
 };
 
 static bool bft_readdir_iter(bft_offset_t off, const bft_entry_t* ent,
@@ -741,9 +740,7 @@ static bool bft_readdir_iter(bft_offset_t off, const bft_entry_t* ent,
   stat_from_bft_ent(&st, ent);
 
   struct readdir_ctx* ctx = (struct readdir_ctx*) raw_ctx;
-  ctx->retval = ctx->user_iter(ent->name, &st, ctx->user_ctx);
-
-  return ctx->retval >= 0;
+  return ctx->user_iter(ent->name, &st, ctx->user_ctx);
 }
 
 int bsfs_readdir(bs_bsfs_t fs, const char* path, bs_dir_iter_t iter,
@@ -763,13 +760,12 @@ int bsfs_readdir(bs_bsfs_t fs, const char* path, bs_dir_iter_t iter,
     }
   }
 
-  ret = iter(".", NULL, user_ctx);
-  if (ret < 0) {
-    return ret;
+  if (!iter(".", NULL, user_ctx)) {
+    return 0;
   }
-  ret = iter("..", NULL, user_ctx);
-  if (ret < 0) {
-    return ret;
+
+  if (!iter("..", NULL, user_ctx)) {
+    return 0;
   }
 
   if (!level) {
@@ -778,11 +774,9 @@ int bsfs_readdir(bs_bsfs_t fs, const char* path, bs_dir_iter_t iter,
 
   pthread_rwlock_rdlock(&level->metadata_lock);
 
-  struct readdir_ctx ctx = { .user_iter = iter,
-                             .user_ctx = user_ctx,
-                             .retval = 0 };
+  struct readdir_ctx ctx = { .user_iter = iter, .user_ctx = user_ctx };
   ret = bft_iter_table_entries(level->bft, bft_readdir_iter, &ctx);
 
   pthread_rwlock_unlock(&level->metadata_lock);
-  return ret < 0 ? ret : ctx.retval;
+  return ret;
 }

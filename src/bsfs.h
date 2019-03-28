@@ -40,8 +40,8 @@ int bsfs_futimens(bs_file_t file, const struct timespec times[2]);
 int bsfs_rename(bs_bsfs_t fs, const char* src_path, const char* new_name,
                 unsigned int flags);
 
-typedef int (*bs_dir_iter_t)(const char* name, const struct stat* st,
-                             void* ctx);
+typedef bool (*bs_dir_iter_t)(const char* name, const struct stat* st,
+                              void* ctx);
 int bsfs_readdir(bs_bsfs_t fs, const char* name, bs_dir_iter_t iter, void* ctx);
 
 #endif
