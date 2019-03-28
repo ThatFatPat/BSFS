@@ -891,6 +891,31 @@ START_TEST(test_do_write_extend_off_buf_outside_of_cluster) {
 END_TEST
 
 START_TEST(test_do_write_extend_cluster_full) {
+  char buf[CLUSTER_SIZE];
+  memset(buf, 'a', CLUSTER_DATA_SIZE);
+  fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
+
+  ck_assert_int_eq(
+      fs_write_cluster(&rw_key, rw_level->fs->disk, buf, rw_extend_cluster), 0);
+
+  const char* new_data =
+      "Hello Shlomi! Things are coming along quite nicely, don't you think?";
+
+  ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
+                                      CLUSTER_DATA_SIZE, new_data,
+                                      strlen(new_data), 0),
+                   0);
+
+  char read[CLUSTER_SIZE];
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, rw_extend_cluster), 0);
+  ck_assert_int_eq(memcmp(read, buf, CLUSTER_DATA_SIZE), 0);
+
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, fs_next_cluster(read)),
+      0);
+
+  ck_assert_int_eq(memcmp(read, new_data, strlen(new_data)), 0);
 }
 END_TEST
 
