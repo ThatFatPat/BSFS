@@ -123,3 +123,35 @@ int bsfs_fuse_rename(const char* oldpath, const char* newpath,
                      unsigned int flags) {
   return bsfs_rename(get_fs(), oldpath, newpath, flags);
 }
+
+struct bsfs_fuse_readdir_ctx {
+  fuse_fill_dir_t filler;
+  void* buf;
+  enum fuse_readdir_flags flags;
+};
+
+static bool bsfs_fuse_readdir_iter(const char* name, const struct stat* st,
+                                   void* raw_ctx) {
+  struct bsfs_fuse_readdir_ctx* ctx = (struct bsfs_fuse_readdir_ctx*) raw_ctx;
+
+  // If the kernel has requested attributes ("plus" mode), and they are
+  // available, let FUSE know that they are.
+  enum fuse_fill_dir_flags filler_flags = 0;
+  if (ctx->flags & FUSE_READDIR_PLUS && st) {
+    filler_flags |= FUSE_FILL_DIR_PLUS;
+  }
+
+  return !ctx->filler(ctx->buf, name, st, 0, filler_flags);
+}
+
+int bsfs_fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
+                      off_t off, struct fuse_file_info* fi,
+                      enum fuse_readdir_flags flags) {
+  (void) off;
+  (void) fi;
+
+  struct bsfs_fuse_readdir_ctx ctx = { .filler = filler,
+                                       .buf = buf,
+                                       .flags = flags };
+  return bsfs_readdir(get_fs(), path, bsfs_fuse_readdir_iter, &ctx);
+}
