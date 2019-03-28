@@ -796,29 +796,29 @@ START_TEST(test_do_write_extend_off_outside_of_cluster) {
 
   off_t local_eof_off = strlen(buf);
 
-  const char* new_data = "The Corridor by Iddo Shavit"
-                         "The door was open"
-                         "And the lock,"
-                         "broken So I walk right in In my hand,"
-                         "a token And it's not always dark"
-                         "And on the wall, a mark."
+  const char* new_data = "The Corridor by Iddo Shavit\n"
+                         "The door was open\n"
+                         "And the lock,\n"
+                         "broken So I walk right in In my hand,\n"
+                         "a token And it's not always dark\n"
+                         "And on the wall, a mark.\n"
 
-                         "It goes on forever But at the end,"
-                         "a lever And once pulled, it will sever"
-                         "It carves a hole in the wall"
+                         "It goes on forever But at the end,\n"
+                         "a lever And once pulled, it will sever\n"
+                         "It carves a hole in the wall\n"
 
-                         "And the wedge is small,"
-                         "Token-sized"
-                         "So in goes the token Never to be prized"
+                         "And the wedge is small,\n"
+                         "Token-sized\n"
+                         "So in goes the token Never to be prized\n"
 
-                         "And when I return"
-                         "The mark is gone"
-                         "And will in-turn"
-                         "To ashes burn"
+                         "And when I return\n"
+                         "The mark is gone\n"
+                         "And will in-turn\n"
+                         "To ashes burn\n"
 
-                         "And I walk back out of the hall"
-                         "Into eternal freedom"
-                         "But the door isn't open"
+                         "And I walk back out of the hall\n"
+                         "Into eternal freedom\n"
+                         "But the door isn't open\n"
                          "And the lock, not broken.";
   off_t off = CLUSTER_SIZE + 300;
   ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
