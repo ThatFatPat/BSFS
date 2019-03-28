@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
+}
+
 /**
  * Initialize an open level
  */
@@ -316,6 +320,16 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
+static int read_cluster(bs_open_level_t level, void* buf,
+                        cluster_offset_t cluster) {
+  return fs_read_cluster(&level->key, level->fs->disk, buf, cluster);
+}
+
+static int write_cluster(bs_open_level_t level, const void* buf,
+                         cluster_offset_t cluster) {
+  return fs_write_cluster(&level->key, level->fs->disk, buf, cluster);
+}
+
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   if (!S_ISREG(mode)) {
     return -ENOTSUP;
@@ -533,8 +547,7 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
   while (processed < size) {
     size_t total_remaining = size - processed;
     size_t cluster_remaining = CLUSTER_DATA_SIZE - local_off;
-    size_t cur_size = total_remaining < cluster_remaining ? total_remaining
-                                                          : cluster_remaining;
+    size_t cur_size = min(total_remaining, cluster_remaining);
 
     int ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
