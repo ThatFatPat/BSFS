@@ -557,8 +557,8 @@ struct test_readdir_ctx {
   int files;
 };
 
-static int test_readdir_iter(const char* name, const struct stat* st,
-                             void* raw_ctx) {
+static bool test_readdir_iter(const char* name, const struct stat* st,
+                              void* raw_ctx) {
   struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
   if (!strcmp(name, ".")) {
     ctx->files++;
@@ -584,7 +584,7 @@ static int test_readdir_iter(const char* name, const struct stat* st,
     ck_abort_msg("unexpected file");
   }
 
-  return 0;
+  return true;
 }
 
 START_TEST(test_readdir) {
@@ -610,23 +610,19 @@ START_TEST(test_readdir_with_file) {
 }
 END_TEST
 
-static int test_readdir_error_iter(const char* name, const struct stat* st,
-                                   void* raw_ctx) {
+static bool test_readdir_bailout_iter(const char* name, const struct stat* st,
+                                      void* raw_ctx) {
   (void) name;
   (void) st;
 
   struct test_readdir_ctx* ctx = (struct test_readdir_ctx*) raw_ctx;
-  if (++ctx->files == 4) {
-    return -EXDEV;
-  }
-  return 0;
+  return ++ctx->files < 4;
 }
 
-START_TEST(test_readdir_iter_error) {
+START_TEST(test_readdir_iter_bailout) {
   struct test_readdir_ctx ctx = { 0 };
   ck_assert_int_eq(
-      bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_error_iter, &ctx),
-      -EXDEV);
+      bsfs_readdir(tmp_fs, "readdirlvl", test_readdir_bailout_iter, &ctx), 0);
   ck_assert_int_eq(ctx.files, 4);
 }
 END_TEST
@@ -710,7 +706,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(readdir_tcase, test_readdir);
   tcase_add_test(readdir_tcase, test_readdir_nonexistent);
   tcase_add_test(readdir_tcase, test_readdir_with_file);
-  tcase_add_test(readdir_tcase, test_readdir_iter_error);
+  tcase_add_test(readdir_tcase, test_readdir_iter_bailout);
   tcase_add_test(readdir_tcase, test_readdir_root);
   suite_add_tcase(suite, readdir_tcase);
 
