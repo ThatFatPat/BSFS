@@ -729,7 +729,8 @@ int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
 
   if ((size_t) off < partial_cluster_remaining) {
     // Possibly write start of `buf` into existing cluster.
-    memcpy(cluster + off, buf, partial_cluster_remaining - off);
+    memcpy(cluster + off + local_eof_off, buf,
+           min(partial_cluster_remaining - off, buf_size));
   }
 
   fs_set_next_cluster(cluster, new_cluster_indices[0]);
