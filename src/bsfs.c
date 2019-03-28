@@ -698,15 +698,25 @@ int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
   size_t processed = partial_cluster_remaining; // Skip partial cluster for now.
   for (size_t i = 0; i < new_cluster_count; i++) {
     size_t remaining = actual_size - processed;
-    size_t write_size = min(remaining, CLUSTER_DATA_SIZE);
+    size_t write_size =
+        min(remaining,
+            CLUSTER_DATA_SIZE); // The size of data to be written to the current
+                                // cluster.
 
-    if (processed < (size_t) off) {
-      // Before `off`: pad with zeroes.
-      memset(cluster, 0, write_size);
-    } else {
+    size_t pad_size = (size_t) off > processed
+                          ? min(write_size, off - processed)
+                          : 0; // The size to be padded in zeros.
+
+    // Before `off`: pad with zeroes.
+    memset(cluster, 0, pad_size);
+
+    if (pad_size < write_size) {
       // After `off`: write data.
-      memcpy(cluster, (const uint8_t*) buf + processed - off, write_size);
+      memcpy(cluster + pad_size,
+             (const uint8_t*) buf + (processed + pad_size - off),
+             write_size - pad_size);
     }
+
     processed += write_size;
 
     fs_set_next_cluster(cluster, new_cluster_indices[i + 1]);
