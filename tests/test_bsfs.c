@@ -668,73 +668,28 @@ static void rw_fs_teardown(void) {
 }
 
 static const char* long_data =
-    "asfjkAHGLFuikjwshgAPIGHSipughsiadpohguisiufghbnsipTHGPywiurtgyh "
-    "8sEGHFihsayioufgtyseuifghaifHJIOShtrjizsdthojasytfgu tyy8eywtiu "
-    "asgihhasf vnsfoiu vyhljwsgnhvij asytgjhsnrepoui tyojsknvigj "
-    "yhatiumnjdhgij hnfnvij ehjrgnaiuertyhoiahbngonwlgajrhiengkj5qgfjlra "
-    "ahaintgopTERHTUIwngfopuhe4rgniurebgvjiSHbroifbjOASIgrhjoksANPIOUJDNVPOIQ"
-    "AFEMNBVPOIWHFKGNROUGNVFOi "
-    "aHRLJKDFNBKULJGVBNMPKSFLVHJKLSJFLANMPKLRGNDFJNZOGJBNPOkprfngoisndgpibhsi"
-    "gnapouj b iposjoudngpkZMv [JOUH FIURHIJ dksfog jsoktjgozpjdyrio djyhpz "
-    "kdhkjiozj ghoixjmthpdjkghipsjktrmo9ipbrk;lnmlkstf "
-    "jmhj;ktrjm;hkljdfg;h,s;dfvfd;klhj;krwsjkfhj;sgjmfldkymkpfjh;"
-    "dslgmnasedmtosidbvnsp "
-    "gspighs;ljt[poj4w;,sjb;'lsjmfb[lsdm,r[pohg,[spoykpz.,gp[sr,myho["
-    "sdhkbwsel[gkm,[sorjhpszojhbl'sfmyhopsrjb[d'f,h[oxjmfbn'ld,hpksdfjsf["
-    "oymoplgnj kldfmh;l "
-    "jfhrl',ym';ltjhk;ldry,jkm;fhjkasjmetklshtklngzjldghldawern "
-    "/,lmsahffjlkhasljfhaskljfaljsfhbjkoadfyghm,."
-    "asdkljghajhflkahflkahflkayhklfhakfhaklserfhaklfjl;"
-    "kahEFJLKNEWRKJFGNWSJLKBNFGJDZANFGLKANFKLANFKLNAKLRNQAJLFB,MSA DBG "
-    "WESNBTG"
-    "asfjkAHGLFuikjwshgAPIASKJFGHAJFHGLAHFGOIAEYHTGNLJKAEBNGLMSABDKIJSHRWNGJK"
-    "LBHNSDJIGBSJIKDBGVHSEDMN "
-    "KGBJNWSGKJMSNDKJGHSDJKGBKJZDBGKJASDGJKZDABHVKVBDKJLBNVKJSDNBFGLKLZDNGLKD"
-    "SZHVBESKLGHLESHNTLJSHRKALYHFGKLASEHTRNLKASDFHGHSipughsiadpohguisiufghbns"
-    "ipTHGPywiurtgyh 8sEGHFihsayioufgtyseuifghaifHJIOShtrjizsdthojasytfgu "
-    "tyy8eywtiu asgihhasf vnsfoiu vyhljwsgnhvij asytgjhsnrepoui tyojsknvigj "
-    "yhatiumnjdhgij hnfnvij ehjrgnaiuertyhoiahbngonwlgajrhiengkj5qgfjlra "
-    "ahaintgopTERHTUIwngfopuhe4rgniurebgvjiSHbroifbjOASIgrhjoksANPIOUJDNVPOIQ"
-    "AFEMNBVPOIWHFKGNROUGNVFOi "
-    "aHRLJKDFNBKULJGVBNMPKSFLVHJKLSJFLANMPKLRGNDFJNZOGJBNPOkprfngoisndgpibhsi"
-    "gnapouj b iposjoudngpkZMv [JOUH FIURHIJ dksfog jsoktjgozpjdyrio djyhpz "
-    "kdhkjiozj ghoixjmthpdjkghipsjktrmo9ipbrk;lnmlkstf "
-    "jmhj;ktrjm;hkljdfg;h,s;dfvfd;klhj;krwsjkfhj;sgjmfldkymkpfjh;"
-    "dslgmnasedmtosidbvnsp "
-    "gspighs;ljt[poj4w;,sjb;'lsjmfb[lsdm,r[pohg,[spoykpz.,gp[sr,myho["
-    "sdhkbwsel[gkm,[sorjhpszojhbl'sfmyhopsrjb[d'f,h[oxjmfbn'ld,hpksdfjsf["
-    "oymoplgnj kldfmh;l "
-    "jfhrl',ym';ltjhk;ldry,jkm;fhjkasjmetklshtklngzjldghldawern "
-    "/,lmsahffjlkhasljfhaskljfaljsfhbjkoadfyghm,."
-    "asdkljghajhflkahflkahflkayhklfhakfhaklserfhaklfjl;"
-    "kahEFJLKNEWRKJFGNWSJLKBNFGJDZANFGLKANFKLANFKLNAKLRNQAJLFB,MSA DBG "
-    "WESNBTGJ";
-
-static const char* long_data2 =
-    "Lorem ipsum dolor sit amet, mea cu consul moderatius, et eum prima nostro "
+    "Lorem ipsum dolor sit amet, mea cu consul moderatius, et eum prima "
+    "nostro "
     "petentium. Ea quo sint putant. Numquam sensibus ut nec, vix dicat "
     "iracundia liberavisse ad, quot discere fuisset in qui. Ne vix veri "
     "maiorum interpretaris, ne viris facete fastidii his. Sed in fuisset "
-    "appellantur consequuntur. In quo etiam aliquando conceptam. Ius et quidam "
+    "appellantur consequuntur. In quo etiam aliquando conceptam. Ius et "
+    "quidam "
     "legendos, an eum rebum labitur, id debitis habemus platonem nam."
-
     "Prompta sadipscing qui no,"
     "eam ei possim nostrum euripidis.Te est nisl putant principes,"
     "soleat dissentiunt eam eu,"
     "wisi tacimates nec ei.Ius"
     "populo facete et.Choro regione recteque ad"
     "has.Ei sit menandri consetetur liberavisse"
-
     "Eum nisl utinam mucius ex.Et tollit doctus audiam vix.Choro"
     "oporteat ne sed,"
     "an mucius semper labores quo.Pri cu dicit debitis"
-
     "Vix mentitum offendit contentiones ei.An"
     "mea aperiri accumsan.Clita partiendo eloquentiam ad mea,"
     "tantas feugiat sit eu.Per lorem persecuti no,"
     "te pro purto bonorum omittantur,"
     "iusto partem et has.Vim tota saepe virtute cu."
-
     "Ei eam commune signiferumque,"
     "ea eam ferri singulis reprehendunt.Ut"
     "habeo mutat lucilius vis.Pri at placerat repudiandae.Dicam"
@@ -746,7 +701,6 @@ static const char* long_data2 =
     "veniam dolorem vivendum est no,"
     "ponderum explicari theophrastus id"
     "sea."
-
     "Wisi philosophia vim an.Malorum vivendo copiosae ad vis,"
     "ut veniam legere eos,"
     "eu vix populo integre percipit.Principes definitionem in mei,"
@@ -755,42 +709,23 @@ static const char* long_data2 =
     "est omnes evertitur ut.Et ius nusquam accusam blandit,"
     "at qui probo ponderum signiferumque,"
     "tollit mentitum probatus ne mea."
-
     "Id graece mollis aliquid vim,"
     "graeci doming molestiae eu pro.Eos eu quem mollis,"
     "his mutat quando altera id.Ne sit dicant antiopam moderatius,"
     "id quo consulatu dissentiunt definitionem"
     ".Vel tamquam molestie an.Nec eu elitr primis albucius,"
-    "soluta electram ei vix, doming audiam nam id.Porro interpretaris ad vel,";
-// cum in vero wisi erroribus,
-// ubique vocent scriptorem id pro.
+    "soluta electram ei vix, doming audiam nam id.Porro interpretaris ad "
+    "vel,"
+    "cum in vero wisi erroribus,"
+    "ubique vocent scriptorem id pro."
+    "Et eam dico causae pertinax,"
+    "ei porro mazim duo.Mel ea aperiam labores recusabo,"
+    "alterum principes incorrupte nec ne.Duo at fabellas repudiare,"
+    "ne vis iisque facilisi consequat.Qui ne aliquam referrentur,"
+    "ancillae prodesset et pro.Has brute accusam signiferumque no,"
+    "solet altera phaedrum duo id.Te his modo munere."
+    "Duo denique appetere in,";
 
-// Et eam dico causae pertinax,
-// ei porro mazim duo.Mel ea aperiam labores recusabo,
-// alterum principes incorrupte nec ne.Duo at fabellas repudiare,
-// ne vis iisque facilisi consequat.Qui ne aliquam referrentur,
-// ancillae prodesset et pro.Has brute accusam signiferumque no,
-// solet altera phaedrum duo id.Te his modo munere.
-
-// Duo denique appetere in,
-// vim te agam nihil.Unum laoreet deleniti at eam,
-// ad vim iudico theophrastus.Zril oporteat adversarium mel ex,
-// omnes dolores vis te.Ex tempor dolores consulatu vel,
-// numquam tacimates id pro.Vim sonet deseruisse at.An
-//     nemore feugiat temporibus mei,
-// vidit dolor option pro
-//     te.
-
-// Quas iracundia contentiones ei sit.Mel dolorum intellegam assueverit et,
-// no facete honestatis qui,
-// ex has dico scribentur.Vocibus democritum signiferumque ea vim,
-// sanctus delectus expetenda te his.Altera percipit mea te,
-// ut modus altera tibique sit.Ad quo erant utamur interesset.Sea
-//     no malorum oportere prodesset,
-// purto facer evertitur mei ad.
-
-// At mei brute graecis forensibus,
-// ei prompta saperet perpetua mei.Pri no quem.";
 START_TEST(test_do_write_extend_within_cluster) {
   char buf[CLUSTER_SIZE] = "asjfhakjsfh";
   fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
