@@ -484,6 +484,7 @@ unlock:
   return ret;
 }
 
+// Adjust `size` and `off` such that they fit within `file_size`
 static void adjust_size_and_off(off_t file_size, size_t* size, off_t* off) {
   if (*off > file_size) {
     *off = file_size;
