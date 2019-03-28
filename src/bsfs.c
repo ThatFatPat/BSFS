@@ -460,6 +460,30 @@ int bsfs_release(bs_file_t file) {
   return bs_oft_release(&level->open_files, file);
 }
 
+static int get_size_and_initial_cluster(bs_file_t file, off_t* out_size,
+                                        cluster_offset_t* out_initial_cluster) {
+  bs_open_level_t level = file->level;
+  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  *out_size = ent.size;
+  *out_initial_cluster = ent.initial_cluster;
+
+  bft_entry_destroy(&ent);
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
