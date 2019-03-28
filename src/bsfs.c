@@ -551,8 +551,47 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
 
   return processed;
 }
+
+static void read_op(void* buf, size_t buf_size, void* user_buf) {
+  memcpy(user_buf, buf, buf_size);
+}
+
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
-  return -ENOSYS;
+  ssize_t ret = -pthread_rwlock_rdlock(&file->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Get the initial cluster and size of the file.
+  off_t file_size;
+  cluster_offset_t initial_cluster;
+  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  // Adjust `size` and `off` such that they fit within `file_size`.
+  adjust_size_and_off(file_size, &size, &off);
+  if (!size) {
+    ret = size;
+    goto unlock;
+  }
+
+  // Find the cluster from which we must start reading.
+  cluster_offset_t cluster_idx;
+  off_t local_off;
+  ret =
+      find_cluster(file->level, initial_cluster, off, &cluster_idx, &local_off);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  // Perform the read.
+  ret = do_file_op(read_op, file->level, cluster_idx, local_off, buf, size);
+
+unlock:
+  pthread_rwlock_unlock(&file->lock);
+  return ret;
 }
 
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
