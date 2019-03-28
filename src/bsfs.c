@@ -716,7 +716,7 @@ int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
     }
   }
 
-  // Hook up to existing cluster chainw
+  // Hook up to existing cluster chain
   ret = read_cluster(level, cluster, cluster_idx);
   if (ret < 0) {
     goto fail;
