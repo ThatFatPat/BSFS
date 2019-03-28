@@ -55,4 +55,12 @@ int bs_level_get(bs_bsfs_t fs, const char* pass, bs_open_level_t* out);
 int bs_get_dirname(const char* path, char** out_pass);
 int bs_split_path(const char* path, char** out_pass, char** out_name);
 
+/**
+ * Append the contents of `buf` at offset `off` past the end of the file (as
+ * specified by `cluster_idx` and `local_eof_off`).
+ */
+int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
+                       off_t local_eof_off, const void* buf, size_t buf_size,
+                       off_t off);
+
 #endif

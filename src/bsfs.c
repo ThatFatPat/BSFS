@@ -670,6 +670,82 @@ static int dealloc_clusters(bs_open_level_t level,
   return 0;
 }
 
+/**
+ * Append the contents of `buf` at offset `off` past the end of the file (as
+ * specified by `cluster_idx` and `local_eof_off`).
+ */
+int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
+                       off_t local_eof_off, const void* buf, size_t buf_size,
+                       off_t off) {
+  size_t actual_size = buf_size + off;
+  size_t partial_cluster_remaining = CLUSTER_DATA_SIZE - local_eof_off;
+
+  // The size of the extra data to be written (past existing cluster) over
+  // `CLUSTER_DATA_SIZE` (rounded up).
+  size_t new_cluster_count =
+      (actual_size - partial_cluster_remaining + CLUSTER_DATA_SIZE - 1) /
+      CLUSTER_DATA_SIZE;
+
+  // Allocate new clusters
+  cluster_offset_t* new_cluster_indices;
+  int ret = alloc_clusters(level, new_cluster_count, &new_cluster_indices);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Write the new data
+  uint8_t cluster[CLUSTER_SIZE];
+  size_t processed = partial_cluster_remaining; // Skip partial cluster for now.
+  for (size_t i = 0; i < new_cluster_count; i++) {
+    size_t remaining = actual_size - processed;
+    size_t write_size = min(remaining, CLUSTER_DATA_SIZE);
+
+    if (processed < (size_t) off) {
+      // Before `off`: pad with zeroes.
+      memset(cluster, 0, write_size);
+    } else {
+      // After `off`: write data.
+      memcpy(cluster, (const uint8_t*) buf + processed - off, write_size);
+    }
+    processed += write_size;
+
+    fs_set_next_cluster(cluster, new_cluster_indices[i + 1]);
+    ret = write_cluster(level, cluster, new_cluster_indices[i]);
+    if (ret < 0) {
+      goto fail;
+    }
+  }
+
+  // Hook up to existing cluster chainw
+  ret = read_cluster(level, cluster, cluster_idx);
+  if (ret < 0) {
+    goto fail;
+  }
+
+  if (off > 0) {
+    // Zero-pad if necessary.
+    memset(cluster + local_eof_off, 0, min(off, partial_cluster_remaining));
+  }
+
+  if ((size_t) off < partial_cluster_remaining) {
+    // Possibly write start of `buf` into existing cluster.
+    memcpy(cluster + off, buf, partial_cluster_remaining - off);
+  }
+
+  fs_set_next_cluster(cluster, new_cluster_indices[0]);
+
+  ret = write_cluster(level, cluster, cluster_idx);
+  if (ret >= 0) {
+    free(new_cluster_indices);
+    return ret;
+  }
+
+fail:
+  dealloc_clusters(level, new_cluster_indices, new_cluster_count);
+  free(new_cluster_indices);
+  return ret;
+}
+
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   return -ENOSYS;
 }
