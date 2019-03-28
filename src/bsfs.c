@@ -364,7 +364,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   uint8_t cluster_data[CLUSTER_SIZE] = { 0 };
   fs_set_next_cluster(cluster_data, CLUSTER_OFFSET_EOF);
 
-  ret = fs_write_cluster(&level->key, fs->disk, cluster_data, initial_cluster);
+  ret = write_cluster(level, cluster_data, initial_cluster);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
   }
@@ -417,7 +417,7 @@ static int do_unlink(bs_open_level_t level, bft_offset_t index) {
       return ret;
     }
 
-    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
       return ret;
     }
@@ -501,8 +501,7 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
                         off_t off, cluster_offset_t* found, off_t* local_off) {
   uint8_t cluster[CLUSTER_SIZE];
   while ((size_t) off >= CLUSTER_DATA_SIZE) {
-    int ret =
-        fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    int ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
       return ret;
     }
@@ -537,8 +536,7 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
     size_t cur_size = total_remaining < cluster_remaining ? total_remaining
                                                           : cluster_remaining;
 
-    int ret =
-        fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    int ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
       return ret;
     }
