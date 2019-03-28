@@ -6,6 +6,7 @@
 #include "stego.h"
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -634,6 +635,330 @@ START_TEST(test_readdir_root) {
 }
 END_TEST
 
+stego_key_t rw_key;
+bs_open_level_t rw_level;
+cluster_offset_t rw_extend_cluster;
+
+static void rw_fs_setup(void) {
+  int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
+  ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
+
+  ck_assert_int_eq(stego_gen_user_keys(&rw_key, 1), 0);
+  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "readwritelvl", &rw_key), 0);
+
+  void* zero = calloc(1, BFT_SIZE);
+  ck_assert(zero);
+  ck_assert_int_eq(bft_write_table(&rw_key, tmp_fs->disk, zero), 0);
+  ck_assert_int_eq(fs_write_bitmap(&rw_key, tmp_fs->disk, zero), 0);
+  free(zero);
+
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, "readwritelvl/file", S_IFREG), 0);
+
+  ck_assert_int_eq(bs_level_get(tmp_fs, "readwritelvl", &rw_level), 0);
+  ck_assert_int_eq(
+      fs_alloc_cluster(rw_level->bitmap,
+                       fs_count_clusters(stego_compute_user_level_size(
+                           disk_get_size(rw_level->fs->disk))),
+                       &rw_extend_cluster),
+      0);
+}
+
+static void rw_fs_teardown(void) {
+  bsfs_destroy(tmp_fs);
+}
+
+static const char* long_data =
+    "asfjkAHGLFuikjwshgAPIGHSipughsiadpohguisiufghbnsipTHGPywiurtgyh "
+    "8sEGHFihsayioufgtyseuifghaifHJIOShtrjizsdthojasytfgu tyy8eywtiu "
+    "asgihhasf vnsfoiu vyhljwsgnhvij asytgjhsnrepoui tyojsknvigj "
+    "yhatiumnjdhgij hnfnvij ehjrgnaiuertyhoiahbngonwlgajrhiengkj5qgfjlra "
+    "ahaintgopTERHTUIwngfopuhe4rgniurebgvjiSHbroifbjOASIgrhjoksANPIOUJDNVPOIQ"
+    "AFEMNBVPOIWHFKGNROUGNVFOi "
+    "aHRLJKDFNBKULJGVBNMPKSFLVHJKLSJFLANMPKLRGNDFJNZOGJBNPOkprfngoisndgpibhsi"
+    "gnapouj b iposjoudngpkZMv [JOUH FIURHIJ dksfog jsoktjgozpjdyrio djyhpz "
+    "kdhkjiozj ghoixjmthpdjkghipsjktrmo9ipbrk;lnmlkstf "
+    "jmhj;ktrjm;hkljdfg;h,s;dfvfd;klhj;krwsjkfhj;sgjmfldkymkpfjh;"
+    "dslgmnasedmtosidbvnsp "
+    "gspighs;ljt[poj4w;,sjb;'lsjmfb[lsdm,r[pohg,[spoykpz.,gp[sr,myho["
+    "sdhkbwsel[gkm,[sorjhpszojhbl'sfmyhopsrjb[d'f,h[oxjmfbn'ld,hpksdfjsf["
+    "oymoplgnj kldfmh;l "
+    "jfhrl',ym';ltjhk;ldry,jkm;fhjkasjmetklshtklngzjldghldawern "
+    "/,lmsahffjlkhasljfhaskljfaljsfhbjkoadfyghm,."
+    "asdkljghajhflkahflkahflkayhklfhakfhaklserfhaklfjl;"
+    "kahEFJLKNEWRKJFGNWSJLKBNFGJDZANFGLKANFKLANFKLNAKLRNQAJLFB,MSA DBG "
+    "WESNBTG"
+    "asfjkAHGLFuikjwshgAPIASKJFGHAJFHGLAHFGOIAEYHTGNLJKAEBNGLMSABDKIJSHRWNGJK"
+    "LBHNSDJIGBSJIKDBGVHSEDMN "
+    "KGBJNWSGKJMSNDKJGHSDJKGBKJZDBGKJASDGJKZDABHVKVBDKJLBNVKJSDNBFGLKLZDNGLKD"
+    "SZHVBESKLGHLESHNTLJSHRKALYHFGKLASEHTRNLKASDFHGHSipughsiadpohguisiufghbns"
+    "ipTHGPywiurtgyh 8sEGHFihsayioufgtyseuifghaifHJIOShtrjizsdthojasytfgu "
+    "tyy8eywtiu asgihhasf vnsfoiu vyhljwsgnhvij asytgjhsnrepoui tyojsknvigj "
+    "yhatiumnjdhgij hnfnvij ehjrgnaiuertyhoiahbngonwlgajrhiengkj5qgfjlra "
+    "ahaintgopTERHTUIwngfopuhe4rgniurebgvjiSHbroifbjOASIgrhjoksANPIOUJDNVPOIQ"
+    "AFEMNBVPOIWHFKGNROUGNVFOi "
+    "aHRLJKDFNBKULJGVBNMPKSFLVHJKLSJFLANMPKLRGNDFJNZOGJBNPOkprfngoisndgpibhsi"
+    "gnapouj b iposjoudngpkZMv [JOUH FIURHIJ dksfog jsoktjgozpjdyrio djyhpz "
+    "kdhkjiozj ghoixjmthpdjkghipsjktrmo9ipbrk;lnmlkstf "
+    "jmhj;ktrjm;hkljdfg;h,s;dfvfd;klhj;krwsjkfhj;sgjmfldkymkpfjh;"
+    "dslgmnasedmtosidbvnsp "
+    "gspighs;ljt[poj4w;,sjb;'lsjmfb[lsdm,r[pohg,[spoykpz.,gp[sr,myho["
+    "sdhkbwsel[gkm,[sorjhpszojhbl'sfmyhopsrjb[d'f,h[oxjmfbn'ld,hpksdfjsf["
+    "oymoplgnj kldfmh;l "
+    "jfhrl',ym';ltjhk;ldry,jkm;fhjkasjmetklshtklngzjldghldawern "
+    "/,lmsahffjlkhasljfhaskljfaljsfhbjkoadfyghm,."
+    "asdkljghajhflkahflkahflkayhklfhakfhaklserfhaklfjl;"
+    "kahEFJLKNEWRKJFGNWSJLKBNFGJDZANFGLKANFKLANFKLNAKLRNQAJLFB,MSA DBG "
+    "WESNBTGJ";
+
+static const char* long_data2 =
+    "Lorem ipsum dolor sit amet, mea cu consul moderatius, et eum prima nostro "
+    "petentium. Ea quo sint putant. Numquam sensibus ut nec, vix dicat "
+    "iracundia liberavisse ad, quot discere fuisset in qui. Ne vix veri "
+    "maiorum interpretaris, ne viris facete fastidii his. Sed in fuisset "
+    "appellantur consequuntur. In quo etiam aliquando conceptam. Ius et quidam "
+    "legendos, an eum rebum labitur, id debitis habemus platonem nam."
+
+    "Prompta sadipscing qui no,"
+    "eam ei possim nostrum euripidis.Te est nisl putant principes,"
+    "soleat dissentiunt eam eu,"
+    "wisi tacimates nec ei.Ius"
+    "populo facete et.Choro regione recteque ad"
+    "has.Ei sit menandri consetetur liberavisse"
+
+    "Eum nisl utinam mucius ex.Et tollit doctus audiam vix.Choro"
+    "oporteat ne sed,"
+    "an mucius semper labores quo.Pri cu dicit debitis"
+
+    "Vix mentitum offendit contentiones ei.An"
+    "mea aperiri accumsan.Clita partiendo eloquentiam ad mea,"
+    "tantas feugiat sit eu.Per lorem persecuti no,"
+    "te pro purto bonorum omittantur,"
+    "iusto partem et has.Vim tota saepe virtute cu."
+
+    "Ei eam commune signiferumque,"
+    "ea eam ferri singulis reprehendunt.Ut"
+    "habeo mutat lucilius vis.Pri at placerat repudiandae.Dicam"
+    "periculis abhorreant quo no,"
+    "sit dolor utamur delectus te,"
+    "vix aeque volutpat an.Id elitr percipit apeirian eum,"
+    "eos simul nominavi ea.His solum reprehendunt in,"
+    "duo no vocibus nostrum.Pro euripidis efficiendi et,"
+    "veniam dolorem vivendum est no,"
+    "ponderum explicari theophrastus id"
+    "sea."
+
+    "Wisi philosophia vim an.Malorum vivendo copiosae ad vis,"
+    "ut veniam legere eos,"
+    "eu vix populo integre percipit.Principes definitionem in mei,"
+    "vix reque diceret at,"
+    "tota salutatus quo te.Elitr omnes sea no,"
+    "est omnes evertitur ut.Et ius nusquam accusam blandit,"
+    "at qui probo ponderum signiferumque,"
+    "tollit mentitum probatus ne mea."
+
+    "Id graece mollis aliquid vim,"
+    "graeci doming molestiae eu pro.Eos eu quem mollis,"
+    "his mutat quando altera id.Ne sit dicant antiopam moderatius,"
+    "id quo consulatu dissentiunt definitionem"
+    ".Vel tamquam molestie an.Nec eu elitr primis albucius,"
+    "soluta electram ei vix, doming audiam nam id.Porro interpretaris ad vel,";
+// cum in vero wisi erroribus,
+// ubique vocent scriptorem id pro.
+
+// Et eam dico causae pertinax,
+// ei porro mazim duo.Mel ea aperiam labores recusabo,
+// alterum principes incorrupte nec ne.Duo at fabellas repudiare,
+// ne vis iisque facilisi consequat.Qui ne aliquam referrentur,
+// ancillae prodesset et pro.Has brute accusam signiferumque no,
+// solet altera phaedrum duo id.Te his modo munere.
+
+// Duo denique appetere in,
+// vim te agam nihil.Unum laoreet deleniti at eam,
+// ad vim iudico theophrastus.Zril oporteat adversarium mel ex,
+// omnes dolores vis te.Ex tempor dolores consulatu vel,
+// numquam tacimates id pro.Vim sonet deseruisse at.An
+//     nemore feugiat temporibus mei,
+// vidit dolor option pro
+//     te.
+
+// Quas iracundia contentiones ei sit.Mel dolorum intellegam assueverit et,
+// no facete honestatis qui,
+// ex has dico scribentur.Vocibus democritum signiferumque ea vim,
+// sanctus delectus expetenda te his.Altera percipit mea te,
+// ut modus altera tibique sit.Ad quo erant utamur interesset.Sea
+//     no malorum oportere prodesset,
+// purto facer evertitur mei ad.
+
+// At mei brute graecis forensibus,
+// ei prompta saperet perpetua mei.Pri no quem.";
+START_TEST(test_do_write_extend_within_cluster) {
+  char buf[CLUSTER_SIZE] = "asjfhakjsfh";
+  fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
+  ck_assert_int_eq(
+      fs_write_cluster(&rw_key, rw_level->fs->disk, buf, rw_extend_cluster), 0);
+
+  off_t local_eof_off = strlen(buf);
+
+  const char* new_data =
+      "\n\"No, I am your father\".\n \"WHAAAAAT\" - Said Luke,\n \"FUCK OFF!\"";
+  ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
+                                      local_eof_off, new_data, strlen(new_data),
+                                      0),
+                   0);
+  char read[CLUSTER_SIZE];
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, rw_extend_cluster), 0);
+
+  char expected[CLUSTER_SIZE] = { 0 };
+  memcpy(expected, buf, local_eof_off);
+  strcpy(expected + local_eof_off, new_data);
+  fs_set_next_cluster(expected, CLUSTER_OFFSET_EOF);
+
+  ck_assert_int_eq(memcmp(read, expected, CLUSTER_SIZE), 0);
+}
+END_TEST
+
+START_TEST(test_do_write_extend_outside_of_cluster) {
+  char buf[CLUSTER_SIZE] = "asjfhakjsfh";
+  fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
+  ck_assert_int_eq(
+      fs_write_cluster(&rw_key, rw_level->fs->disk, buf, rw_extend_cluster), 0);
+
+  off_t local_eof_off = strlen(buf);
+
+  ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
+                                      local_eof_off, long_data,
+                                      strlen(long_data), 0),
+                   0);
+  char read_total[2 * CLUSTER_DATA_SIZE] = { 0 };
+
+  char read[CLUSTER_SIZE];
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, rw_extend_cluster), 0);
+
+  memcpy(read_total, read, CLUSTER_DATA_SIZE);
+
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, fs_next_cluster(read)),
+      0);
+
+  memcpy(read_total + CLUSTER_DATA_SIZE, read, CLUSTER_DATA_SIZE);
+
+  char expected[2 * CLUSTER_DATA_SIZE] = { 0 };
+  memcpy(expected, buf, local_eof_off);
+  strcpy(expected + local_eof_off, long_data);
+
+  ck_assert_int_eq(
+      memcmp(read_total, expected, local_eof_off + strlen(long_data)), 0);
+}
+END_TEST
+
+START_TEST(test_do_write_extend_off_outside_of_cluster) {
+  char buf[CLUSTER_SIZE] = "asjfhakjsfh";
+  fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
+  ck_assert_int_eq(
+      fs_write_cluster(&rw_key, rw_level->fs->disk, buf, rw_extend_cluster), 0);
+
+  off_t local_eof_off = strlen(buf);
+
+  const char* new_data = "The Corridor by Iddo Shavit"
+                         "The door was open"
+                         "And the lock,"
+                         "broken So I walk right in In my hand,"
+                         "a token And it's not always dark"
+                         "And on the wall, a mark."
+
+                         "It goes on forever But at the end,"
+                         "a lever And once pulled, it will sever"
+                         "It carves a hole in the wall"
+
+                         "And the wedge is small,"
+                         "Token-sized"
+                         "So in goes the token Never to be prized"
+
+                         "And when I return"
+                         "The mark is gone"
+                         "And will in-turn"
+                         "To ashes burn"
+
+                         "And I walk back out of the hall"
+                         "Into eternal freedom"
+                         "But the door isn't open"
+                         "And the lock, not broken.";
+  off_t off = CLUSTER_SIZE + 300;
+  ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
+                                      local_eof_off, new_data, strlen(new_data),
+                                      off),
+                   0);
+  char read_total[2 * CLUSTER_DATA_SIZE] = { 0 };
+
+  char read[CLUSTER_SIZE];
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, rw_extend_cluster), 0);
+
+  memcpy(read_total, read, CLUSTER_DATA_SIZE);
+
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, fs_next_cluster(read)),
+      0);
+
+  memcpy(read_total + CLUSTER_DATA_SIZE, read, CLUSTER_DATA_SIZE);
+
+  char expected[2 * CLUSTER_DATA_SIZE] = { 0 };
+  memcpy(expected, buf, local_eof_off);
+  strcpy(expected + local_eof_off + off, new_data);
+
+  ck_assert_int_eq(
+      memcmp(read_total, expected, local_eof_off + off + strlen(new_data)), 0);
+}
+END_TEST
+
+START_TEST(test_do_write_extend_off_buf_outside_of_cluster) {
+  char buf[CLUSTER_SIZE] = "asjfhakjsfh";
+  fs_set_next_cluster(buf, CLUSTER_OFFSET_EOF);
+  ck_assert_int_eq(
+      fs_write_cluster(&rw_key, rw_level->fs->disk, buf, rw_extend_cluster), 0);
+
+  off_t local_eof_off = strlen(buf);
+
+  off_t off = CLUSTER_SIZE + 300;
+  ck_assert_int_eq(bs_do_write_extend(rw_level, rw_extend_cluster,
+                                      local_eof_off, long_data,
+                                      strlen(long_data), off),
+                   0);
+  char read_total[3 * CLUSTER_DATA_SIZE] = { 0 };
+
+  char read[CLUSTER_SIZE];
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, rw_extend_cluster), 0);
+
+  memcpy(read_total, read, CLUSTER_DATA_SIZE);
+
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, fs_next_cluster(read)),
+      0);
+
+  memcpy(read_total + CLUSTER_DATA_SIZE, read, CLUSTER_DATA_SIZE);
+
+  ck_assert_int_eq(
+      fs_read_cluster(&rw_key, rw_level->fs->disk, read, fs_next_cluster(read)),
+      0);
+
+  memcpy(read_total + 2 * CLUSTER_DATA_SIZE, read, CLUSTER_DATA_SIZE);
+
+  char expected[3 * CLUSTER_DATA_SIZE] = { 0 };
+  memcpy(expected, buf, local_eof_off);
+  strcpy(expected + local_eof_off + off, long_data);
+
+  ck_assert_int_eq(
+      memcmp(read_total, expected, local_eof_off + off + strlen(long_data)), 0);
+}
+END_TEST
+
+START_TEST(test_do_write_extend_cluster_full) {
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -709,6 +1034,16 @@ Suite* bsfs_suite(void) {
   tcase_add_test(readdir_tcase, test_readdir_iter_bailout);
   tcase_add_test(readdir_tcase, test_readdir_root);
   suite_add_tcase(suite, readdir_tcase);
+
+  TCase* read_write_tcase = tcase_create("read_write");
+  tcase_add_checked_fixture(read_write_tcase, rw_fs_setup, rw_fs_teardown);
+  tcase_add_test(read_write_tcase, test_do_write_extend_within_cluster);
+  tcase_add_test(read_write_tcase, test_do_write_extend_outside_of_cluster);
+  tcase_add_test(read_write_tcase, test_do_write_extend_off_outside_of_cluster);
+  tcase_add_test(read_write_tcase,
+                 test_do_write_extend_off_buf_outside_of_cluster);
+  tcase_add_test(read_write_tcase, test_do_write_extend_cluster_full);
+  suite_add_tcase(suite, read_write_tcase);
 
   return suite;
 }
