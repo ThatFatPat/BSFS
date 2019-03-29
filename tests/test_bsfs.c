@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -957,6 +958,53 @@ START_TEST(test_read_write_roundtrip_empty_file_with_offset) {
 }
 END_TEST
 
+START_TEST(test_write_extend_update_size) {
+  const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, buf, sizeof(buf), 0), sizeof(buf));
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_int_eq(st.st_size, sizeof(buf));
+}
+END_TEST
+
+START_TEST(test_write_killpriv) {
+  const char buf[] = "fdjks";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+  ck_assert_int_eq(bsfs_fchmod(file, S_IFREG | S_ISUID), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_ISUID);
+
+  ck_assert_int_eq(bsfs_write(file, buf, sizeof(buf), 0), sizeof(buf));
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG);
+}
+END_TEST
+
+START_TEST(test_write_none_no_killpriv) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+  ck_assert_int_eq(bsfs_fchmod(file, S_IFREG | S_ISGID), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_ISGID);
+
+  char c;
+  ck_assert_int_eq(bsfs_write(file, &c, 0, 0), 0);
+  ck_assert_int_eq(bsfs_fgetattr(file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_ISGID);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -1044,6 +1092,9 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase, test_read_write_roundtrip_empty_file);
   tcase_add_test(read_write_tcase,
                  test_read_write_roundtrip_empty_file_with_offset);
+  tcase_add_test(read_write_tcase, test_write_extend_update_size);
+  tcase_add_test(read_write_tcase, test_write_killpriv);
+  tcase_add_test(read_write_tcase, test_write_none_no_killpriv);
   suite_add_tcase(suite, read_write_tcase);
 
   return suite;
