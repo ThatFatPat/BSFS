@@ -972,6 +972,26 @@ START_TEST(test_write_extend_update_size) {
 }
 END_TEST
 
+START_TEST(test_write_full_overlap) {
+  const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
+  const char overlap_buf[] = "Mi Amigo";
+  const char expected[] = "YAAAAAAAAAMi AmigoOOOOO! is bad";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, buf, sizeof(buf), 0), sizeof(buf));
+  ck_assert_int_eq(bsfs_write(file, overlap_buf, strlen(overlap_buf), OFF),
+                   strlen(overlap_buf));
+
+  char read[sizeof(buf)];
+  ck_assert_int_eq(bsfs_read(file, read, sizeof(read), 0), sizeof(read));
+  ck_assert_int_eq(memcmp(read, expected, sizeof(read)), 0);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
 START_TEST(test_write_killpriv) {
   const char buf[] = "fdjks";
 
@@ -1093,6 +1113,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase,
                  test_read_write_roundtrip_empty_file_with_offset);
   tcase_add_test(read_write_tcase, test_write_extend_update_size);
+  tcase_add_test(read_write_tcase, test_write_full_overlap);
   tcase_add_test(read_write_tcase, test_write_killpriv);
   tcase_add_test(read_write_tcase, test_write_none_no_killpriv);
   suite_add_tcase(suite, read_write_tcase);
