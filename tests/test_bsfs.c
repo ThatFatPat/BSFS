@@ -668,7 +668,7 @@ static void rw_fs_teardown(void) {
   bsfs_destroy(tmp_fs);
 }
 
-static const char* long_data =
+static const char long_data[] =
     "Lorem ipsum dolor sit amet, mea cu consul moderatius, et eum prima "
     "nostro "
     "petentium. Ea quo sint putant. Numquam sensibus ut nec, vix dicat "
@@ -1017,6 +1017,21 @@ START_TEST(test_write_partial_overlap) {
 }
 END_TEST
 
+START_TEST(test_write_across_clusters) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, long_data, sizeof(long_data), 0),
+                   sizeof(long_data));
+
+  char read[sizeof(long_data)];
+  ck_assert_int_eq(bsfs_read(file, read, sizeof(read), 0), sizeof(read));
+  ck_assert_int_eq(memcmp(long_data, read, sizeof(read)), 0);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
 START_TEST(test_write_killpriv) {
   const char buf[] = "fdjks";
 
@@ -1140,6 +1155,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase, test_write_extend_update_size);
   tcase_add_test(read_write_tcase, test_write_full_overlap);
   tcase_add_test(read_write_tcase, test_write_partial_overlap);
+  tcase_add_test(read_write_tcase, test_write_across_clusters);
   tcase_add_test(read_write_tcase, test_write_killpriv);
   tcase_add_test(read_write_tcase, test_write_none_no_killpriv);
   suite_add_tcase(suite, read_write_tcase);
