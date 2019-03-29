@@ -1065,6 +1065,20 @@ START_TEST(test_write_none_no_killpriv) {
 }
 END_TEST
 
+START_TEST(test_read_large_buf) {
+  const char buf[] = "abc";
+  size_t buflen = strlen(buf);
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+  ck_assert_int_eq(bsfs_write(file, buf, buflen, 0), buflen);
+
+  char read[CLUSTER_SIZE + 20];
+  ck_assert_int_eq(bsfs_read(file, read, sizeof(read), 0), buflen);
+  ck_assert_int_eq(memcmp(read, buf, buflen), 0);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -1158,6 +1172,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase, test_write_across_clusters);
   tcase_add_test(read_write_tcase, test_write_killpriv);
   tcase_add_test(read_write_tcase, test_write_none_no_killpriv);
+  tcase_add_test(read_write_tcase, test_read_large_buf);
   suite_add_tcase(suite, read_write_tcase);
 
   return suite;
