@@ -14,6 +14,10 @@ static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
 }
 
+static size_t max(size_t a, size_t b) {
+  return a > b ? a : b;
+}
+
 /**
  * Initialize an open level
  */
@@ -545,6 +549,10 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
 
   size_t processed = 0;
   while (processed < size) {
+    if (*cluster_idx == CLUSTER_OFFSET_EOF) {
+      return -EIO;
+    }
+
     size_t total_remaining = size - processed;
     size_t cluster_remaining = CLUSTER_DATA_SIZE - local_off;
     size_t cur_size = min(total_remaining, cluster_remaining);
@@ -560,9 +568,6 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
     processed += cur_size;
 
     *cluster_idx = fs_next_cluster(cluster);
-    if (*cluster_idx == CLUSTER_OFFSET_EOF) {
-      return -EIO;
-    }
   }
 
   return processed;
@@ -828,8 +833,13 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
     ret = do_file_op(write_op, file->level, &cluster_idx, local_off,
                      (void*) buf, size);
 
-    if (ret < 0 || overlap_size == size) {
+    if (ret < 0) {
       goto unlock;
+    }
+
+    if (overlap_size == size) {
+      // Kill privileges and unlock.
+      goto commit;
     }
 
     eof_cluster = cluster_idx;
@@ -845,12 +855,15 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
 
   // If the file ends on a cluster boundary, point into the "next" (nonexistent)
   // cluster.
-  off_t local_eof_off = (file_size - 1) % CLUSTER_DATA_SIZE + 1;
+  off_t local_eof_off = (file_size - 1) % (off_t) CLUSTER_DATA_SIZE + 1;
 
   // Write portion that extends the file
   ret = bs_do_write_extend(file->level, eof_cluster, local_eof_off,
                            (const uint8_t*) buf + overlap_size,
                            size - overlap_size, off - file_size);
+
+commit:
+  ret = commit_write_to_bft(file, max(file_size, off + size), true);
 
   if (ret >= 0) {
     ret = size;
