@@ -537,14 +537,11 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
   return 0;
 }
 
-typedef void (*file_op_t)(void* buf, size_t buf_size, void* user_buf);
-
 /**
- * Iterate over a file's clusters and perform an operation on them.
+ * Iterate over a file's clusters and either read or write them.
  */
-static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
-                          cluster_offset_t* cluster_idx, off_t local_off,
-                          void* buf, size_t size) {
+static ssize_t do_rw_op(bs_open_level_t level, cluster_offset_t* cluster_idx,
+                        off_t local_off, void* buf, size_t size, bool write) {
   uint8_t cluster[CLUSTER_SIZE];
 
   size_t processed = 0;
@@ -562,7 +559,12 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
       return ret;
     }
 
-    op(cluster + local_off, cur_size, (uint8_t*) buf + processed);
+    if (write) {
+      memcpy(cluster + local_off, (uint8_t*) buf + processed, cur_size);
+      ret = write_cluster(level, cluster, *cluster_idx);
+    } else {
+      memcpy((uint8_t*) buf + processed, cluster + local_off, cur_size);
+    }
 
     local_off = 0; // We always operate from offset 0 after the first iteration.
     processed += cur_size;
@@ -571,10 +573,6 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
   }
 
   return processed;
-}
-
-static void read_op(void* buf, size_t buf_size, void* user_buf) {
-  memcpy(user_buf, buf, buf_size);
 }
 
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
@@ -608,7 +606,7 @@ ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   }
 
   // Perform the read.
-  ret = do_file_op(read_op, file->level, &cluster_idx, local_off, buf, size);
+  ret = do_rw_op(file->level, &cluster_idx, local_off, buf, size, false);
 
 unlock:
   pthread_rwlock_unlock(&file->lock);
@@ -762,10 +760,6 @@ fail:
   return ret;
 }
 
-static void write_op(void* buf, size_t buf_size, void* user_buf) {
-  memcpy(buf, user_buf, buf_size);
-}
-
 /**
  * Update file size in BFT and kill privileges if required.
  */
@@ -830,8 +824,8 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
       goto unlock;
     }
 
-    ret = do_file_op(write_op, file->level, &cluster_idx, local_off,
-                     (void*) buf, size);
+    ret =
+        do_rw_op(file->level, &cluster_idx, local_off, (void*) buf, size, true);
 
     if (ret < 0) {
       goto unlock;
