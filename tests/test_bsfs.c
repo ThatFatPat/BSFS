@@ -992,6 +992,31 @@ START_TEST(test_write_full_overlap) {
 }
 END_TEST
 
+START_TEST(test_write_partial_overlap) {
+  const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
+  const char overlap_buf[] =
+      "UpdateCTestjfewnfbsdbConfiguration  from "
+      ":/home^()04/lolu@lo234lu/build/DartConfiguration.tcl";
+  const char expected[] =
+      "YAAAAAAAAAUpdateCTestjfewnfbsdbConfiguration  from "
+      ":/home^()04/lolu@lo234lu/build/DartConfiguration.tcl";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, buf, strlen(buf), 0), strlen(buf));
+  ck_assert_int_eq(bsfs_write(file, overlap_buf, strlen(overlap_buf), OFF),
+                   strlen(overlap_buf));
+
+  char read[sizeof(expected)] = { 0 };
+  ck_assert_int_eq(bsfs_read(file, read, strlen(expected), 0),
+                   strlen(expected));
+  ck_assert_int_eq(strcmp(expected, read), 0);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
 START_TEST(test_write_killpriv) {
   const char buf[] = "fdjks";
 
@@ -1114,6 +1139,7 @@ Suite* bsfs_suite(void) {
                  test_read_write_roundtrip_empty_file_with_offset);
   tcase_add_test(read_write_tcase, test_write_extend_update_size);
   tcase_add_test(read_write_tcase, test_write_full_overlap);
+  tcase_add_test(read_write_tcase, test_write_partial_overlap);
   tcase_add_test(read_write_tcase, test_write_killpriv);
   tcase_add_test(read_write_tcase, test_write_none_no_killpriv);
   suite_add_tcase(suite, read_write_tcase);
