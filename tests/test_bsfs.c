@@ -919,6 +919,44 @@ START_TEST(test_do_write_extend_cluster_full) {
 }
 END_TEST
 
+START_TEST(test_read_write_roundtrip_empty_file) {
+  const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, buf, sizeof(buf), 0), sizeof(buf));
+
+  char read[sizeof(buf)];
+  ck_assert_int_eq(bsfs_read(file, read, sizeof(read), 0), sizeof(read));
+
+  ck_assert_int_eq(memcmp(buf, read, sizeof(buf)), 0);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
+#define OFF 10
+
+START_TEST(test_read_write_roundtrip_empty_file_with_offset) {
+  const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
+
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  ck_assert_int_eq(bsfs_write(file, buf, sizeof(buf), OFF), sizeof(buf));
+
+  char read[OFF + sizeof(buf)];
+  ck_assert_int_eq(bsfs_read(file, read, sizeof(read), 0), sizeof(read));
+
+  char padding[OFF] = { 0 };
+  ck_assert_int_eq(memcmp(read, padding, OFF), 0);
+  ck_assert_int_eq(memcmp(buf, read + OFF, sizeof(buf)), 0);
+
+  ck_assert_int_eq(bsfs_release(file), 0);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -1003,6 +1041,9 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase,
                  test_do_write_extend_off_buf_outside_of_cluster);
   tcase_add_test(read_write_tcase, test_do_write_extend_cluster_full);
+  tcase_add_test(read_write_tcase, test_read_write_roundtrip_empty_file);
+  tcase_add_test(read_write_tcase,
+                 test_read_write_roundtrip_empty_file_with_offset);
   suite_add_tcase(suite, read_write_tcase);
 
   return suite;
