@@ -6,9 +6,11 @@
 #include "keytab.h"
 #include "stego.h"
 #include <errno.h>
+#include <linux/stat.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /**
  * Initialize an open level
@@ -593,6 +595,87 @@ int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size) {
 
 int bsfs_ftruncate(bs_file_t file, off_t size) {
   return -ENOSYS;
+}
+
+static bool get_timestamp(const struct timespec times[2], size_t index,
+                          bft_timestamp_t* out) {
+  if (!times) {
+    *out = time(NULL);
+    return true;
+  }
+
+  const struct timespec* ret_time = times + index;
+  if (ret_time->tv_nsec == UTIME_OMIT) {
+    return false;
+  }
+
+  if (ret_time->tv_nsec == UTIME_NOW) {
+    *out = time(NULL);
+    return true;
+  }
+
+  *out = ret_time->tv_sec;
+  return true;
+}
+
+static int do_utimens(bs_open_level_t level, bft_offset_t index,
+                      const struct timespec times[2]) {
+  bft_timestamp_t atim; // Access time
+  bft_timestamp_t mtim; // Modification time
+  bool needs_atim = get_timestamp(times, 0, &atim);
+  bool needs_mtim = get_timestamp(times, 1, &mtim);
+
+  if (!needs_atim && !needs_mtim) {
+    return 0;
+  }
+
+  bft_entry_t ent;
+  int ret = bft_read_table_entry(level->bft, &ent, index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  if (needs_atim) {
+    ent.atim = atim;
+  }
+  if (needs_mtim) {
+    ent.mtim = mtim;
+  }
+
+  ret = bft_write_table_entry(level->bft, &ent, index);
+  bft_entry_destroy(&ent);
+
+  return ret;
+}
+
+int bsfs_utimens(bs_bsfs_t fs, const char* path,
+                 const struct timespec times[2]) {
+  bs_open_level_t level;
+  bft_offset_t index;
+
+  int ret = get_locked_level_and_index(fs, path, true, &level, &index);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = do_utimens(level, index, times);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
+int bsfs_futimens(bs_file_t file, const struct timespec times[2]) {
+  bs_open_level_t level = file->level;
+
+  int ret = pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ret = do_utimens(level, file->index, times);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 static int do_exchange(bs_open_level_t level, bft_offset_t src,
