@@ -761,6 +761,36 @@ static void write_op(void* buf, size_t buf_size, void* user_buf) {
   memcpy(buf, user_buf, buf_size);
 }
 
+/**
+ * Update file size in BFT and kill privileges if required.
+ */
+static int commit_write_to_bft(bs_file_t file, off_t new_size, bool killpriv) {
+  bs_open_level_t level = file->level;
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  if (killpriv) {
+    ent.mode &= ~(S_ISUID | S_ISGID);
+  }
+
+  ent.size = new_size;
+
+  ret = bft_write_table_entry(level->bft, &ent, file->index);
+  bft_entry_destroy(&ent);
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   if (!size) {
     return size;
