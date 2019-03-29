@@ -539,7 +539,7 @@ typedef void (*file_op_t)(void* buf, size_t buf_size, void* user_buf);
  * Iterate over a file's clusters and perform an operation on them.
  */
 static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
-                          cluster_offset_t cluster_idx, off_t local_off,
+                          cluster_offset_t* cluster_idx, off_t local_off,
                           void* buf, size_t size) {
   uint8_t cluster[CLUSTER_SIZE];
 
@@ -549,7 +549,7 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
     size_t cluster_remaining = CLUSTER_DATA_SIZE - local_off;
     size_t cur_size = min(total_remaining, cluster_remaining);
 
-    int ret = read_cluster(level, cluster, cluster_idx);
+    int ret = read_cluster(level, cluster, *cluster_idx);
     if (ret < 0) {
       return ret;
     }
@@ -559,8 +559,8 @@ static ssize_t do_file_op(file_op_t op, bs_open_level_t level,
     local_off = 0; // We always operate from offset 0 after the first iteration.
     processed += cur_size;
 
-    cluster_idx = fs_next_cluster(cluster);
-    if (cluster_idx == CLUSTER_OFFSET_EOF) {
+    *cluster_idx = fs_next_cluster(cluster);
+    if (*cluster_idx == CLUSTER_OFFSET_EOF) {
       return -EIO;
     }
   }
@@ -603,7 +603,7 @@ ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
   }
 
   // Perform the read.
-  ret = do_file_op(read_op, file->level, cluster_idx, local_off, buf, size);
+  ret = do_file_op(read_op, file->level, &cluster_idx, local_off, buf, size);
 
 unlock:
   pthread_rwlock_unlock(&file->lock);
@@ -757,8 +757,78 @@ fail:
   return ret;
 }
 
+static void write_op(void* buf, size_t buf_size, void* user_buf) {
+  memcpy(buf, user_buf, buf_size);
+}
+
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
-  return -ENOSYS;
+  if (!size) {
+    return size;
+  }
+
+  ssize_t ret = -pthread_rwlock_wrlock(&file->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  off_t file_size;
+  cluster_offset_t initial_cluster;
+  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  cluster_offset_t eof_cluster;
+
+  // Write portion that overlaps with existing contents
+  off_t overlap_off = off;
+  size_t overlap_size = size;
+
+  adjust_size_and_off(file_size, &overlap_size, &overlap_off);
+
+  if (overlap_size) {
+    cluster_offset_t cluster_idx;
+    off_t local_off;
+    ret = find_cluster(file->level, initial_cluster, overlap_off, &cluster_idx,
+                       &local_off);
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    ret = do_file_op(write_op, file->level, &cluster_idx, local_off,
+                     (void*) buf, size);
+
+    if (ret < 0 || overlap_size == size) {
+      goto unlock;
+    }
+
+    eof_cluster = cluster_idx;
+  } else if (!file_size) {
+    // The file is empty, but `mknod` always allocates at least 1 cluster.
+    eof_cluster = initial_cluster;
+  } else {
+    // Find the cluster containing the last byte.
+    off_t dummy;
+    ret = find_cluster(file->level, initial_cluster, file_size - 1,
+                       &eof_cluster, &dummy);
+  }
+
+  // If the file ends on a cluster boundary, point into the "next" (nonexistent)
+  // cluster.
+  off_t local_eof_off = (file_size - 1) % CLUSTER_DATA_SIZE + 1;
+
+  // Write portion that extends the file
+  ret = bs_do_write_extend(file->level, eof_cluster, local_eof_off,
+                           (const uint8_t*) buf + overlap_size,
+                           size - overlap_size, off - file_size);
+
+  if (ret >= 0) {
+    ret = size;
+  }
+
+unlock:
+  pthread_rwlock_unlock(&file->lock);
+  return ret;
 }
 
 int bsfs_fsync(bs_file_t file, bool datasync) {
