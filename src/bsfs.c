@@ -12,6 +12,14 @@
 #include <string.h>
 #include <time.h>
 
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
+}
+
+static size_t max(size_t a, size_t b) {
+  return a > b ? a : b;
+}
+
 /**
  * Initialize an open level
  */
@@ -318,6 +326,16 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
+static int read_cluster(bs_open_level_t level, void* buf,
+                        cluster_offset_t cluster) {
+  return fs_read_cluster(&level->key, level->fs->disk, buf, cluster);
+}
+
+static int write_cluster(bs_open_level_t level, const void* buf,
+                         cluster_offset_t cluster) {
+  return fs_write_cluster(&level->key, level->fs->disk, buf, cluster);
+}
+
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   if (!S_ISREG(mode)) {
     return -ENOTSUP;
@@ -366,7 +384,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   uint8_t cluster_data[CLUSTER_SIZE] = { 0 };
   fs_set_next_cluster(cluster_data, CLUSTER_OFFSET_EOF);
 
-  ret = fs_write_cluster(&level->key, fs->disk, cluster_data, initial_cluster);
+  ret = write_cluster(level, cluster_data, initial_cluster);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
   }
@@ -419,7 +437,7 @@ static int do_unlink(bs_open_level_t level, bft_offset_t index) {
       return ret;
     }
 
-    ret = fs_read_cluster(&level->key, level->fs->disk, cluster, cluster_idx);
+    ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
       return ret;
     }
@@ -462,12 +480,394 @@ int bsfs_release(bs_file_t file) {
   return bs_oft_release(&level->open_files, file);
 }
 
+static int get_size_and_initial_cluster(bs_file_t file, off_t* out_size,
+                                        cluster_offset_t* out_initial_cluster) {
+  bs_open_level_t level = file->level;
+  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  *out_size = ent.size;
+  *out_initial_cluster = ent.initial_cluster;
+
+  bft_entry_destroy(&ent);
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
+}
+
+/**
+ * Adjust `size` and `off` such that they fit within `file_size`
+ */
+static void adjust_size_and_off(off_t file_size, size_t* size, off_t* off) {
+  if (*off > file_size) {
+    *off = file_size;
+  }
+
+  if (*size > (size_t)(file_size - *off)) {
+    *size = file_size - *off;
+  }
+}
+
+static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
+                        off_t off, cluster_offset_t* found, off_t* local_off) {
+  uint8_t cluster[CLUSTER_SIZE];
+  while ((size_t) off >= CLUSTER_DATA_SIZE) {
+    int ret = read_cluster(level, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+    if (cluster_idx == CLUSTER_OFFSET_EOF) {
+      return -EIO;
+    }
+
+    off -= CLUSTER_DATA_SIZE;
+  }
+
+  *found = cluster_idx;
+  *local_off = off;
+  return 0;
+}
+
+/**
+ * Iterate over a file's clusters and either read or write them.
+ */
+static ssize_t do_rw_op(bs_open_level_t level, cluster_offset_t* cluster_idx,
+                        off_t local_off, void* buf, size_t size, bool write) {
+  uint8_t cluster[CLUSTER_SIZE];
+
+  size_t processed = 0;
+  while (processed < size) {
+    if (*cluster_idx == CLUSTER_OFFSET_EOF) {
+      return -EIO;
+    }
+
+    size_t total_remaining = size - processed;
+    size_t cluster_remaining = CLUSTER_DATA_SIZE - local_off;
+    size_t cur_size = min(total_remaining, cluster_remaining);
+
+    int ret = read_cluster(level, cluster, *cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    if (write) {
+      memcpy(cluster + local_off, (uint8_t*) buf + processed, cur_size);
+      ret = write_cluster(level, cluster, *cluster_idx);
+    } else {
+      memcpy((uint8_t*) buf + processed, cluster + local_off, cur_size);
+    }
+
+    local_off = 0; // We always operate from offset 0 after the first iteration.
+    processed += cur_size;
+
+    *cluster_idx = fs_next_cluster(cluster);
+  }
+
+  return processed;
+}
+
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
-  return -ENOSYS;
+  ssize_t ret = -pthread_rwlock_rdlock(&file->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Get the initial cluster and size of the file.
+  off_t file_size;
+  cluster_offset_t initial_cluster;
+  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  // Adjust `size` and `off` such that they fit within `file_size`.
+  adjust_size_and_off(file_size, &size, &off);
+  if (!size) {
+    ret = size;
+    goto unlock;
+  }
+
+  // Find the cluster from which we must start reading.
+  cluster_offset_t cluster_idx;
+  off_t local_off;
+  ret =
+      find_cluster(file->level, initial_cluster, off, &cluster_idx, &local_off);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  // Perform the read.
+  ret = do_rw_op(file->level, &cluster_idx, local_off, buf, size, false);
+
+unlock:
+  pthread_rwlock_unlock(&file->lock);
+  return ret;
+}
+
+static void do_dealloc_clusters(bs_open_level_t level,
+                                cluster_offset_t* cluster_indices,
+                                size_t count) {
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+  for (size_t i = 0; i < count; i++) {
+    // If one of these fails, we still want to free the rest.
+    fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_indices[i]);
+  }
+}
+
+static int alloc_clusters(bs_open_level_t level, size_t count,
+                          cluster_offset_t** out) {
+  cluster_offset_t* cluster_indices =
+      calloc(count + 1, sizeof(*cluster_indices));
+
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    goto fail_after_alloc;
+  }
+
+  size_t i = 0;
+  for (; i < count; i++) {
+    ret = fs_alloc_cluster(level->bitmap, bitmap_bits, cluster_indices + i);
+    if (ret < 0) {
+      goto fail_after_lock;
+    }
+  }
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+
+  cluster_indices[count] = CLUSTER_OFFSET_EOF;
+  *out = cluster_indices;
+
+  return 0;
+
+fail_after_lock:
+  if (i) {
+    do_dealloc_clusters(level, cluster_indices, i - 1);
+  }
+  pthread_rwlock_unlock(&level->metadata_lock);
+fail_after_alloc:
+  free(cluster_indices);
+  return ret;
+}
+
+static int dealloc_clusters(bs_open_level_t level,
+                            cluster_offset_t* cluster_indices, size_t count) {
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  do_dealloc_clusters(level, cluster_indices, count);
+
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return 0;
+}
+
+/**
+ * Append the contents of `buf` at offset `off` past the end of the file (as
+ * specified by `cluster_idx` and `local_eof_off`).
+ */
+int bs_do_write_extend(bs_open_level_t level, cluster_offset_t cluster_idx,
+                       off_t local_eof_off, const void* buf, size_t buf_size,
+                       off_t off) {
+  size_t actual_size = buf_size + off;
+  size_t partial_cluster_remaining = CLUSTER_DATA_SIZE - local_eof_off;
+
+  // The size of the extra data to be written (past existing cluster) over
+  // `CLUSTER_DATA_SIZE` (rounded up).
+  size_t new_cluster_count =
+      (actual_size - partial_cluster_remaining + CLUSTER_DATA_SIZE - 1) /
+      CLUSTER_DATA_SIZE;
+
+  // Allocate new clusters
+  cluster_offset_t* new_cluster_indices;
+  int ret = alloc_clusters(level, new_cluster_count, &new_cluster_indices);
+  if (ret < 0) {
+    return ret;
+  }
+
+  // Write the new data
+  uint8_t cluster[CLUSTER_SIZE];
+  size_t processed = partial_cluster_remaining; // Skip partial cluster for now.
+  for (size_t i = 0; i < new_cluster_count; i++) {
+    size_t remaining = actual_size - processed;
+    size_t write_size =
+        min(remaining,
+            CLUSTER_DATA_SIZE); // The size of data to be written to the current
+                                // cluster.
+
+    size_t pad_size = (size_t) off > processed
+                          ? min(write_size, off - processed)
+                          : 0; // The size to be padded in zeros.
+
+    // Before `off`: pad with zeroes.
+    memset(cluster, 0, pad_size);
+
+    if (pad_size < write_size) {
+      // After `off`: write data.
+      memcpy(cluster + pad_size,
+             (const uint8_t*) buf + (processed + pad_size - off),
+             write_size - pad_size);
+    }
+
+    processed += write_size;
+
+    fs_set_next_cluster(cluster, new_cluster_indices[i + 1]);
+    ret = write_cluster(level, cluster, new_cluster_indices[i]);
+    if (ret < 0) {
+      goto fail;
+    }
+  }
+
+  // Hook up to existing cluster chain
+  ret = read_cluster(level, cluster, cluster_idx);
+  if (ret < 0) {
+    goto fail;
+  }
+
+  if (off > 0) {
+    // Zero-pad if necessary.
+    memset(cluster + local_eof_off, 0, min(off, partial_cluster_remaining));
+  }
+
+  if ((size_t) off < partial_cluster_remaining) {
+    // Possibly write start of `buf` into existing cluster.
+    memcpy(cluster + off + local_eof_off, buf,
+           min(partial_cluster_remaining - off, buf_size));
+  }
+
+  fs_set_next_cluster(cluster, new_cluster_indices[0]);
+
+  ret = write_cluster(level, cluster, cluster_idx);
+  if (ret >= 0) {
+    free(new_cluster_indices);
+    return ret;
+  }
+
+fail:
+  dealloc_clusters(level, new_cluster_indices, new_cluster_count);
+  free(new_cluster_indices);
+  return ret;
+}
+
+/**
+ * Update file size in BFT and kill privileges if required.
+ */
+static int commit_write_to_bft(bs_file_t file, off_t new_size, bool killpriv) {
+  bs_open_level_t level = file->level;
+  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  bft_entry_t ent;
+  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  if (killpriv) {
+    ent.mode &= ~(S_ISUID | S_ISGID);
+  }
+
+  ent.size = new_size;
+
+  ret = bft_write_table_entry(level->bft, &ent, file->index);
+  bft_entry_destroy(&ent);
+
+unlock:
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
-  return -ENOSYS;
+  if (!size) {
+    return size;
+  }
+
+  ssize_t ret = -pthread_rwlock_wrlock(&file->lock);
+  if (ret < 0) {
+    return ret;
+  }
+
+  off_t file_size;
+  cluster_offset_t initial_cluster;
+  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  cluster_offset_t eof_cluster;
+
+  // Write portion that overlaps with existing contents
+  off_t overlap_off = off;
+  size_t overlap_size = size;
+
+  adjust_size_and_off(file_size, &overlap_size, &overlap_off);
+
+  if (overlap_size) {
+    cluster_offset_t cluster_idx;
+    off_t local_off;
+    ret = find_cluster(file->level, initial_cluster, overlap_off, &cluster_idx,
+                       &local_off);
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    ret =
+        do_rw_op(file->level, &cluster_idx, local_off, (void*) buf, size, true);
+
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    if (overlap_size == size) {
+      // Kill privileges and unlock.
+      goto commit;
+    }
+
+    eof_cluster = cluster_idx;
+  } else if (!file_size) {
+    // The file is empty, but `mknod` always allocates at least 1 cluster.
+    eof_cluster = initial_cluster;
+  } else {
+    // Find the cluster containing the last byte.
+    off_t dummy;
+    ret = find_cluster(file->level, initial_cluster, file_size - 1,
+                       &eof_cluster, &dummy);
+  }
+
+  // If the file ends on a cluster boundary, point into the "next" (nonexistent)
+  // cluster.
+  off_t local_eof_off = (file_size - 1) % (off_t) CLUSTER_DATA_SIZE + 1;
+
+  // Write portion that extends the file
+  ret = bs_do_write_extend(file->level, eof_cluster, local_eof_off,
+                           (const uint8_t*) buf + overlap_size,
+                           size - overlap_size, off - file_size);
+
+commit:
+  ret = commit_write_to_bft(file, max(file_size, off + size), true);
+
+  if (ret >= 0) {
+    ret = size;
+  }
+
+unlock:
+  pthread_rwlock_unlock(&file->lock);
+  return ret;
 }
 
 int bsfs_fsync(bs_file_t file, bool datasync) {
