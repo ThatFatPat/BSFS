@@ -562,6 +562,9 @@ static ssize_t do_rw_op(bs_open_level_t level, cluster_offset_t* cluster_idx,
     if (write) {
       memcpy(cluster + local_off, (uint8_t*) buf + processed, cur_size);
       ret = write_cluster(level, cluster, *cluster_idx);
+      if (ret < 0) {
+        return ret;
+      }
     } else {
       memcpy((uint8_t*) buf + processed, cluster + local_off, cur_size);
     }
