@@ -33,7 +33,7 @@ int bsfs_fchmod(bs_file_t file, mode_t mode);
 int bsfs_truncate(bs_bsfs_t fs, const char* path, off_t size);
 int bsfs_ftruncate(bs_file_t file, off_t size);
 
-int bsfs_fallocate(bs_file_t file, off_t size);
+int bsfs_fallocate(bs_file_t file, off_t off, off_t len);
 
 int bsfs_utimens(bs_bsfs_t fs, const char* path,
                  const struct timespec times[2]);

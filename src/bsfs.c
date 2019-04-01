@@ -809,6 +809,20 @@ static off_t get_local_eof_off(off_t size) {
   return (size - 1) % (off_t) CLUSTER_DATA_SIZE + 1;
 }
 
+static int find_eof_cluster(bs_open_level_t level,
+                            cluster_offset_t initial_cluster, off_t file_size,
+                            cluster_offset_t* eof_cluster) {
+  if (!file_size) {
+    // The file is empty, but `mknod` always allocates at least 1 cluster.
+    *eof_cluster = initial_cluster;
+    return 0;
+  }
+  // Find the cluster containing the last byte.
+  off_t dummy;
+  return find_cluster(level, initial_cluster, file_size - 1, eof_cluster,
+                      &dummy);
+}
+
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
   if (!size) {
     return size;
@@ -854,14 +868,12 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
       // Kill privileges and unlock.
       goto commit;
     }
-  } else if (!file_size) {
-    // The file is empty, but `mknod` always allocates at least 1 cluster.
-    eof_cluster = initial_cluster;
   } else {
-    // Find the cluster containing the last byte.
-    off_t dummy;
-    ret = find_cluster(file->level, initial_cluster, file_size - 1,
-                       &eof_cluster, &dummy);
+    ret =
+        find_eof_cluster(file->level, initial_cluster, file_size, &eof_cluster);
+    if (ret < 0) {
+      goto unlock;
+    }
   }
 
   // Write portion that extends the file
@@ -1030,12 +1042,11 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
   if (new_size > size) {
     // Extend
     cluster_offset_t curr_eof;
-    off_t dummy;
-    ret =
-        find_cluster(file->level, initial_cluster, size - 1, &curr_eof, &dummy);
+    ret = find_eof_cluster(file->level, initial_cluster, size, &curr_eof);
     if (ret < 0) {
       goto unlock;
     }
+
     ret = bs_do_write_extend(file->level, curr_eof, get_local_eof_off(size),
                              NULL, 0, new_size);
   } else if (get_required_cluster_count(new_size) <
@@ -1070,6 +1081,41 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
   if (ret >= 0) {
     // Update size and kill privileges
     ret = commit_write_to_bft(file, new_size, true);
+  }
+
+unlock:
+  pthread_rwlock_unlock(&file->lock);
+  return ret;
+}
+
+int bsfs_fallocate(bs_file_t file, off_t off, off_t len) {
+  pthread_rwlock_wrlock(&file->lock);
+
+  off_t requested_size = off + len;
+
+  off_t file_size;
+  cluster_offset_t initial_cluster;
+  int ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  if (ret < 0) {
+    goto unlock;
+  }
+
+  if (requested_size > file_size) {
+    cluster_offset_t eof_cluster;
+    ret =
+        find_eof_cluster(file->level, initial_cluster, file_size, &eof_cluster);
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    ret = bs_do_write_extend(file->level, eof_cluster,
+                             get_local_eof_off(file_size), NULL, 0,
+                             requested_size - file_size);
+    if (ret < 0) {
+      goto unlock;
+    }
+
+    ret = commit_write_to_bft(file, requested_size, false);
   }
 
 unlock:
