@@ -6,6 +6,7 @@
 #include "stego.h"
 #include <errno.h>
 #include <linux/stat.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -1276,6 +1277,32 @@ START_TEST(test_truncate) {
 }
 END_TEST
 
+START_TEST(test_ftruncate_shrink_dealloc) {
+  ck_assert_int_eq(bsfs_write(truncate_file, long_data, strlen(long_data), 3),
+                   strlen(long_data));
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, 3), 0);
+
+  struct stat st;
+  uint8_t buf[4] = { 0 };
+  ck_assert_int_eq(bsfs_read(truncate_file, buf, 3, 0), 3);
+  const char* expected = "sal";
+  printf("%s", buf);
+  ck_assert_int_eq(memcmp(buf, expected, 3), 0);
+  ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
+  ck_assert_int_eq(st.st_size, 3);
+}
+END_TEST
+START_TEST(test_ftruncate_extend_alloc) {
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(long_data)), 0);
+
+  uint8_t buf[strlen(long_data)];
+  uint8_t expected[sizeof(buf) - 20];
+  memset(expected, 0, sizeof(expected));
+  ck_assert_int_eq(bsfs_read(truncate_file, buf, sizeof(buf), 0), sizeof(buf));
+  ck_assert_int_eq(memcmp(buf + 20, expected, sizeof(expected)), 0);
+}
+END_TEST
+
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
 
@@ -1391,6 +1418,8 @@ Suite* bsfs_suite(void) {
   tcase_add_test(truncate_tcase, test_ftruncate_killpriv);
   tcase_add_test(truncate_tcase, test_ftruncate_same_size_no_killpriv);
   tcase_add_test(truncate_tcase, test_truncate);
+  tcase_add_test(truncate_tcase, test_ftruncate_shrink_dealloc);
+  tcase_add_test(truncate_tcase, test_ftruncate_extend_alloc);
   suite_add_tcase(suite, truncate_tcase);
   return suite;
 }
