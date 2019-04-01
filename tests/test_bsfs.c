@@ -1181,6 +1181,7 @@ START_TEST(test_read_large_buf) {
 }
 END_TEST
 
+const char* truncate_str = "saljbhajfhaojefbgaof";
 bs_file_t truncate_file;
 
 static void truncate_fs_setup(void) {
@@ -1201,8 +1202,9 @@ static void truncate_fs_setup(void) {
   ck_assert_int_eq(bsfs_mknod(tmp_fs, "truncatelvl/file", S_IFREG), 0);
 
   ck_assert_int_eq(bsfs_open(tmp_fs, "truncatelvl/file", &truncate_file), 0);
-  ck_assert_int_eq(bsfs_write(truncate_file, "saljbhajfhaojefbgaof", 20, 0),
-                   20);
+  ck_assert_int_eq(
+      bsfs_write(truncate_file, truncate_str, strlen(truncate_str), 0),
+      strlen(truncate_str));
 }
 
 static void truncate_fs_teardown(void) {
@@ -1240,7 +1242,7 @@ END_TEST
 START_TEST(test_ftruncate_killpriv) {
   struct stat st;
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
-  ck_assert_int_eq(st.st_size, 20);
+  ck_assert_int_eq(st.st_size, strlen(truncate_str));
   ck_assert_int_eq(bsfs_fchmod(truncate_file, S_IFREG | S_ISUID), 0);
 
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
@@ -1255,13 +1257,13 @@ END_TEST
 START_TEST(test_ftruncate_same_size_no_killpriv) {
   struct stat st;
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
-  ck_assert_int_eq(st.st_size, 20);
+  ck_assert_int_eq(st.st_size, strlen(truncate_str));
   ck_assert_int_eq(bsfs_fchmod(truncate_file, S_IFREG | S_ISGID), 0);
 
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
   ck_assert_uint_eq(st.st_mode, S_IFREG | S_ISGID);
 
-  ck_assert_int_eq(bsfs_ftruncate(truncate_file, 20), 0);
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(truncate_str)), 0);
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
   ck_assert_uint_eq(st.st_mode, S_IFREG | S_ISGID);
 }
@@ -1294,10 +1296,47 @@ START_TEST(test_ftruncate_extend_alloc) {
   ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(long_data)), 0);
 
   uint8_t buf[strlen(long_data)];
-  uint8_t expected[sizeof(buf) - 20];
+  uint8_t expected[sizeof(buf) - strlen(truncate_str)];
   memset(expected, 0, sizeof(expected));
   ck_assert_int_eq(bsfs_read(truncate_file, buf, sizeof(buf), 0), sizeof(buf));
-  ck_assert_int_eq(memcmp(buf + 20, expected, sizeof(expected)), 0);
+  ck_assert_int_eq(
+      memcmp(buf + strlen(truncate_str), expected, sizeof(expected)), 0);
+}
+END_TEST
+
+START_TEST(test_fallocate_preserve) {
+  ck_assert_int_eq(bsfs_fallocate(truncate_file, 3, 3), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
+  ck_assert_int_eq(st.st_size, strlen(truncate_str));
+}
+END_TEST
+
+START_TEST(test_fallocate_extend) {
+  ck_assert_int_eq(bsfs_fallocate(truncate_file, 15, 10), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
+  ck_assert_int_eq(st.st_size, 25);
+
+  uint8_t buf[25];
+  ck_assert_int_eq(bsfs_read(truncate_file, buf, sizeof(buf), 0), sizeof(buf));
+  ck_assert_int_eq(memcmp(buf, truncate_str, strlen(truncate_str)), 0);
+
+  uint8_t zero[5] = { 0 };
+  ck_assert_int_eq(memcmp(buf + strlen(truncate_str), zero, 5), 0);
+}
+END_TEST
+
+START_TEST(test_fallocate_no_killpriv) {
+  ck_assert_int_eq(
+      bsfs_fchmod(truncate_file, S_IFREG | S_IRUSR | S_ISUID | S_ISGID), 0);
+  ck_assert_int_eq(bsfs_fallocate(truncate_file, 15, 10), 0);
+
+  struct stat st;
+  ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
+  ck_assert_uint_eq(st.st_mode, S_IFREG | S_IRUSR | S_ISUID | S_ISGID);
 }
 END_TEST
 
@@ -1418,6 +1457,9 @@ Suite* bsfs_suite(void) {
   tcase_add_test(truncate_tcase, test_truncate);
   tcase_add_test(truncate_tcase, test_ftruncate_shrink_dealloc);
   tcase_add_test(truncate_tcase, test_ftruncate_extend_alloc);
+  tcase_add_test(truncate_tcase, test_fallocate_preserve);
+  tcase_add_test(truncate_tcase, test_fallocate_extend);
+  tcase_add_test(truncate_tcase, test_fallocate_no_killpriv);
   suite_add_tcase(suite, truncate_tcase);
   return suite;
 }
