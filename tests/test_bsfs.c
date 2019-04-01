@@ -6,7 +6,6 @@
 #include "stego.h"
 #include <errno.h>
 #include <linux/stat.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -1286,7 +1285,6 @@ START_TEST(test_ftruncate_shrink_dealloc) {
   uint8_t buf[4] = { 0 };
   ck_assert_int_eq(bsfs_read(truncate_file, buf, 3, 0), 3);
   const char* expected = "sal";
-  printf("%s", buf);
   ck_assert_int_eq(memcmp(buf, expected, 3), 0);
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
   ck_assert_int_eq(st.st_size, 3);
