@@ -540,7 +540,9 @@ static int find_cluster(bs_open_level_t level, cluster_offset_t cluster_idx,
   }
 
   *found = cluster_idx;
-  *local_off = off;
+  if (local_off) {
+    *local_off = off;
+  }
   return 0;
 }
 
@@ -818,9 +820,7 @@ static int find_eof_cluster(bs_open_level_t level,
     return 0;
   }
   // Find the cluster containing the last byte.
-  off_t dummy;
-  return find_cluster(level, initial_cluster, file_size - 1, eof_cluster,
-                      &dummy);
+  return find_cluster(level, initial_cluster, file_size - 1, eof_cluster, NULL);
 }
 
 ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
@@ -1053,9 +1053,7 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
              get_required_cluster_count(size)) {
     // Shrink
     cluster_offset_t new_eof;
-    off_t dummy;
-    ret =
-        find_cluster(file->level, initial_cluster, new_size, &new_eof, &dummy);
+    ret = find_cluster(file->level, initial_cluster, new_size, &new_eof, NULL);
     if (ret < 0) {
       goto unlock;
     }
