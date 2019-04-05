@@ -206,7 +206,8 @@ END_TEST
 START_TEST(test_mknod_file_exists) {
   char path[256];
   strcpy(path, mknod_level_name);
-  strcat(path, "/bla") ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
+  strcat(path, "/bla");
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), -EEXIST);
 }
 END_TEST
