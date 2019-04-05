@@ -232,7 +232,7 @@ START_TEST(test_unlink) {
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_unlink(tmp_fs, path), 0);
   bs_file_t file;
-  ck_assert_int_eq(bsfs_open(tmp_fs, path, &file), -2);
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &file), -ENOENT);
 }
 END_TEST
 
