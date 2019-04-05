@@ -231,7 +231,8 @@ START_TEST(test_unlink) {
   strcat(path, "/bla");
   ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
   ck_assert_int_eq(bsfs_unlink(tmp_fs, path), 0);
-  // TODO: Make sure file doesn't exist!
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &file), -2);
 }
 END_TEST
 
