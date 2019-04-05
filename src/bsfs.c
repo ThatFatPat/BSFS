@@ -412,8 +412,16 @@ cleanup:
 }
 
 static int do_unlink(bs_open_level_t level, bft_offset_t index) {
+  bool is_open;
+  int ret = bs_oft_has(&level->open_files, index, &is_open);
+  if (ret < 0) {
+    return ret;
+  }
+  if (is_open) {
+    return -EBUSY;
+  }
   bft_entry_t ent;
-  int ret = bft_read_table_entry(level->bft, &ent, index);
+  ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
     return ret;
   }

@@ -236,6 +236,18 @@ START_TEST(test_unlink) {
 }
 END_TEST
 
+START_TEST(test_unlink_file_open) {
+  char path[256];
+  strcpy(path, mknod_level_name);
+  strcat(path, "/bla");
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), 0);
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, path, &file), 0);
+
+  ck_assert_int_eq(bsfs_unlink(tmp_fs, path), -EBUSY);
+}
+END_TEST
+
 START_TEST(test_unlink_noent) {
   char path[256];
   strcpy(path, mknod_level_name);
@@ -1224,6 +1236,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(mknod_unlink_tcase, test_mknod_not_reg);
   tcase_add_test(mknod_unlink_tcase, test_mknod_no_such_level);
   tcase_add_test(mknod_unlink_tcase, test_unlink);
+  tcase_add_test(mknod_unlink_tcase, test_unlink_file_open);
   tcase_add_test(mknod_unlink_tcase, test_unlink_noent);
   suite_add_tcase(suite, mknod_unlink_tcase);
 
