@@ -25,6 +25,7 @@ static void set_file(struct fuse_file_info* fi, bs_file_t file) {
 void* bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
   conn->time_gran = 1000000000; // 1 second
   conn->want |= FUSE_CAP_WRITEBACK_CACHE;
+  conn->want &= !FUSE_CAP_ATOMIC_O_TRUNC;
 
   cfg->set_uid = true;
   cfg->uid = getuid();
