@@ -203,6 +203,14 @@ START_TEST(test_mknod) {
 }
 END_TEST
 
+START_TEST(test_mknod_file_exists) {
+  char path[256];
+  strcpy(path, mknod_level_name);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/bla"), S_IFREG), 0);
+  ck_assert_int_eq(bsfs_mknod(tmp_fs, path, S_IFREG), -EEXIST);
+}
+END_TEST
+
 START_TEST(test_mknod_not_reg) {
   char path[256];
   strcpy(path, mknod_level_name);
@@ -1211,6 +1219,7 @@ Suite* bsfs_suite(void) {
   tcase_add_checked_fixture(mknod_unlink_tcase, mknod_fs_setup,
                             mknod_fs_teardown);
   tcase_add_test(mknod_unlink_tcase, test_mknod);
+  tcase_add_test(mknod_unlink_tcase, test_mknod_file_exists);
   tcase_add_test(mknod_unlink_tcase, test_mknod_not_reg);
   tcase_add_test(mknod_unlink_tcase, test_mknod_no_such_level);
   tcase_add_test(mknod_unlink_tcase, test_unlink);
