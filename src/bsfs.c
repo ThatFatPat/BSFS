@@ -386,12 +386,11 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
 
   ret = write_cluster(level, cluster_data, initial_cluster);
   if (ret < 0) {
-    FUSE_CAP_WRITEBACK_CACH
-    fs_dealloc_cFUSE_CAP_WRITEBACK_CACHitmap_bits, initial_cluster);
+    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
   }
 
-  bft_entry_t enFUSE_CAP_WRITEBACK_CACH
-  ret = bft_entrFUSE_CAP_WRITEBACK_CACHode, initial_cluster, 0, 0);
+  bft_entry_t ent;
+  ret = bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
     fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
     goto cleanup_after_metadata;
