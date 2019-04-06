@@ -700,6 +700,7 @@ static int dealloc_clusters(bs_open_level_t level,
 }
 
 size_t get_required_cluster_count(off_t file_size) {
+  // Divide by `CLUSTER_DATA_SIZE`, but round up.
   return (file_size + CLUSTER_DATA_SIZE - 1) / CLUSTER_DATA_SIZE;
 }
 
