@@ -1035,50 +1035,49 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
     goto unlock;
   }
 
-  if (new_size == size) {
-    goto unlock;
-  }
+  if (new_size != size) {
+    if (new_size > size) {
+      // Extend
+      cluster_offset_t curr_eof;
+      ret = find_eof_cluster(file->level, initial_cluster, size, &curr_eof);
+      if (ret < 0) {
+        goto unlock;
+      }
 
-  if (new_size > size) {
-    // Extend
-    cluster_offset_t curr_eof;
-    ret = find_eof_cluster(file->level, initial_cluster, size, &curr_eof);
-    if (ret < 0) {
-      goto unlock;
+      ret = bs_do_write_extend(file->level, curr_eof, get_local_eof_off(size),
+                               NULL, 0, new_size - size);
+    } else if (get_required_cluster_count(new_size) <
+               get_required_cluster_count(size)) {
+      // Shrink
+      cluster_offset_t new_eof;
+      ret =
+          find_cluster(file->level, initial_cluster, new_size, &new_eof, NULL);
+      if (ret < 0) {
+        goto unlock;
+      }
+
+      uint8_t cluster[CLUSTER_SIZE];
+      ret = read_cluster(file->level, cluster, new_eof);
+      if (ret < 0) {
+        goto unlock;
+      }
+
+      pthread_rwlock_wrlock(&file->level->metadata_lock);
+
+      ret = dealloc_cluster_chain(file->level, fs_next_cluster(cluster));
+      pthread_rwlock_unlock(&file->level->metadata_lock);
+      if (ret < 0) {
+        goto unlock;
+      }
+
+      fs_set_next_cluster(cluster, CLUSTER_OFFSET_EOF);
+      ret = write_cluster(file->level, cluster, new_eof);
     }
 
-    ret = bs_do_write_extend(file->level, curr_eof, get_local_eof_off(size),
-                             NULL, 0, new_size - size);
-  } else if (get_required_cluster_count(new_size) <
-             get_required_cluster_count(size)) {
-    // Shrink
-    cluster_offset_t new_eof;
-    ret = find_cluster(file->level, initial_cluster, new_size, &new_eof, NULL);
-    if (ret < 0) {
-      goto unlock;
+    if (ret >= 0) {
+      // Update size and kill privileges
+      ret = commit_write_to_bft(file, new_size, true);
     }
-
-    uint8_t cluster[CLUSTER_SIZE];
-    ret = read_cluster(file->level, cluster, new_eof);
-    if (ret < 0) {
-      goto unlock;
-    }
-
-    pthread_rwlock_wrlock(&file->level->metadata_lock);
-
-    ret = dealloc_cluster_chain(file->level, fs_next_cluster(cluster));
-    pthread_rwlock_unlock(&file->level->metadata_lock);
-    if (ret < 0) {
-      goto unlock;
-    }
-
-    fs_set_next_cluster(cluster, CLUSTER_OFFSET_EOF);
-    ret = write_cluster(file->level, cluster, new_eof);
-  }
-
-  if (ret >= 0) {
-    // Update size and kill privileges
-    ret = commit_write_to_bft(file, new_size, true);
   }
 
 unlock:
