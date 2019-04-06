@@ -1048,7 +1048,7 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
     }
 
     ret = bs_do_write_extend(file->level, curr_eof, get_local_eof_off(size),
-                             NULL, 0, new_size);
+                             NULL, 0, new_size - size);
   } else if (get_required_cluster_count(new_size) <
              get_required_cluster_count(size)) {
     // Shrink
