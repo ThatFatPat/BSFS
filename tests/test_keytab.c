@@ -106,7 +106,7 @@ START_TEST(test_keytab_store_lookup_roundtrip) {
   ck_assert_int_eq(keytab_store(disk, 0, pass1, &key1), 0);
   ck_assert_int_eq(keytab_store(disk, 1, pass2, &key2), 0);
 
-  stego_key_t recovered_key = { { 0 } };
+  stego_key_t recovered_key = { { 0 }, { { 0 } }, { { 0 } } };
 
   ck_assert_int_eq(keytab_lookup(disk, pass1, &recovered_key), 0);
   ck_assert(stego_key_eq(&recovered_key, &key1));

@@ -436,8 +436,16 @@ static int dealloc_cluster_chain(bs_open_level_t level,
 }
 
 static int do_unlink(bs_open_level_t level, bft_offset_t index) {
+  bool is_open;
+  int ret = bs_oft_has(&level->open_files, index, &is_open);
+  if (ret < 0) {
+    return ret;
+  }
+  if (is_open) {
+    return -EBUSY;
+  }
   bft_entry_t ent;
-  int ret = bft_read_table_entry(level->bft, &ent, index);
+  ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
     return ret;
   }
@@ -475,9 +483,10 @@ int bsfs_open(bs_bsfs_t fs, const char* path, bs_file_t* file) {
   if (ret < 0) {
     return ret;
   }
-  pthread_rwlock_unlock(&level->metadata_lock);
 
-  return bs_oft_get(&level->open_files, level, index, file);
+  ret = bs_oft_get(&level->open_files, level, index, file);
+  pthread_rwlock_unlock(&level->metadata_lock);
+  return ret;
 }
 
 int bsfs_release(bs_file_t file) {
