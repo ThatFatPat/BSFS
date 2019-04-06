@@ -1234,21 +1234,21 @@ static void truncate_fs_teardown(void) {
 }
 
 START_TEST(test_ftruncate_extend) {
-  ck_assert_int_eq(bsfs_ftruncate(truncate_file, 30), 0);
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(truncate_str) + 10), 0);
 
   uint8_t buf[10];
   uint8_t expected[sizeof(buf)] = { 0 };
-  ck_assert_int_eq(bsfs_read(truncate_file, buf, 10, 20), 10);
+  ck_assert_int_eq(bsfs_read(truncate_file, buf, sizeof(buf), strlen(truncate_str)), sizeof(buf));
   ck_assert_int_eq(memcmp(buf, expected, sizeof(buf)), 0);
 }
 END_TEST
 
 START_TEST(test_ftruncate_same_size) {
-  ck_assert_int_eq(bsfs_ftruncate(truncate_file, 20), 0);
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(truncate_str)), 0);
 
   struct stat st;
   ck_assert_int_eq(bsfs_fgetattr(truncate_file, &st), 0);
-  ck_assert_int_eq(st.st_size, 20);
+  ck_assert_int_eq(st.st_size, strlen(truncate_str));
 }
 END_TEST
 
