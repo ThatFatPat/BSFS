@@ -1,6 +1,7 @@
 #include "fuse_ops.h"
 
 #include "bsfs.h"
+#include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
 
@@ -117,6 +118,15 @@ int bsfs_fuse_utimens(const char* path, const struct timespec times[2],
   bs_file_t file = try_get_file(fi);
   return file ? bsfs_futimens(file, times)
               : bsfs_utimens(get_fs(), path, times);
+}
+
+int bsfs_fuse_fallocate(const char* path, int mode, off_t off, off_t len,
+                        struct fuse_file_info* fi) {
+  (void) path;
+  if (mode) {
+    return -ENOTSUP;
+  }
+  return bsfs_fallocate(get_file(fi), off, len);
 }
 
 int bsfs_fuse_rename(const char* oldpath, const char* newpath,
