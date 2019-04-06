@@ -29,6 +29,9 @@ int bsfs_fuse_truncate(const char* path, off_t size, struct fuse_file_info* fi);
 int bsfs_fuse_utimens(const char* path, const struct timespec times[2],
                       struct fuse_file_info* fi);
 
+int bsfs_fuse_fallocate(const char* path, int mode, off_t off, off_t len,
+                        struct fuse_file_info* fi);
+
 int bsfs_fuse_rename(const char* oldpath, const char* newpath,
                      unsigned int flags);
 
