@@ -209,7 +209,7 @@ int bs_split_path(const char* path, char** out_pass, char** out_name) {
   }
 
   if (!slash_loc[1]) {
-    // No file name was provided after the directory
+    // No file name was provided after the directory.
     return -ENOTSUP;
   }
 
