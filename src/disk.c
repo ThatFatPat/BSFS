@@ -80,10 +80,7 @@ size_t disk_get_size(bs_disk_t disk) {
 }
 
 int disk_lock_read(bs_disk_t disk, const void** data) {
-  int ret = pthread_rwlock_rdlock(&disk->lock);
-  if (ret) {
-    return -ret;
-  }
+  pthread_rwlock_rdlock(&disk->lock);
   *data = disk->data;
   return 0;
 }
@@ -93,10 +90,7 @@ int disk_unlock_read(bs_disk_t disk) {
 }
 
 int disk_lock_write(bs_disk_t disk, void** data) {
-  int ret = pthread_rwlock_wrlock(&disk->lock);
-  if (ret) {
-    return -ret;
-  }
+  pthread_rwlock_wrlock(&disk->lock);
   *data = disk->data;
   return 0;
 }

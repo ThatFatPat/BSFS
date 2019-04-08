@@ -160,13 +160,11 @@ void bs_oft_destroy(bs_oft_t* table) {
 
 int bs_oft_get(bs_oft_t* table, bs_open_level_t level, bft_offset_t index,
                bs_file_t* file) {
-  int ret = -pthread_mutex_lock(&table->lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_mutex_lock(&table->lock);
 
   *file = oft_find(table, index);
 
+  int ret = 0;
   if (!*file) {
     bs_file_t new_file;
     ret = create_open_file(level, index, &new_file);
@@ -191,13 +189,8 @@ unlock:
 }
 
 int bs_oft_has(bs_oft_t* table, bft_offset_t index, bool* out) {
-  int ret = -pthread_mutex_lock(&table->lock);
-  if (ret < 0) {
-    return ret;
-  }
-
+  pthread_mutex_lock(&table->lock);
   *out = oft_find(table, index) != NULL;
-
   pthread_mutex_unlock(&table->lock);
   return 0;
 }
@@ -209,10 +202,9 @@ int bs_oft_release(bs_oft_t* table, bs_file_t file) {
     return 0;
   }
 
-  int ret = -pthread_mutex_lock(&table->lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_mutex_lock(&table->lock);
+
+  int ret = 0;
 
   // Recheck refcount under lock (double-checked locking).
   new_refcount = atomic_load_explicit(&file->refcount, memory_order_acquire);

@@ -93,12 +93,9 @@ static int level_flush_metadata(bs_open_level_t level) {
   bs_disk_t disk = level->fs->disk;
 
   // Note: take a read lock here as we are not modifying the in-memory cache.
-  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_rwlock_rdlock(&level->metadata_lock);
 
-  ret = fs_write_bitmap(&level->key, disk, level->bitmap);
+  int ret = fs_write_bitmap(&level->key, disk, level->bitmap);
 
   if (ret >= 0) {
     ret = bft_write_table(&level->key, disk, level->bft);
@@ -255,13 +252,9 @@ static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
 
   // Find BFT index
   if (write) {
-    ret = -pthread_rwlock_wrlock(&level->metadata_lock);
+    pthread_rwlock_wrlock(&level->metadata_lock);
   } else {
-    ret = -pthread_rwlock_rdlock(&level->metadata_lock);
-  }
-
-  if (ret < 0) {
-    goto cleanup;
+    pthread_rwlock_rdlock(&level->metadata_lock);
   }
 
   ret = bft_find_table_entry(level->bft, name, out_index);
@@ -370,10 +363,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup;
   }
 
-  ret = -pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    goto cleanup;
-  }
+  pthread_rwlock_wrlock(&level->metadata_lock);
 
   // Check if file exists
   bft_offset_t existing_ent_index;
@@ -509,13 +499,10 @@ int bsfs_release(bs_file_t file) {
 static int get_size_and_initial_cluster(bs_file_t file, off_t* out_size,
                                         cluster_offset_t* out_initial_cluster) {
   bs_open_level_t level = file->level;
-  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_rwlock_rdlock(&level->metadata_lock);
 
   bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  int ret = bft_read_table_entry(level->bft, &ent, file->index);
   if (ret < 0) {
     goto unlock;
   }
@@ -614,15 +601,13 @@ static ssize_t do_rw_op(bs_open_level_t level, cluster_offset_t cluster_idx,
 }
 
 ssize_t bsfs_read(bs_file_t file, void* buf, size_t size, off_t off) {
-  ssize_t ret = -pthread_rwlock_rdlock(&file->lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_rwlock_rdlock(&file->lock);
 
   // Get the initial cluster and size of the file.
   off_t file_size;
   cluster_offset_t initial_cluster;
-  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  ssize_t ret =
+      get_size_and_initial_cluster(file, &file_size, &initial_cluster);
   if (ret < 0) {
     goto unlock;
   }
@@ -665,11 +650,9 @@ static int alloc_clusters(bs_open_level_t level, size_t count,
   cluster_offset_t* cluster_indices =
       calloc(count + 1, sizeof(*cluster_indices));
 
-  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    goto fail_after_alloc;
-  }
+  pthread_rwlock_wrlock(&level->metadata_lock);
 
+  int ret = 0;
   size_t i = 0;
   for (; i < count; i++) {
     ret = alloc_cluster(level, cluster_indices + i);
@@ -690,21 +673,16 @@ fail_after_lock:
     do_dealloc_clusters(level, cluster_indices, i - 1);
   }
   pthread_rwlock_unlock(&level->metadata_lock);
-fail_after_alloc:
   free(cluster_indices);
   return ret;
 }
 
 static int dealloc_clusters(bs_open_level_t level,
                             cluster_offset_t* cluster_indices, size_t count) {
-  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
-
+  pthread_rwlock_wrlock(&level->metadata_lock);
   do_dealloc_clusters(level, cluster_indices, count);
-
   pthread_rwlock_unlock(&level->metadata_lock);
+
   return 0;
 }
 
@@ -802,13 +780,10 @@ fail:
  */
 static int commit_write_to_bft(bs_file_t file, off_t new_size, bool killpriv) {
   bs_open_level_t level = file->level;
-  int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_rwlock_wrlock(&level->metadata_lock);
 
   bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, file->index);
+  int ret = bft_read_table_entry(level->bft, &ent, file->index);
   if (ret < 0) {
     goto unlock;
   }
@@ -850,14 +825,12 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
     return size;
   }
 
-  ssize_t ret = -pthread_rwlock_wrlock(&file->lock);
-  if (ret < 0) {
-    return ret;
-  }
+  pthread_rwlock_wrlock(&file->lock);
 
   off_t file_size;
   cluster_offset_t initial_cluster;
-  ret = get_size_and_initial_cluster(file, &file_size, &initial_cluster);
+  ssize_t ret =
+      get_size_and_initial_cluster(file, &file_size, &initial_cluster);
   if (ret < 0) {
     goto unlock;
   }
@@ -984,14 +957,10 @@ int bsfs_getattr(bs_bsfs_t fs, const char* path, struct stat* st) {
 int bsfs_fgetattr(bs_file_t file, struct stat* st) {
   bs_open_level_t level = file->level;
 
-  int ret = -pthread_rwlock_rdlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = do_getattr(level, file->index, st);
-
+  pthread_rwlock_rdlock(&level->metadata_lock);
+  int ret = do_getattr(level, file->index, st);
   pthread_rwlock_unlock(&level->metadata_lock);
+
   return ret;
 }
 
@@ -1028,14 +997,10 @@ int bsfs_chmod(bs_bsfs_t fs, const char* path, mode_t mode) {
 int bsfs_fchmod(bs_file_t file, mode_t mode) {
   bs_open_level_t level = file->level;
 
-  int ret = pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = do_chmod(level, file->index, mode);
-
+  pthread_rwlock_wrlock(&level->metadata_lock);
+  int ret = do_chmod(level, file->index, mode);
   pthread_rwlock_unlock(&level->metadata_lock);
+
   return ret;
 }
 
@@ -1089,9 +1054,9 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
       }
 
       pthread_rwlock_wrlock(&file->level->metadata_lock);
-
       ret = dealloc_cluster_chain(file->level, fs_next_cluster(cluster));
       pthread_rwlock_unlock(&file->level->metadata_lock);
+
       if (ret < 0) {
         goto unlock;
       }
@@ -1216,14 +1181,10 @@ int bsfs_utimens(bs_bsfs_t fs, const char* path,
 int bsfs_futimens(bs_file_t file, const struct timespec times[2]) {
   bs_open_level_t level = file->level;
 
-  int ret = pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    return ret;
-  }
-
-  ret = do_utimens(level, file->index, times);
-
+  pthread_rwlock_wrlock(&level->metadata_lock);
+  int ret = do_utimens(level, file->index, times);
   pthread_rwlock_unlock(&level->metadata_lock);
+
   return ret;
 }
 
@@ -1309,10 +1270,7 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
     goto cleanup_after_alloc;
   }
 
-  ret = -pthread_rwlock_wrlock(&level->metadata_lock);
-  if (ret < 0) {
-    goto cleanup_after_alloc;
-  }
+  pthread_rwlock_wrlock(&level->metadata_lock);
 
   bft_offset_t old_index;
   ret = bft_find_table_entry(level->bft, old_name, &old_index);
