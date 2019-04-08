@@ -208,6 +208,11 @@ int bs_split_path(const char* path, char** out_pass, char** out_name) {
     return -ENOTSUP;
   }
 
+  if (!slash_loc[1]) {
+    // No file name was provided after the directory
+    return -ENOTSUP;
+  }
+
   if (strchr(slash_loc + 1, '/')) {
     // Another slash was found in the path, but subdirectories are not
     // supported.

@@ -124,6 +124,16 @@ START_TEST(test_split_path_no_slash) {
 }
 END_TEST
 
+START_TEST(test_split_path_no_name) {
+  const char* path = "/pass/";
+  char* pass;
+  char* name;
+
+  ck_assert_int_eq(bs_split_path(path, &pass, &name), -ENOTSUP);
+  ck_assert_int_eq(bs_split_path(path, &pass, &name), -ENOTSUP);
+}
+END_TEST
+
 START_TEST(test_split_path_double_slash) {
   const char* path = "/pass/nam/e";
   char* pass;
@@ -1238,7 +1248,9 @@ START_TEST(test_ftruncate_extend) {
 
   uint8_t buf[10];
   uint8_t expected[sizeof(buf)] = { 0 };
-  ck_assert_int_eq(bsfs_read(truncate_file, buf, sizeof(buf), strlen(truncate_str)), sizeof(buf));
+  ck_assert_int_eq(
+      bsfs_read(truncate_file, buf, sizeof(buf), strlen(truncate_str)),
+      sizeof(buf));
   ck_assert_int_eq(memcmp(buf, expected, sizeof(buf)), 0);
 }
 END_TEST
@@ -1382,6 +1394,7 @@ Suite* bsfs_suite(void) {
   TCase* path_tcase = tcase_create("path");
   tcase_add_test(path_tcase, test_split_path);
   tcase_add_test(path_tcase, test_split_path_no_slash);
+  tcase_add_test(path_tcase, test_split_path_no_name);
   tcase_add_test(path_tcase, test_split_path_double_slash);
   tcase_add_test(path_tcase, test_get_dirname);
   tcase_add_test(path_tcase, test_get_dirname_trailing_slash);
