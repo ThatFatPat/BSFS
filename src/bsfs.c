@@ -322,10 +322,6 @@ void bsfs_destroy(bs_bsfs_t fs) {
   free(fs);
 }
 
-static size_t count_clusters_from_disk(bs_disk_t disk) {
-  return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
-}
-
 static int read_cluster(bs_open_level_t level, void* buf,
                         cluster_offset_t cluster) {
   return fs_read_cluster(&level->key, level->fs->disk, buf, cluster);
@@ -334,6 +330,20 @@ static int read_cluster(bs_open_level_t level, void* buf,
 static int write_cluster(bs_open_level_t level, const void* buf,
                          cluster_offset_t cluster) {
   return fs_write_cluster(&level->key, level->fs->disk, buf, cluster);
+}
+
+static size_t count_clusters_from_disk(bs_disk_t disk) {
+  return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
+}
+
+static int alloc_cluster(bs_open_level_t level, cluster_offset_t* out) {
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+  return fs_alloc_cluster(level->bitmap, bitmap_bits, out);
+}
+
+static int dealloc_cluster(bs_open_level_t level, cluster_offset_t cluster) {
+  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
+  return fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster);
 }
 
 int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
@@ -373,10 +383,8 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
     goto cleanup_after_metadata;
   }
 
-  size_t bitmap_bits = count_clusters_from_disk(fs->disk);
-
   cluster_offset_t initial_cluster;
-  ret = fs_alloc_cluster(level->bitmap, bitmap_bits, &initial_cluster);
+  ret = alloc_cluster(level, &initial_cluster);
   if (ret < 0) {
     goto cleanup_after_metadata;
   }
@@ -386,19 +394,19 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
 
   ret = write_cluster(level, cluster_data, initial_cluster);
   if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
+    dealloc_cluster(level, initial_cluster);
   }
 
   bft_entry_t ent;
   ret = bft_entry_init(&ent, name, 0, mode, initial_cluster, 0, 0);
   if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
+    dealloc_cluster(level, initial_cluster);
     goto cleanup_after_metadata;
   }
 
   ret = bft_write_table_entry(level->bft, &ent, offset);
   if (ret < 0) {
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, initial_cluster);
+    dealloc_cluster(level, initial_cluster);
   }
 
   bft_entry_destroy(&ent);
@@ -414,12 +422,11 @@ cleanup:
 static int dealloc_cluster_chain(bs_open_level_t level,
                                  cluster_offset_t cluster_idx) {
   uint8_t cluster[CLUSTER_SIZE];
-  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
 
   int ret = 0;
 
   while (cluster_idx != CLUSTER_OFFSET_EOF) {
-    ret = fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_idx);
+    ret = dealloc_cluster(level, cluster_idx);
     if (ret < 0) {
       return ret;
     }
@@ -642,10 +649,9 @@ unlock:
 static void do_dealloc_clusters(bs_open_level_t level,
                                 cluster_offset_t* cluster_indices,
                                 size_t count) {
-  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
   for (size_t i = 0; i < count; i++) {
     // If one of these fails, we still want to free the rest.
-    fs_dealloc_cluster(level->bitmap, bitmap_bits, cluster_indices[i]);
+    dealloc_cluster(level, cluster_indices[i]);
   }
 }
 
@@ -654,8 +660,6 @@ static int alloc_clusters(bs_open_level_t level, size_t count,
   cluster_offset_t* cluster_indices =
       calloc(count + 1, sizeof(*cluster_indices));
 
-  size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
-
   int ret = -pthread_rwlock_wrlock(&level->metadata_lock);
   if (ret < 0) {
     goto fail_after_alloc;
@@ -663,7 +667,7 @@ static int alloc_clusters(bs_open_level_t level, size_t count,
 
   size_t i = 0;
   for (; i < count; i++) {
-    ret = fs_alloc_cluster(level->bitmap, bitmap_bits, cluster_indices + i);
+    ret = alloc_cluster(level, cluster_indices + i);
     if (ret < 0) {
       goto fail_after_lock;
     }
