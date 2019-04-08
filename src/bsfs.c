@@ -438,16 +438,12 @@ static int dealloc_cluster_chain(bs_open_level_t level,
 }
 
 static int do_unlink(bs_open_level_t level, bft_offset_t index) {
-  bool is_open;
-  int ret = bs_oft_has(&level->open_files, index, &is_open);
-  if (ret < 0) {
-    return ret;
-  }
-  if (is_open) {
+  if (bs_oft_has(&level->open_files, index)) {
     return -EBUSY;
   }
+
   bft_entry_t ent;
-  ret = bft_read_table_entry(level->bft, &ent, index);
+  int ret = bft_read_table_entry(level->bft, &ent, index);
   if (ret < 0) {
     return ret;
   }
@@ -677,13 +673,11 @@ fail_after_lock:
   return ret;
 }
 
-static int dealloc_clusters(bs_open_level_t level,
-                            cluster_offset_t* cluster_indices, size_t count) {
+static void dealloc_clusters(bs_open_level_t level,
+                             cluster_offset_t* cluster_indices, size_t count) {
   pthread_rwlock_wrlock(&level->metadata_lock);
   do_dealloc_clusters(level, cluster_indices, count);
   pthread_rwlock_unlock(&level->metadata_lock);
-
-  return 0;
 }
 
 size_t get_required_cluster_count(off_t file_size) {

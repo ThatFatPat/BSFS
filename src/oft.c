@@ -188,11 +188,12 @@ unlock:
   return ret;
 }
 
-int bs_oft_has(bs_oft_t* table, bft_offset_t index, bool* out) {
+bool bs_oft_has(bs_oft_t* table, bft_offset_t index) {
   pthread_mutex_lock(&table->lock);
-  *out = oft_find(table, index) != NULL;
+  bool has = oft_find(table, index) != NULL;
   pthread_mutex_unlock(&table->lock);
-  return 0;
+
+  return has;
 }
 
 int bs_oft_release(bs_oft_t* table, bs_file_t file) {

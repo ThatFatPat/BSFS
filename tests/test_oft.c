@@ -202,9 +202,7 @@ START_TEST(test_oft_has) {
   bs_file_t file;
   ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
 
-  bool has;
-  ck_assert_int_eq(bs_oft_has(&table, 0, &has), 0);
-  ck_assert(has);
+  ck_assert(bs_oft_has(&table, 0));
 
   bs_oft_destroy(&table);
 }
@@ -217,9 +215,7 @@ START_TEST(test_oft_has_not) {
   bs_file_t file;
   ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
 
-  bool has;
-  ck_assert_int_eq(bs_oft_has(&table, 123, &has), 0);
-  ck_assert(!has);
+  ck_assert(!bs_oft_has(&table, 123));
 
   bs_oft_destroy(&table);
 }
@@ -233,9 +229,7 @@ START_TEST(test_oft_has_same_bucket) {
   ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
   ck_assert_int_eq(bs_oft_get(&table, NULL, table.bucket_count, &file), 0);
 
-  bool has;
-  ck_assert_int_eq(bs_oft_has(&table, 0, &has), 0);
-  ck_assert(has);
+  ck_assert(bs_oft_has(&table, 0));
 
   bs_oft_destroy(&table);
 }
@@ -248,9 +242,7 @@ START_TEST(test_oft_has_not_same_bucket) {
   bs_file_t file;
   ck_assert_int_eq(bs_oft_get(&table, NULL, 0, &file), 0);
 
-  bool has;
-  ck_assert_int_eq(bs_oft_has(&table, table.bucket_count, &has), 0);
-  ck_assert(!has);
+  ck_assert(!bs_oft_has(&table, table.bucket_count));
 
   bs_oft_destroy(&table);
 }
