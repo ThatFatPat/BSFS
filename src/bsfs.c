@@ -904,6 +904,10 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
       (const uint8_t*) buf + overlap_size, size - overlap_size,
       file_size > off ? 0 : off - file_size);
 
+  if (ret < 0) {
+    goto unlock;
+  }
+
 commit:
   ret = commit_write_to_bft(file, max(file_size, off + size), true);
 

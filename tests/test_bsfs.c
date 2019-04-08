@@ -1106,6 +1106,16 @@ START_TEST(test_write_extend_update_size) {
 }
 END_TEST
 
+START_TEST(test_write_extend_nospace) {
+  bs_file_t file;
+  ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
+
+  void* zero = calloc(1, 0x10000);
+  ck_assert_int_eq(bsfs_write(file, zero, 0x10000, 0), -ENOSPC);
+  free(zero);
+}
+END_TEST
+
 START_TEST(test_write_full_overlap) {
   const char buf[] = "YAAAAAAAAAAHOOOOOOOOOOO! is bad";
   const char overlap_buf[] = "Mi Amigo";
@@ -1475,6 +1485,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(read_write_tcase,
                  test_read_write_roundtrip_empty_file_with_offset);
   tcase_add_test(read_write_tcase, test_write_extend_update_size);
+  tcase_add_test(read_write_tcase, test_write_extend_nospace);
   tcase_add_test(read_write_tcase, test_write_full_overlap);
   tcase_add_test(read_write_tcase, test_write_partial_overlap);
   tcase_add_test(read_write_tcase, test_write_across_clusters);
