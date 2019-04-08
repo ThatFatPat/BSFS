@@ -233,7 +233,7 @@ int bs_split_path(const char* path, char** out_pass, char** out_name) {
 static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
                                       bool write, bs_open_level_t* out_level,
                                       bft_offset_t* out_index) {
-  // Split the path to password and name
+  // Split the path into password and name
   char* pass;
   char* name;
   int ret = bs_split_path(path, &pass, &name);
@@ -878,7 +878,7 @@ ssize_t bsfs_write(bs_file_t file, const void* buf, size_t size, off_t off) {
     }
 
     if (overlap_size == size) {
-      // Kill privileges and unlock.
+      // Nothing else to write - just kill privileges.
       goto commit;
     }
   } else {
