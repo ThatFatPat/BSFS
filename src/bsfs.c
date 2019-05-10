@@ -462,9 +462,9 @@ static int get_cluster_chain(bs_open_level_t level,
   size_t capacity = 4;
   size_t count = 0;
 
-  cluster_offset_t* cluster_indicies =
+  cluster_offset_t* cluster_indices =
       calloc(capacity, sizeof(cluster_offset_t));
-  if (!cluster_indicies) {
+  if (!cluster_indices) {
     return -ENOMEM;
   }
 
@@ -475,16 +475,16 @@ static int get_cluster_chain(bs_open_level_t level,
       capacity *= 2;
 
       cluster_offset_t* new_cluster_indices =
-          realloc(cluster_indicies, sizeof(cluster_offset_t) * capacity);
+          realloc(cluster_indices, sizeof(cluster_offset_t) * capacity);
       if (!new_cluster_indices) {
-        free(cluster_indicies);
+        free(cluster_indices);
         return -ENOMEM;
       }
 
-      cluster_indicies = new_cluster_indicies;
+      cluster_indices = new_cluster_indices;
     }
 
-    cluster_indicies[count++] = cluster_idx;
+    cluster_indices[count++] = cluster_idx;
 
     ret = read_cluster(level, cluster, cluster_idx);
     if (ret < 0) {
@@ -494,7 +494,7 @@ static int get_cluster_chain(bs_open_level_t level,
     cluster_idx = fs_next_cluster(cluster);
   }
 
-  *out_cluster_indices = cluster_indicies;
+  *out_cluster_indices = cluster_indices;
   *out_count = count;
 
   return ret;
