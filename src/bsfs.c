@@ -437,7 +437,67 @@ static int dealloc_cluster_chain(bs_open_level_t level,
   return ret;
 }
 
-static int do_unlink(bs_open_level_t level, bft_offset_t index) {
+static void do_dealloc_clusters(bs_open_level_t level,
+                                cluster_offset_t* cluster_indices,
+                                size_t count) {
+  for (size_t i = 0; i < count; i++) {
+    // If one of these fails, we still want to free the rest.
+    dealloc_cluster(level, cluster_indices[i]);
+  }
+}
+
+static void dealloc_clusters(bs_open_level_t level,
+                             cluster_offset_t* cluster_indices, size_t count) {
+  pthread_rwlock_wrlock(&level->metadata_lock);
+  do_dealloc_clusters(level, cluster_indices, count);
+  pthread_rwlock_unlock(&level->metadata_lock);
+}
+
+static int get_cluster_chain(bs_open_level_t level,
+                             cluster_offset_t cluster_idx,
+                             cluster_offset_t** out_cluster_indices,
+                             size_t* out_count) {
+  uint8_t cluster[CLUSTER_SIZE];
+
+  size_t capacity = 4;
+  size_t count = 0;
+
+  cluster_offset_t* cluster_indicies =
+      calloc(capacity, sizeof(cluster_offset_t));
+  if (!cluster_indicies) {
+    return -ENOMEM;
+  }
+
+  int ret = 0;
+
+  while (cluster_idx != CLUSTER_OFFSET_EOF) {
+    if (count >= capacity) {
+      capacity *= 2;
+      cluster_offset_t* new_cluster_indices =
+          realloc(cluster_indicies, sizeof(cluster_offset_t) * capacity);
+      if (!new_cluster_indices) {
+        free(cluster_indicies);
+        return -ENOMEM;
+      }
+    }
+    cluster_indicies[count++] = cluster_idx;
+
+    ret = read_cluster(level, cluster, cluster_idx);
+    if (ret < 0) {
+      return ret;
+    }
+
+    cluster_idx = fs_next_cluster(cluster);
+  }
+
+  *out_cluster_indices = cluster_indicies;
+  *out_count = count;
+
+  return ret;
+}
+
+static int do_unlink_metadata(bs_open_level_t level, bft_offset_t index,
+                              cluster_offset_t* inital_cluster) {
   if (bs_oft_has(&level->open_files, index)) {
     return -EBUSY;
   }
@@ -447,16 +507,13 @@ static int do_unlink(bs_open_level_t level, bft_offset_t index) {
   if (ret < 0) {
     return ret;
   }
-  cluster_offset_t init_cluster_idx = ent.initial_cluster;
+
+  *inital_cluster = ent.initial_cluster;
 
   // Remove BFT entry
   ret = bft_remove_table_entry(level->bft, index);
   bft_entry_destroy(&ent);
-  if (ret < 0) {
-    return ret;
-  }
-
-  return dealloc_cluster_chain(level, init_cluster_idx);
+  return ret;
 }
 
 int bsfs_unlink(bs_bsfs_t fs, const char* path) {
@@ -468,8 +525,25 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
     return ret;
   }
 
-  ret = do_unlink(level, index);
+  cluster_offset_t initial_cluster;
+
+  ret = do_unlink_metadata(level, index, &initial_cluster);
+  if (ret < 0) {
+    return ret;
+  }
+
   pthread_rwlock_unlock(&level->metadata_lock);
+
+  cluster_offset_t* cluster_indices = NULL;
+  size_t count = 0;
+  ret = get_cluster_chain(level, initial_cluster, &cluster_indices, &count);
+  if (ret < 0) {
+    return ret;
+  }
+
+  dealloc_clusters(level, cluster_indices, count);
+  free(cluster_indices);
+
   return ret;
 }
 
@@ -632,15 +706,6 @@ unlock:
   return ret;
 }
 
-static void do_dealloc_clusters(bs_open_level_t level,
-                                cluster_offset_t* cluster_indices,
-                                size_t count) {
-  for (size_t i = 0; i < count; i++) {
-    // If one of these fails, we still want to free the rest.
-    dealloc_cluster(level, cluster_indices[i]);
-  }
-}
-
 static int alloc_clusters(bs_open_level_t level, size_t count,
                           cluster_offset_t** out) {
   cluster_offset_t* cluster_indices =
@@ -671,13 +736,6 @@ fail_after_lock:
   pthread_rwlock_unlock(&level->metadata_lock);
   free(cluster_indices);
   return ret;
-}
-
-static void dealloc_clusters(bs_open_level_t level,
-                             cluster_offset_t* cluster_indices, size_t count) {
-  pthread_rwlock_wrlock(&level->metadata_lock);
-  do_dealloc_clusters(level, cluster_indices, count);
-  pthread_rwlock_unlock(&level->metadata_lock);
 }
 
 size_t get_required_cluster_count(off_t file_size) {
@@ -1263,12 +1321,15 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
     goto cleanup_after_alloc;
   }
 
+  bool unlink_new = false;
+  cluster_offset_t new_initial_cluster;
+
   pthread_rwlock_wrlock(&level->metadata_lock);
 
   bft_offset_t old_index;
   ret = bft_find_table_entry(level->bft, old_name, &old_index);
   if (ret < 0) {
-    goto cleanup_after_alloc;
+    goto unlock;
   }
 
   bft_offset_t new_index;
@@ -1288,12 +1349,17 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
 
     ret = do_exchange(level, old_index, new_index);
   } else {
+
     if (new_exists) {
       if (flags == RENAME_NOREPLACE) {
         ret = -EEXIST;
         goto unlock;
       } else {
-        do_unlink(level, new_index);
+        ret = do_unlink_metadata(level, new_index, &new_initial_cluster);
+        if (ret < 0) {
+          goto unlock;
+        }
+        unlink_new = true;
       }
     }
 
@@ -1302,6 +1368,19 @@ int bsfs_rename(bs_bsfs_t fs, const char* old_path, const char* new_path,
 
 unlock:
   pthread_rwlock_unlock(&level->metadata_lock);
+
+  if (unlink_new) {
+    cluster_offset_t* cluster_indices = NULL;
+    size_t count = 0;
+    ret =
+        get_cluster_chain(level, new_initial_cluster, &cluster_indices, &count);
+    if (ret < 0) {
+      goto cleanup_after_alloc;
+    }
+    dealloc_clusters(level, cluster_indices, count);
+    free(cluster_indices);
+  }
+
 cleanup_after_alloc:
   free(old_name);
   free(old_pass);
