@@ -414,29 +414,6 @@ cleanup:
   return ret;
 }
 
-static int dealloc_cluster_chain(bs_open_level_t level,
-                                 cluster_offset_t cluster_idx) {
-  uint8_t cluster[CLUSTER_SIZE];
-
-  int ret = 0;
-
-  while (cluster_idx != CLUSTER_OFFSET_EOF) {
-    ret = dealloc_cluster(level, cluster_idx);
-    if (ret < 0) {
-      return ret;
-    }
-
-    ret = read_cluster(level, cluster, cluster_idx);
-    if (ret < 0) {
-      return ret;
-    }
-
-    cluster_idx = fs_next_cluster(cluster);
-  }
-
-  return ret;
-}
-
 static void do_dealloc_clusters(bs_open_level_t level,
                                 cluster_offset_t* cluster_indices,
                                 size_t count) {
@@ -500,6 +477,21 @@ static int get_cluster_chain(bs_open_level_t level,
   return ret;
 }
 
+static int dealloc_cluster_chain(bs_open_level_t level,
+                                 cluster_offset_t initial_cluster) {
+  cluster_offset_t* cluster_indices;
+  size_t count;
+  int ret = get_cluster_chain(level, initial_cluster, &cluster_indices, &count);
+  if (ret < 0) {
+    return ret;
+  }
+
+  dealloc_clusters(level, cluster_indices, count);
+
+  free(cluster_indices);
+  return 0;
+}
+
 static int do_unlink_metadata(bs_open_level_t level, bft_offset_t index,
                               cluster_offset_t* inital_cluster) {
   if (bs_oft_has(&level->open_files, index)) {
@@ -538,17 +530,7 @@ int bsfs_unlink(bs_bsfs_t fs, const char* path) {
 
   pthread_rwlock_unlock(&level->metadata_lock);
 
-  cluster_offset_t* cluster_indices = NULL;
-  size_t count = 0;
-  ret = get_cluster_chain(level, initial_cluster, &cluster_indices, &count);
-  if (ret < 0) {
-    return ret;
-  }
-
-  dealloc_clusters(level, cluster_indices, count);
-  free(cluster_indices);
-
-  return ret;
+  return dealloc_cluster_chain(level, initial_cluster);
 }
 
 int bsfs_open(bs_bsfs_t fs, const char* path, bs_file_t* file) {
@@ -1108,9 +1090,7 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
         goto unlock;
       }
 
-      pthread_rwlock_wrlock(&file->level->metadata_lock);
       ret = dealloc_cluster_chain(file->level, fs_next_cluster(cluster));
-      pthread_rwlock_unlock(&file->level->metadata_lock);
 
       if (ret < 0) {
         goto unlock;
@@ -1374,15 +1354,7 @@ unlock:
   pthread_rwlock_unlock(&level->metadata_lock);
 
   if (unlink_new) {
-    cluster_offset_t* cluster_indices = NULL;
-    size_t count = 0;
-    ret =
-        get_cluster_chain(level, new_initial_cluster, &cluster_indices, &count);
-    if (ret < 0) {
-      goto cleanup_after_alloc;
-    }
-    dealloc_clusters(level, cluster_indices, count);
-    free(cluster_indices);
+    ret = dealloc_cluster_chain(level, new_initial_cluster);
   }
 
 cleanup_after_alloc:
