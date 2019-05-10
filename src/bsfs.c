@@ -473,13 +473,17 @@ static int get_cluster_chain(bs_open_level_t level,
   while (cluster_idx != CLUSTER_OFFSET_EOF) {
     if (count >= capacity) {
       capacity *= 2;
+
       cluster_offset_t* new_cluster_indices =
           realloc(cluster_indicies, sizeof(cluster_offset_t) * capacity);
       if (!new_cluster_indices) {
         free(cluster_indicies);
         return -ENOMEM;
       }
+
+      cluster_indicies = new_cluster_indicies;
     }
+
     cluster_indicies[count++] = cluster_idx;
 
     ret = read_cluster(level, cluster, cluster_idx);
