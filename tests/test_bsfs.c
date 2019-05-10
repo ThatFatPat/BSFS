@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #define FS_DISK_SIZE                                                           \
-  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x4000))
+  (KEYTAB_SIZE + STEGO_USER_LEVEL_COUNT * (BFT_SIZE + 0x400000))
 
 static int create_tmp_file(size_t size) {
   int fd = syscall(SYS_memfd_create, "test_bsfs.bsf", 0);
@@ -1111,8 +1111,8 @@ START_TEST(test_write_extend_nospace) {
   bs_file_t file;
   ck_assert_int_eq(bsfs_open(tmp_fs, "readwritelvl/file", &file), 0);
 
-  void* zero = calloc(1, 0x10000);
-  ck_assert_int_eq(bsfs_write(file, zero, 0x10000, 0), -ENOSPC);
+  void* zero = calloc(1, 0x10000000);
+  ck_assert_int_eq(bsfs_write(file, zero, 0x10000000, 0), -ENOSPC);
   free(zero);
 }
 END_TEST

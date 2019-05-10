@@ -87,7 +87,7 @@ static bs_disk_t create_tmp_disk(size_t size) {
 }
 
 START_TEST(test_read_write_level_roundtrip) {
-  const int level_size = 8;
+  const int level_size = 16;
 
   const char data1[48] = "The quick brown fox jumps over the lazy dog";
   const char data2[sizeof(data1)] = "0123456789012345678901234567890123456789";
