@@ -1353,6 +1353,14 @@ START_TEST(test_ftruncate_shrink_dealloc) {
   ck_assert_int_eq(st.st_size, 3);
 }
 END_TEST
+
+START_TEST(test_ftruncate_shrink_to_empty) {
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, 0), 0);
+  char buf;
+  ck_assert_int_eq(bsfs_read(truncate_file, &buf, 1, 0), 0);
+}
+END_TEST
+
 START_TEST(test_ftruncate_extend_alloc) {
   ck_assert_int_eq(bsfs_ftruncate(truncate_file, strlen(long_data)), 0);
 
@@ -1522,6 +1530,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(truncate_tcase, test_ftruncate_cluster_leak);
   tcase_add_test(truncate_tcase, test_truncate);
   tcase_add_test(truncate_tcase, test_ftruncate_shrink_dealloc);
+  tcase_add_test(truncate_tcase, test_ftruncate_shrink_to_empty);
   tcase_add_test(truncate_tcase, test_ftruncate_extend_alloc);
   tcase_add_test(truncate_tcase, test_fallocate_preserve);
   tcase_add_test(truncate_tcase, test_fallocate_extend);
