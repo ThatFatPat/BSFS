@@ -1,6 +1,7 @@
 #include "test_bsfs.h"
 
 #include "bft.h"
+#include "bit_util.h"
 #include "bsfs_priv.h"
 #include "keytab.h"
 #include "stego.h"
@@ -1313,6 +1314,22 @@ START_TEST(test_ftruncate_same_size_no_killpriv) {
 }
 END_TEST
 
+START_TEST(test_ftruncate_cluster_leak) {
+  ck_assert_int_eq(bsfs_write(truncate_file, long_data, strlen(long_data), 0),
+                   strlen(long_data));
+  ck_assert_int_eq(bsfs_ftruncate(truncate_file, CLUSTER_DATA_SIZE), 0);
+
+  size_t clusters = fs_count_clusters(
+      stego_compute_user_level_size(disk_get_size(tmp_fs->disk)));
+  void* bitmap = truncate_file->level->bitmap;
+  size_t sum = 0;
+  for (size_t i = 0; i < clusters; i++) {
+    sum += get_bit(bitmap, i);
+  }
+  ck_assert_int_eq(sum, 1);
+}
+END_TEST
+
 START_TEST(test_truncate) {
   ck_assert_int_eq(bsfs_truncate(tmp_fs, "truncatelvl/file", 15), 0);
 
@@ -1502,6 +1519,7 @@ Suite* bsfs_suite(void) {
   tcase_add_test(truncate_tcase, test_ftruncate_shrink);
   tcase_add_test(truncate_tcase, test_ftruncate_killpriv);
   tcase_add_test(truncate_tcase, test_ftruncate_same_size_no_killpriv);
+  tcase_add_test(truncate_tcase, test_ftruncate_cluster_leak);
   tcase_add_test(truncate_tcase, test_truncate);
   tcase_add_test(truncate_tcase, test_ftruncate_shrink_dealloc);
   tcase_add_test(truncate_tcase, test_ftruncate_extend_alloc);

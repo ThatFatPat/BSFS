@@ -1035,8 +1035,7 @@ int bsfs_ftruncate(bs_file_t file, off_t new_size) {
                get_required_cluster_count(size)) {
       // Shrink
       cluster_offset_t new_eof;
-      ret =
-          find_cluster(file->level, initial_cluster, new_size, &new_eof, NULL);
+      ret = find_eof_cluster(file->level, initial_cluster, new_size, &new_eof);
       if (ret < 0) {
         goto unlock;
       }
