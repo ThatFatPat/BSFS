@@ -7,11 +7,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#define STEGO_COVER_FILE_COUNT 128
+#define STEGO_COVER_FILE_COUNT 256
 #define STEGO_KEY_SIZE (STEGO_COVER_FILE_COUNT / CHAR_BIT)
-#define STEGO_LEVELS_PER_PASSWORD 8
-#define STEGO_USER_LEVEL_COUNT                                                 \
-  (STEGO_COVER_FILE_COUNT / STEGO_LEVELS_PER_PASSWORD)
+#define STEGO_LEVELS_PER_PASSWORD 4
+#define STEGO_USER_LEVEL_COUNT 16
 #define STEGO_AES_KEY_SIZE 16
 
 typedef struct {

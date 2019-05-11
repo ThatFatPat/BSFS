@@ -8,11 +8,6 @@
 
 #define BITS_PER_BLOCK (16 * CHAR_BIT)
 
-static size_t compute_bitmap_size_from_disk(bs_disk_t disk) {
-  return fs_compute_bitmap_size(
-      fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk))));
-}
-
 size_t fs_count_clusters(size_t level_size) {
   if (level_size <= BFT_SIZE) {
     return 0;
@@ -30,10 +25,15 @@ size_t fs_compute_bitmap_size(size_t clusters) {
   return 16 * ((round_to_bytes(clusters) + 15) / 16);
 }
 
+size_t fs_compute_bitmap_size_from_disk(bs_disk_t disk) {
+  return fs_compute_bitmap_size(
+      fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk))));
+}
+
 int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,
                     cluster_offset_t cluster) {
   return stego_read_level(key, disk, buf,
-                          BFT_SIZE + compute_bitmap_size_from_disk(disk) +
+                          BFT_SIZE + fs_compute_bitmap_size_from_disk(disk) +
                               CLUSTER_SIZE * cluster,
                           CLUSTER_SIZE);
 }
@@ -41,7 +41,7 @@ int fs_read_cluster(const stego_key_t* key, bs_disk_t disk, void* buf,
 int fs_write_cluster(const stego_key_t* key, bs_disk_t disk, const void* buf,
                      cluster_offset_t cluster) {
   return stego_write_level(key, disk, buf,
-                           BFT_SIZE + compute_bitmap_size_from_disk(disk) +
+                           BFT_SIZE + fs_compute_bitmap_size_from_disk(disk) +
                                CLUSTER_SIZE * cluster,
                            CLUSTER_SIZE);
 }
@@ -56,12 +56,12 @@ void fs_set_next_cluster(void* cluster, cluster_offset_t next) {
 
 int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk, void* buf) {
   return stego_read_level(key, disk, buf, BFT_SIZE,
-                          compute_bitmap_size_from_disk(disk));
+                          fs_compute_bitmap_size_from_disk(disk));
 }
 
 int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk, const void* buf) {
   return stego_write_level(key, disk, buf, BFT_SIZE,
-                           compute_bitmap_size_from_disk(disk));
+                           fs_compute_bitmap_size_from_disk(disk));
 }
 
 int fs_alloc_cluster(void* bitmap, size_t bitmap_bits,

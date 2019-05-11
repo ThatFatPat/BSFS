@@ -27,8 +27,9 @@ int disk_create(int fd, bs_disk_t* disk) {
     return -ENOMEM;
   }
 
-  if (flock(fd, LOCK_EX) == -1) { // Locks the file with file descriptor `fd`
-                                  // to be EXCLUSIVE to THIS FD.
+  if (flock(fd, LOCK_EX | LOCK_NB) ==
+      -1) { // Locks the file with file descriptor `fd`
+            // to be EXCLUSIVE to THIS FD.
     ret = -errno;
     goto fail_after_alloc;
   }
@@ -40,7 +41,7 @@ int disk_create(int fd, bs_disk_t* disk) {
   }
 
   disk_local->data =
-      mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (disk_local->data == MAP_FAILED) {
     ret = -errno;
     goto fail_after_flock;
@@ -80,10 +81,7 @@ size_t disk_get_size(bs_disk_t disk) {
 }
 
 int disk_lock_read(bs_disk_t disk, const void** data) {
-  int ret = pthread_rwlock_rdlock(&disk->lock);
-  if (ret) {
-    return -ret;
-  }
+  pthread_rwlock_rdlock(&disk->lock);
   *data = disk->data;
   return 0;
 }
@@ -93,10 +91,7 @@ int disk_unlock_read(bs_disk_t disk) {
 }
 
 int disk_lock_write(bs_disk_t disk, void** data) {
-  int ret = pthread_rwlock_wrlock(&disk->lock);
-  if (ret) {
-    return -ret;
-  }
+  pthread_rwlock_wrlock(&disk->lock);
   *data = disk->data;
   return 0;
 }
