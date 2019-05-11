@@ -4,6 +4,7 @@
 #include "keytab.h"
 #include "matrix.h"
 #include "vector.h"
+#include <assert.h>
 #include <errno.h>
 #include <openssl/rand.h>
 #include <stdbool.h>
@@ -11,6 +12,10 @@
 
 #define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_LEVELS_PER_PASSWORD)
 #define STEGO_SALT_SIZE (2 * sizeof(uint64_t))
+
+static_assert(STEGO_LEVELS_PER_PASSWORD * STEGO_USER_LEVEL_COUNT <
+                  STEGO_COVER_FILE_COUNT / 2,
+              "Vulnerability - too many usable levels");
 
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
