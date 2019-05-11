@@ -1,6 +1,7 @@
 #include "fuse_ops.h"
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct bsfs_config {
@@ -21,6 +22,9 @@ static int bsfs_opt_proc(void* data, const char* arg, int key,
   struct bsfs_config* config = (struct bsfs_config*) data;
   if (key == FUSE_OPT_KEY_NONOPT && !config->disk_path) {
     config->disk_path = strdup(arg);
+    if (!config->disk_path) {
+      exit(1);
+    }
     return 0;
   }
   return 1;
