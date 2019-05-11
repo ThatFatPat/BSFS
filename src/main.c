@@ -12,10 +12,6 @@ struct bsfs_config {
 #define BSFS_OPT(templ, memb)                                                  \
   { templ, offsetof(struct bsfs_config, memb), 1 }
 
-const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
-                                      BSFS_OPT("--help", show_help),
-                                      FUSE_OPT_END };
-
 static int bsfs_opt_proc(void* data, const char* arg, int key,
                          struct fuse_args* args) {
   (void) args;
@@ -29,6 +25,14 @@ static int bsfs_opt_proc(void* data, const char* arg, int key,
   }
   return 1;
 }
+
+static void show_bsfs_help(const char* progname) {
+  printf("usage: %s [options] <disk path> <mountpoint>\n\n", progname);
+}
+
+static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
+                                             BSFS_OPT("--help", show_help),
+                                             FUSE_OPT_END };
 
 static const struct fuse_operations ops = { .init = bsfs_fuse_init,
                                             .destroy = bsfs_fuse_destroy,
@@ -53,8 +57,16 @@ int main(int argc, char* argv[]) {
   struct bsfs_config config = { 0 };
 
   if (fuse_opt_parse(&args, &config, bsfs_opts, bsfs_opt_proc) < 0) {
-    fprintf(stderr, "error: failed to parse arguments\n");
     return 1;
+  }
+
+  if (config.show_help) {
+    show_bsfs_help(args.argv[0]);
+    if (fuse_opt_add_arg(&args, "-h") < 0) {
+      return 1;
+    }
+    args.argv[0][0] = '\0'; // Prevent FUSE from printing usage.
+    return fuse_main(args.argc, args.argv, &ops, NULL);
   }
 
   return 0;
