@@ -11,6 +11,7 @@
 struct bsfs_config {
   const char* disk_path;
   int show_help;
+  int show_version;
 };
 
 #define BSFS_OPT(templ, memb)                                                  \
@@ -46,9 +47,11 @@ static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
   return ret;
 }
 
-static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
-                                             BSFS_OPT("--help", show_help),
-                                             FUSE_OPT_END };
+static const struct fuse_opt bsfs_opts[] = {
+  BSFS_OPT("-h", show_help), BSFS_OPT("--help", show_help),
+  BSFS_OPT("-V", show_version), BSFS_OPT("--version", show_version),
+  FUSE_OPT_END
+};
 
 static const struct fuse_operations ops = { .init = bsfs_fuse_init,
                                             .destroy = bsfs_fuse_destroy,
@@ -74,6 +77,14 @@ int main(int argc, char* argv[]) {
 
   if (fuse_opt_parse(&args, &config, bsfs_opts, bsfs_opt_proc) < 0) {
     return 1;
+  }
+
+  if (config.show_version) {
+    // TODO: show bsfs version?
+    if (fuse_opt_add_arg(&args, "-V") < 0) {
+      return 1;
+    }
+    return fuse_main(args.argc, args.argv, &ops, NULL);
   }
 
   if (config.show_help) {
