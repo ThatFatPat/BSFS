@@ -1,8 +1,12 @@
+#include "bsfs.h"
 #include "fuse_ops.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 struct bsfs_config {
   const char* disk_path;
@@ -28,6 +32,18 @@ static int bsfs_opt_proc(void* data, const char* arg, int key,
 
 static void show_bsfs_help(const char* progname) {
   printf("usage: %s [options] <disk path> <mountpoint>\n\n", progname);
+}
+
+static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
+  int fd = open(disk_path, O_RDWR);
+  if (fd < 0) {
+    return -errno;
+  }
+  int ret = bsfs_init(fd, fs);
+  if (ret < 0) {
+    close(fd);
+  }
+  return ret;
 }
 
 static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
@@ -69,5 +85,21 @@ int main(int argc, char* argv[]) {
     return fuse_main(args.argc, args.argv, &ops, NULL);
   }
 
-  return 0;
+  if (!config.disk_path) {
+    fprintf(stderr, "error: no disk path specified\n");
+    return 1;
+  }
+
+  if (fuse_opt_add_arg(&args, "-odefault_permissions") < 0) {
+    return 1;
+  }
+
+  bs_bsfs_t fs;
+  int ret = init_fs(&fs, config.disk_path);
+  if (ret < 0) {
+    fprintf(stderr, "error: initialization failed: %s\n", strerror(-ret));
+    return 1;
+  }
+
+  return fuse_main(args.argc, args.argv, &ops, fs);
 }
