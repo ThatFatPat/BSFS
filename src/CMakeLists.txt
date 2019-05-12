@@ -19,6 +19,8 @@ set(SOURCES
 
 add_library(bsfs-core ${SOURCES})
 target_include_directories(bsfs-core SYSTEM PRIVATE ${OPENSSL_INCLUDE_DIR})
+target_compile_options(bsfs-core PRIVATE ${OPENSSL_DEFINITIONS})
+
 target_include_directories(bsfs-core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(bsfs-core PRIVATE ${OPENSSL_LIBRARIES} PUBLIC Threads::Threads)
 

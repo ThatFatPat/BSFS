@@ -19,4 +19,5 @@ set(SOURCES
 
 add_executable(bsfs-test ${SOURCES})
 target_include_directories(bsfs-test SYSTEM PRIVATE ${CHECK_INCLUDE_DIR})
+target_compile_options(bsfs-test PRIVATE ${CHECK_CFLAGS_OTHER})
 target_link_libraries(bsfs-test PRIVATE bsfs-core ${CHECK_LIBRARIES})

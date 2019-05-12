@@ -9,4 +9,5 @@ add_executable(bsfs ${SOURCES})
 target_compile_definitions(bsfs PRIVATE FUSE_USE_VERSION=${FUSE_VERSION})
 
 target_include_directories(bsfs SYSTEM PRIVATE ${FUSE3_INCLUDE_DIR})
+target_compile_definitions(bsfs PRIVATE ${FUSE3_CFLAGS_OTHER})
 target_link_libraries(bsfs PRIVATE bsfs-core ${FUSE3_LIBRARIES})
