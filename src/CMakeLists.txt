@@ -1,4 +1,7 @@
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
@@ -17,6 +20,6 @@ set(SOURCES
 )
 
 add_library(bsfs-core ${SOURCES})
-target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} pthread)
+target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} Threads::Threads)
 
 add_subdirectory(fuse)
