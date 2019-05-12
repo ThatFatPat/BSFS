@@ -41,7 +41,7 @@ int disk_create(int fd, bs_disk_t* disk) {
   }
 
   disk_local->data =
-      mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+      mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (disk_local->data == MAP_FAILED) {
     ret = -errno;
     goto fail_after_flock;
