@@ -1,7 +1,7 @@
 #ifndef BS_FUSE_OPS_H
 #define BS_FUSE_OPS_H
 
-#include "fuse_wrap.h"
+#include <fuse3/fuse.h>
 
 void* bsfs_fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg);
 void bsfs_fuse_destroy(void* private_data);
