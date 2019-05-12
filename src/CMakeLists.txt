@@ -2,7 +2,7 @@ find_package(OpenSSL REQUIRED)
 
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
-set(SOURCE_FILES
+set(SOURCES
   bft.c
   bit_util.c
   bsfs.c
@@ -16,7 +16,7 @@ set(SOURCE_FILES
   vector.c
 )
 
-add_library(bsfs-core ${SOURCE_FILES})
+add_library(bsfs-core ${SOURCES})
 target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} pthread)
 
 add_subdirectory(fuse)
