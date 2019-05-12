@@ -1,9 +1,8 @@
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CHECK REQUIRED check)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/ ${CHECK_INCLUDE_DIR})
-
-set(TEST_SOURCES
+add_executable(bsfs-test "")
+target_sources(bsfs-test PRIVATE
   test_bft.c
   test_bit_util.c
   test_bsfs.c
@@ -19,5 +18,6 @@ set(TEST_SOURCES
   main.c
 )
 
-add_executable(bsfs-test ${TEST_SOURCES})
-target_link_libraries(bsfs-test bsfs-core ${CHECK_LIBRARIES})
+target_include_directories(bsfs-test SYSTEM PRIVATE ${CHECK_INCLUDE_DIR})
+target_compile_options(bsfs-test PRIVATE ${CHECK_CFLAGS_OTHER})
+target_link_libraries(bsfs-test PRIVATE bsfs-core ${CHECK_LIBRARIES})

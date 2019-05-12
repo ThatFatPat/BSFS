@@ -1,18 +1,16 @@
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FUSE3 REQUIRED fuse3)
-
-include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR} ${FUSE3_INCLUDE_DIR})
-
-set(SOURCE_FILES
+add_library(bsfs-core "")
+target_sources(bsfs-core PRIVATE
   bft.c
   bit_util.c
   bsfs.c
   cluster.c
   disk.c
   enc.c
-  fuse_ops.c
   keytab.c
   matrix.c
   oft.c
@@ -20,8 +18,10 @@ set(SOURCE_FILES
   vector.c
 )
 
-add_library(bsfs-core ${SOURCE_FILES})
-target_link_libraries(bsfs-core ${OPENSSL_LIBRARIES} ${FUSE3_LIBRARIES})
+target_include_directories(bsfs-core SYSTEM PRIVATE ${OPENSSL_INCLUDE_DIR})
+target_compile_options(bsfs-core PRIVATE ${OPENSSL_DEFINITIONS})
 
-add_executable(bsfs main.c)
-target_link_libraries(bsfs bsfs-core ${FUSE3_LIBRARIES})
+target_include_directories(bsfs-core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(bsfs-core PRIVATE ${OPENSSL_LIBRARIES} PUBLIC Threads::Threads)
+
+add_subdirectory(fuse)
