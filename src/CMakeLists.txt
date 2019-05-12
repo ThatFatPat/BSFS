@@ -3,7 +3,8 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-set(SOURCES
+add_library(bsfs-core "")
+target_sources(bsfs-core PRIVATE
   bft.c
   bit_util.c
   bsfs.c
@@ -17,7 +18,6 @@ set(SOURCES
   vector.c
 )
 
-add_library(bsfs-core ${SOURCES})
 target_include_directories(bsfs-core SYSTEM PRIVATE ${OPENSSL_INCLUDE_DIR})
 target_compile_options(bsfs-core PRIVATE ${OPENSSL_DEFINITIONS})
 

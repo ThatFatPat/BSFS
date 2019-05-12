@@ -1,7 +1,8 @@
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CHECK REQUIRED check)
 
-set(SOURCES
+add_executable(bsfs-test "")
+target_sources(bsfs-test PRIVATE
   test_bft.c
   test_bit_util.c
   test_bsfs.c
@@ -17,7 +18,6 @@ set(SOURCES
   main.c
 )
 
-add_executable(bsfs-test ${SOURCES})
 target_include_directories(bsfs-test SYSTEM PRIVATE ${CHECK_INCLUDE_DIR})
 target_compile_options(bsfs-test PRIVATE ${CHECK_CFLAGS_OTHER})
 target_link_libraries(bsfs-test PRIVATE bsfs-core ${CHECK_LIBRARIES})
