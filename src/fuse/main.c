@@ -10,6 +10,8 @@
 
 struct bsfs_config {
   const char* disk_path;
+
+  // These are technically booleans, but FUSE wants them to be ints.
   int show_help;
   int show_version;
 };
