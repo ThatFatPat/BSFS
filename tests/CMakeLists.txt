@@ -1,8 +1,7 @@
 find_package(PkgConfig QUIET REQUIRED)
 pkg_check_modules(Check REQUIRED check IMPORTED_TARGET)
 
-add_executable(bsfs-test "")
-target_sources(bsfs-test PRIVATE
+add_executable(bsfs-test
   test_bft.c
   test_bit_util.c
   test_bsfs.c

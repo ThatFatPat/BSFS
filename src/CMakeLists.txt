@@ -3,8 +3,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-add_library(bsfs-core "")
-target_sources(bsfs-core PRIVATE
+add_library(bsfs-core
   bft.c
   bit_util.c
   bsfs.c
