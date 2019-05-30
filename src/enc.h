@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+int enc_key_from_bytes(const void* password, size_t password_size,
+                       const void* salt, size_t salt_size, int iter,
+                       size_t key_size, void* key);
+
 int aes_encrypt(const void* password, size_t password_size, const void* salt,
                 size_t salt_size, const void* plain, void* enc, size_t size);
 int aes_decrypt(const void* password, size_t password_size, const void* salt,

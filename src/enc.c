@@ -16,10 +16,10 @@ static int gen_key(const EVP_CIPHER* cipher, const void* password,
   int keylen = EVP_CIPHER_key_length(cipher);
   int ivlen = EVP_CIPHER_iv_length(cipher);
 
-  if (!PKCS5_PBKDF2_HMAC((const char*) password, password_size,
-                         (const uint8_t*) salt, salt_size, NROUNDS,
-                         EVP_sha256(), keylen + ivlen, key_iv)) {
-    return -EIO;
+  int ret = enc_key_from_bytes(password, password_size, salt, salt_size,
+                               NROUNDS, keylen + ivlen, key_iv);
+  if (ret < 0) {
+    return ret;
   }
 
   memcpy(key, key_iv, keylen);
@@ -59,6 +59,16 @@ init_cipher_ctx(const EVP_CIPHER* cipher, const void* password,
 fail:
   EVP_CIPHER_CTX_free(tmp_ctx);
   return ret;
+}
+
+int enc_key_from_bytes(const void* password, size_t password_size,
+                       const void* salt, size_t salt_size, int iter,
+                       size_t key_size, void* key) {
+  return PKCS5_PBKDF2_HMAC((const char*) password, password_size,
+                           (const uint8_t*) salt, salt_size, iter, EVP_sha256(),
+                           key_size, key)
+             ? 0
+             : -EIO;
 }
 
 int aes_encrypt(const void* password, size_t password_size, const void* salt,
