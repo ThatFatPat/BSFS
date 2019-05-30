@@ -149,6 +149,13 @@ static bool check_parameters(size_t user_level_size, off_t off,
          buf_size % ENC_BLOCK_SIZE == 0 && off % ENC_BLOCK_SIZE == 0;
 }
 
+static int get_iv(void* iv, uint64_t off) {
+  // Note: one round is sufficient here as we just want a different (cheaply
+  // computable) IV per offset - all of the real security guarantees come from
+  // stego itself.
+  return enc_key_from_bytes(NULL, 0, &off, sizeof(off), 1, ENC_IV_SIZE, iv);
+}
+
 int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
                      off_t off, size_t size) {
   size_t disk_size = disk_get_size(disk);
@@ -176,7 +183,12 @@ int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
 
   disk_unlock_read(disk);
 
-  uint8_t iv[ENC_IV_SIZE] = { 0 }; // TODO: generate IV from offset.
+  uint8_t iv[ENC_IV_SIZE];
+  ret = get_iv(iv, off);
+  if (ret < 0) {
+    goto cleanup_data;
+  }
+
   ret = aes_decrypt(key->aes_key, iv, data, buf, size);
 
 cleanup_data:
@@ -200,8 +212,13 @@ int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
   }
   void* disk_data;
 
-  uint8_t iv[ENC_IV_SIZE] = { 0 }; // TODO: generate IV from offset.
-  int ret = aes_encrypt(key->aes_key, iv, buf, encrypted, size);
+  uint8_t iv[ENC_IV_SIZE];
+  int ret = get_iv(iv, off);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  ret = aes_encrypt(key->aes_key, iv, buf, encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }
