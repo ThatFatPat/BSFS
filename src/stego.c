@@ -53,7 +53,7 @@ int stego_gen_user_keys(stego_key_t* keys, size_t count) {
   matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
 
   for (size_t i = 0; i < count; i++) {
-    if (!RAND_bytes(keys[i].aes_key, STEGO_AES_KEY_SIZE)) {
+    if (!RAND_bytes(keys[i].aes_key, ENC_KEY_SIZE)) {
       return -EIO;
     }
     memcpy(keys[i].read_keys, read_keys + i * STEGO_USER_KEY_SIZE,
@@ -146,7 +146,7 @@ static void write_merged_cover_file_delta(const stego_key_t* key, void* disk,
 static bool check_parameters(size_t user_level_size, off_t off,
                              size_t buf_size) {
   return (size_t) off < user_level_size && buf_size < user_level_size - off &&
-         buf_size % 16 == 0 && off % 16 == 0;
+         buf_size % ENC_BLOCK_SIZE == 0 && off % ENC_BLOCK_SIZE == 0;
 }
 
 int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
@@ -176,7 +176,8 @@ int stego_read_level(const stego_key_t* key, bs_disk_t disk, void* buf,
 
   disk_unlock_read(disk);
 
-  ret = aes_decrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, data, buf, size);
+  uint8_t iv[ENC_IV_SIZE] = { 0 }; // TODO: generate IV from offset.
+  ret = aes_decrypt(key->aes_key, iv, data, buf, size);
 
 cleanup_data:
   free(data);
@@ -199,8 +200,8 @@ int stego_write_level(const stego_key_t* key, bs_disk_t disk, const void* buf,
   }
   void* disk_data;
 
-  int ret = aes_encrypt(key->aes_key, STEGO_AES_KEY_SIZE, NULL, 0, buf,
-                        encrypted, size);
+  uint8_t iv[ENC_IV_SIZE] = { 0 }; // TODO: generate IV from offset.
+  int ret = aes_encrypt(key->aes_key, iv, buf, encrypted, size);
   if (ret < 0) {
     goto cleanup;
   }

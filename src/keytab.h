@@ -2,12 +2,13 @@
 #define BS_KEYTAB_H
 
 #include "disk.h"
+#include "enc.h"
 #include "stego.h"
 #include <sys/types.h>
 
 #define KEYTAB_TAG_SIZE 16
 #define KEYTAB_ENTRY_SIZE                                                      \
-  (STEGO_AES_KEY_SIZE + STEGO_LEVELS_PER_PASSWORD * STEGO_KEY_SIZE * 2 +       \
+  (ENC_KEY_SIZE + STEGO_LEVELS_PER_PASSWORD * STEGO_KEY_SIZE * 2 +             \
    KEYTAB_TAG_SIZE)
 #define KEYTAB_SALT_SIZE 16
 

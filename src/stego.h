@@ -11,10 +11,9 @@
 #define STEGO_KEY_SIZE (STEGO_COVER_FILE_COUNT / CHAR_BIT)
 #define STEGO_LEVELS_PER_PASSWORD 4
 #define STEGO_USER_LEVEL_COUNT 16
-#define STEGO_AES_KEY_SIZE 16
 
 typedef struct {
-  uint8_t aes_key[STEGO_AES_KEY_SIZE];
+  uint8_t aes_key[ENC_KEY_SIZE];
   uint8_t read_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
   uint8_t write_keys[STEGO_LEVELS_PER_PASSWORD][STEGO_KEY_SIZE];
 } stego_key_t;
