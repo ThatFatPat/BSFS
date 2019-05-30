@@ -7,8 +7,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#define NROUNDS 10000
-
 static_assert(ENC_BLOCK_SIZE == AES_BLOCK_SIZE,
               "Incorrect block size constant");
 
