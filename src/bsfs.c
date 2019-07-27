@@ -325,6 +325,7 @@ int bsfs_format(int fd, size_t levels, const char* const* passwords) {
   }
 
   if (!fs_compute_bitmap_size_from_disk(disk)) {
+    // The disk is to small for a BSFS filesystem
     ret = -ENOSPC;
     goto cleanup_disk;
   }
