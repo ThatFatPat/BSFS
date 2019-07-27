@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
@@ -268,6 +269,91 @@ static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
 cleanup:
   free(name);
   free(pass);
+  return ret;
+}
+
+static int randomize_disk(bs_disk_t disk) {
+  void* disk_data;
+  int ret = disk_lock_write(disk, &disk_data);
+  if (ret < 0) {
+    return ret;
+  }
+  enc_rand_bytes(disk_data, disk_get_size(disk));
+  disk_unlock_write(disk);
+  return ret;
+}
+
+static int format_metadata(bs_disk_t disk, const stego_key_t* keys,
+                           size_t levels) {
+  size_t bitmap_size = fs_compute_bitmap_size_from_disk(disk);
+
+  void* zero = calloc(1, max(bitmap_size, BFT_SIZE));
+  if (!zero) {
+    return -ENOMEM;
+  }
+
+  int ret = 0;
+  for (size_t i = 0; i < levels; i++) {
+    ret = bft_write_table(keys + i, disk, zero);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+    ret = fs_write_bitmap(keys + i, disk, zero);
+    if (ret < 0) {
+      goto cleanup;
+    }
+  }
+
+cleanup:
+  free(zero);
+  return ret;
+}
+
+int bsfs_format(int fd, size_t levels, const char* const* passwords) {
+  // Disks take ownership of their file descriptors, so make sure the user's fd
+  // isn't closed.
+  int dup_fd = dup(fd);
+  if (dup_fd < 0) {
+    return -errno;
+  }
+
+  bs_disk_t disk;
+  int ret = disk_create(dup_fd, &disk);
+  if (ret < 0) {
+    return ret;
+  }
+
+  if (!fs_compute_bitmap_size_from_disk(disk)) {
+    ret = -ENOSPC;
+    goto cleanup_disk;
+  }
+
+  // Generate passwords
+  stego_key_t keys[STEGO_USER_LEVEL_COUNT];
+  ret = stego_gen_user_keys(keys, levels);
+  if (ret < 0) {
+    goto cleanup_disk;
+  }
+
+  ret = randomize_disk(disk);
+  if (ret < 0) {
+    goto cleanup_disk;
+  }
+
+  // Store passwords in the key table
+  for (size_t i = 0; i < levels; i++) {
+    ret = keytab_store(disk, i, passwords[i], keys + i);
+    if (ret < 0) {
+      goto cleanup_disk;
+    }
+  }
+
+  // Zero out BFTs and Bitmaps
+  ret = format_metadata(disk, keys, levels);
+
+cleanup_disk:
+  disk_free(disk);
   return ret;
 }
 
