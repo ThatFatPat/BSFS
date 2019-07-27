@@ -1,5 +1,6 @@
 #include "bsfs.h"
 #include "fuse_ops.h"
+#include "mkbsfs.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
@@ -10,10 +11,12 @@
 
 struct bsfs_config {
   const char* disk_path;
+  const char* passfile_path;
 
   // These are technically booleans, but FUSE wants them to be ints.
   int show_help;
   int show_version;
+  int format;
 };
 
 #define BSFS_OPT(templ, memb)                                                  \
@@ -23,18 +26,32 @@ static int bsfs_opt_proc(void* data, const char* arg, int key,
                          struct fuse_args* args) {
   (void) args;
   struct bsfs_config* config = (struct bsfs_config*) data;
-  if (key == FUSE_OPT_KEY_NONOPT && !config->disk_path) {
-    config->disk_path = strdup(arg);
+
+  if (key == FUSE_OPT_KEY_NONOPT) {
     if (!config->disk_path) {
-      exit(1);
+      config->disk_path = strdup(arg);
+      if (!config->disk_path) {
+        exit(1);
+      }
+      return 0;
+    } else if (config->format && !config->passfile_path) {
+      config->passfile_path = strdup(arg);
+      if (!config->passfile_path) {
+        exit(1);
+      }
+      return 0;
     }
-    return 0;
   }
   return 1;
 }
 
 static void show_bsfs_help(const char* progname) {
-  printf("usage: %s [options] <disk path> <mountpoint>\n\n", progname);
+  printf("Usage: %s [options] <disk path> <mountpoint|password file>\n\n"
+         "BSFS options:\n"
+         "    %-23sFormat BSFS disk using a newline-separated "
+         "password\n %-25s file. Max passwords is 16. Passwords will be\n "
+         "%-25s trimmed.\n\n",
+         progname, "-F   --format", "", "");
 }
 
 static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
@@ -49,11 +66,14 @@ static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
   return ret;
 }
 
-static const struct fuse_opt bsfs_opts[] = {
-  BSFS_OPT("-h", show_help), BSFS_OPT("--help", show_help),
-  BSFS_OPT("-V", show_version), BSFS_OPT("--version", show_version),
-  FUSE_OPT_END
-};
+static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
+                                             BSFS_OPT("--help", show_help),
+                                             BSFS_OPT("-V", show_version),
+                                             BSFS_OPT("--version",
+                                                      show_version),
+                                             BSFS_OPT("-F", format),
+                                             BSFS_OPT("--format", format),
+                                             FUSE_OPT_END };
 
 static const struct fuse_operations ops = { .init = bsfs_fuse_init,
                                             .destroy = bsfs_fuse_destroy,
@@ -72,6 +92,36 @@ static const struct fuse_operations ops = { .init = bsfs_fuse_init,
                                             .fallocate = bsfs_fuse_fallocate,
                                             .rename = bsfs_fuse_rename,
                                             .readdir = bsfs_fuse_readdir };
+
+int mount_filesystem(struct fuse_args* args, struct bsfs_config* config) {
+  if (fuse_opt_add_arg(args, "-odefault_permissions") < 0) {
+    return 1;
+  }
+
+  bs_bsfs_t fs;
+  int ret = init_fs(&fs, config->disk_path);
+  if (ret < 0) {
+    fprintf(stderr, "error: initialization failed: %s\n", strerror(-ret));
+    return 1;
+  }
+
+  return fuse_main(args->argc, args->argv, &ops, fs);
+}
+
+int format_filesystem(const char* disk_path, const char* passfile_path) {
+  if (!passfile_path) {
+    fprintf(stderr, "error: no password file specified\n");
+    return 1;
+  }
+
+  int ret = mkbsfs(disk_path, passfile_path);
+  if (ret < 0) {
+    fprintf(stderr, "error: format failed: %s\n", strerror(-ret));
+    return 1;
+  }
+
+  return 0;
+}
 
 int main(int argc, char* argv[]) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -103,16 +153,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  if (fuse_opt_add_arg(&args, "-odefault_permissions") < 0) {
-    return 1;
+  if (config.format) {
+    return format_filesystem(config.disk_path, config.passfile_path);
+  } else {
+    return mount_filesystem(&args, &config);
   }
-
-  bs_bsfs_t fs;
-  int ret = init_fs(&fs, config.disk_path);
-  if (ret < 0) {
-    fprintf(stderr, "error: initialization failed: %s\n", strerror(-ret));
-    return 1;
-  }
-
-  return fuse_main(args.argc, args.argv, &ops, fs);
 }

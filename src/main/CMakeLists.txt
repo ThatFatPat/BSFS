@@ -3,7 +3,7 @@ pkg_check_modules(Fuse3 REQUIRED fuse3 IMPORTED_TARGET)
 
 set(FUSE_API_VERSION 31)
 
-add_executable(bsfs fuse_ops.c main.c)
+add_executable(bsfs fuse_ops.c mkbsfs.c main.c)
 
 target_compile_definitions(bsfs PRIVATE FUSE_USE_VERSION=${FUSE_API_VERSION})
 
