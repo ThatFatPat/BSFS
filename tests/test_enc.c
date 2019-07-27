@@ -5,29 +5,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+START_TEST(test_key_from_bytes) {
+  const char* password = "password1";
+  const char* salt = "salt!!!";
+
+  uint8_t key[16];
+
+  ck_assert_int_eq(enc_key_from_bytes(password, strlen(password), salt,
+                                      strlen(salt), 5, sizeof(key), key),
+                   0);
+}
+END_TEST
+
 START_TEST(test_basic_roundtrip) {
-  const char* password = "Doctor Who";
+  const char key[ENC_KEY_SIZE] = "abcdefg1293";
   const char plain[32] = "But what kind of Doctor?";
 
-  const char salt[] = "salt!!!";
-  const char bad_salt[] = "bad salt";
+  const char iv[ENC_IV_SIZE] = "iv!!!";
+  const char bad_iv[ENC_IV_SIZE] = "bad iv!!!";
 
   char cipher[sizeof(plain)];
   char decrypted[sizeof(plain)];
 
-  ck_assert_int_eq(aes_encrypt(password, strlen(password), salt, sizeof(salt),
-                               plain, cipher, sizeof(plain)),
-                   0);
+  ck_assert_int_eq(aes_encrypt(key, iv, plain, cipher, sizeof(plain)), 0);
 
-  ck_assert_int_eq(aes_decrypt(password, strlen(password), salt, sizeof(salt),
-                               cipher, decrypted, sizeof(cipher)),
-                   0);
+  ck_assert_int_eq(aes_decrypt(key, iv, cipher, decrypted, sizeof(cipher)), 0);
 
   ck_assert_str_eq(plain, (char*) decrypted);
 
-  ck_assert_int_eq(aes_decrypt(password, strlen(password), bad_salt,
-                               sizeof(bad_salt), cipher, decrypted,
-                               sizeof(cipher)),
+  ck_assert_int_eq(aes_decrypt(key, bad_iv, cipher, decrypted, sizeof(cipher)),
                    0);
 
   ck_assert_int_ne(memcmp(decrypted, plain, sizeof(plain)), 0);
@@ -35,20 +41,19 @@ START_TEST(test_basic_roundtrip) {
 END_TEST
 
 START_TEST(test_basic_wrong_size) {
-  const char* password = "password1";
-  const char plain[] = "Hello, this plaintext is the wrong size!!!";
+  const char key[ENC_KEY_SIZE] = "key";
+  const char iv[ENC_IV_SIZE] = "iv";
 
+  const char plain[] = "Hello, this plaintext is the wrong size!!!";
   char cipher[sizeof(plain)];
 
-  ck_assert_int_eq(aes_encrypt(password, strlen(password), NULL, 0, plain,
-                               cipher, sizeof(plain)),
-                   -EINVAL);
+  ck_assert_int_eq(aes_encrypt(key, iv, plain, cipher, sizeof(plain)), -EINVAL);
 }
 END_TEST
 
 START_TEST(test_auth_roundtrip) {
-  const char* password = "pass2";
-  const char salt[] = "salt!!!";
+  const char key[ENC_AUTH_KEY_SIZE] = "ajklsdjfaskassdf";
+  const char iv[ENC_AUTH_IV_SIZE] = "asjkdfi3eqi9";
 
   const char plain[] = "This is plaintext!";
 
@@ -56,14 +61,12 @@ START_TEST(test_auth_roundtrip) {
   char decrypted[sizeof(plain)];
   char tag[16];
 
-  ck_assert_int_eq(aes_encrypt_auth(password, strlen(password), salt,
-                                    sizeof(salt), plain, cipher, sizeof(plain),
-                                    tag, sizeof(tag)),
-                   0);
+  ck_assert_int_eq(
+      aes_encrypt_auth(key, iv, plain, cipher, sizeof(plain), tag, sizeof(tag)),
+      0);
 
-  ck_assert_int_eq(aes_decrypt_auth(password, strlen(password), salt,
-                                    sizeof(salt), cipher, decrypted,
-                                    sizeof(cipher), tag, sizeof(tag)),
+  ck_assert_int_eq(aes_decrypt_auth(key, iv, cipher, decrypted, sizeof(cipher),
+                                    tag, sizeof(tag)),
                    0);
 
   ck_assert_str_eq(plain, decrypted);
@@ -71,8 +74,8 @@ START_TEST(test_auth_roundtrip) {
 END_TEST
 
 START_TEST(test_auth_corrupt) {
-  const char* password = "pass2";
-  const char salt[] = "salt!!!";
+  const char key[ENC_AUTH_KEY_SIZE] = "ajklsdjfaskassdf";
+  const char iv[ENC_AUTH_IV_SIZE] = "asjkdfi3eqi9";
 
   const char plain[] = "This is plaintext!";
 
@@ -80,22 +83,24 @@ START_TEST(test_auth_corrupt) {
   char decrypted[sizeof(plain)];
   char tag[16];
 
-  ck_assert_int_eq(aes_encrypt_auth(password, strlen(password), salt,
-                                    sizeof(salt), plain, cipher, sizeof(plain),
-                                    tag, sizeof(tag)),
-                   0);
+  ck_assert_int_eq(
+      aes_encrypt_auth(key, iv, plain, cipher, sizeof(plain), tag, sizeof(tag)),
+      0);
 
   memcpy(cipher, "blabla", 6);
 
-  ck_assert_int_eq(aes_decrypt_auth(password, strlen(password), salt,
-                                    sizeof(salt), cipher, decrypted,
-                                    sizeof(cipher), tag, sizeof(tag)),
+  ck_assert_int_eq(aes_decrypt_auth(key, iv, cipher, decrypted, sizeof(cipher),
+                                    tag, sizeof(tag)),
                    -EBADMSG);
 }
 END_TEST
 
 Suite* enc_suite(void) {
   Suite* suite = suite_create("enc");
+
+  TCase* pbkdf_tcase = tcase_create("pbkdf");
+  tcase_add_test(pbkdf_tcase, test_key_from_bytes);
+  suite_add_tcase(suite, pbkdf_tcase);
 
   TCase* basic_tcase = tcase_create("basic");
   tcase_add_test(basic_tcase, test_basic_roundtrip);
