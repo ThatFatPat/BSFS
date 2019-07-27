@@ -60,6 +60,29 @@ START_TEST(test_bsfs_format) {
 }
 END_TEST
 
+START_TEST(test_bsfs_format_too_many_lvls) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  const char* passwords[] = { "pass1",  "pass2",  "pass3",  "pass4",  "pass5",
+                              "pass6",  "pass7",  "pass8",  "pass9",  "pass10",
+                              "pass11", "pass12", "pass13", "pass14", "pass15",
+                              "pass16", "pass17", "pass18" };
+  ck_assert_int_eq(
+      bsfs_format(fd, sizeof(passwords) / sizeof(passwords[0]), passwords),
+      -EINVAL);
+  close(fd);
+}
+END_TEST
+
+START_TEST(test_bsfs_format_no_space) {
+  int fd = create_tmp_file(0x10);
+  const char* passwords[] = { "pass1", "pass2" };
+  ck_assert_int_eq(
+      bsfs_format(fd, sizeof(passwords) / sizeof(passwords[0]), passwords),
+      -ENOSPC);
+  close(fd);
+}
+END_TEST
+
 START_TEST(test_bsfs_init) {
   int fd = create_tmp_file(FS_DISK_SIZE);
   bs_bsfs_t fs;
@@ -1380,6 +1403,8 @@ Suite* bsfs_suite(void) {
 
   TCase* format_tcase = tcase_create("format");
   tcase_add_test(format_tcase, test_bsfs_format);
+  tcase_add_test(format_tcase, test_bsfs_format_too_many_lvls);
+  tcase_add_test(format_tcase, test_bsfs_format_no_space);
   suite_add_tcase(suite, format_tcase);
 
   TCase* init_tcase = tcase_create("init");
