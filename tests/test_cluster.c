@@ -107,10 +107,10 @@ START_TEST(test_bitmap_alloc_cluster) {
   memset(bitmap, 0, sizeof(bitmap));
 
   cluster_offset_t first;
-  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &first), 0);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, 0, &first), 0);
 
   cluster_offset_t second;
-  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &second), 0);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, 0, &second), 0);
 
   ck_assert_uint_ne(first, second);
 }
@@ -121,7 +121,7 @@ START_TEST(test_bitmap_alloc_cluster_nospace) {
   memset(bitmap, -1, sizeof(bitmap)); // all bits 1 => full
 
   cluster_offset_t clus;
-  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), -ENOSPC);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, 0, &clus), -ENOSPC);
 }
 END_TEST
 
@@ -130,10 +130,10 @@ START_TEST(test_bitmap_dealloc_cluster) {
   memset(bitmap, -1, sizeof(bitmap)); // all bits 1 => full
 
   cluster_offset_t clus;
-  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), -ENOSPC);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, 0, &clus), -ENOSPC);
 
   ck_assert_int_eq(fs_dealloc_cluster(bitmap, CLUSTERS, 5), 0);
-  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, &clus), 0);
+  ck_assert_int_eq(fs_alloc_cluster(bitmap, CLUSTERS, 0, &clus), 0);
   ck_assert_uint_eq(clus, 5);
 }
 END_TEST

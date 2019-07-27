@@ -795,7 +795,7 @@ static void rw_fs_setup(void) {
       fs_alloc_cluster(rw_level->bitmap,
                        fs_count_clusters(stego_compute_user_level_size(
                            disk_get_size(rw_level->fs->disk))),
-                       &rw_extend_cluster),
+                       0, &rw_extend_cluster),
       0);
 }
 

@@ -27,7 +27,7 @@ void fs_set_next_cluster(void* cluster, cluster_offset_t next);
 int fs_read_bitmap(const stego_key_t* key, bs_disk_t disk, void* buf);
 int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk, const void* buf);
 
-int fs_alloc_cluster(void* bitmap, size_t bitmap_bits,
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t start,
                      cluster_offset_t* new_cluster);
 int fs_dealloc_cluster(void* bitmap, size_t bitmap_bits,
                        cluster_offset_t cluster);

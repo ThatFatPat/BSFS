@@ -64,7 +64,7 @@ int fs_write_bitmap(const stego_key_t* key, bs_disk_t disk, const void* buf) {
                            fs_compute_bitmap_size_from_disk(disk));
 }
 
-int fs_alloc_cluster(void* bitmap, size_t bitmap_bits,
+int fs_alloc_cluster(void* bitmap, size_t bitmap_bits, cluster_offset_t start,
                      cluster_offset_t* new_cluster) {
   for (cluster_offset_t cluster = 0; cluster < bitmap_bits; cluster++) {
     if (!get_bit(bitmap, cluster)) {

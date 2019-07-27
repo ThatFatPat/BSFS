@@ -334,9 +334,10 @@ static size_t count_clusters_from_disk(bs_disk_t disk) {
   return fs_count_clusters(stego_compute_user_level_size(disk_get_size(disk)));
 }
 
-static int alloc_cluster(bs_open_level_t level, cluster_offset_t* out) {
+static int alloc_cluster(bs_open_level_t level, cluster_offset_t start,
+                         cluster_offset_t* out) {
   size_t bitmap_bits = count_clusters_from_disk(level->fs->disk);
-  return fs_alloc_cluster(level->bitmap, bitmap_bits, out);
+  return fs_alloc_cluster(level->bitmap, bitmap_bits, start, out);
 }
 
 static int dealloc_cluster(bs_open_level_t level, cluster_offset_t cluster) {
@@ -379,7 +380,7 @@ int bsfs_mknod(bs_bsfs_t fs, const char* path, mode_t mode) {
   }
 
   cluster_offset_t initial_cluster;
-  ret = alloc_cluster(level, &initial_cluster);
+  ret = alloc_cluster(level, 0, &initial_cluster);
   if (ret < 0) {
     goto cleanup_after_metadata;
   }
@@ -701,8 +702,10 @@ static int alloc_clusters(bs_open_level_t level, size_t count,
 
   int ret = 0;
   size_t i = 0;
+  cluster_offset_t start = 0;
   for (; i < count; i++) {
-    ret = alloc_cluster(level, cluster_indices + i);
+    ret = alloc_cluster(level, start, cluster_indices + i);
+    start = cluster_indices[i];
     if (ret < 0) {
       goto fail_after_lock;
     }
