@@ -10,6 +10,8 @@
 #define ENC_AUTH_KEY_SIZE 16
 #define ENC_AUTH_IV_SIZE 12
 
+int enc_rand_bytes(void* dest, size_t size);
+
 int enc_key_from_bytes(const void* password, size_t password_size,
                        const void* salt, size_t salt_size, int iter,
                        size_t key_size, void* key);

@@ -6,7 +6,6 @@
 #include "vector.h"
 #include <assert.h>
 #include <errno.h>
-#include <openssl/rand.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -53,8 +52,9 @@ int stego_gen_user_keys(stego_key_t* keys, size_t count) {
   matrix_transpose(write_keys, write_keys, STEGO_COVER_FILE_COUNT);
 
   for (size_t i = 0; i < count; i++) {
-    if (!RAND_bytes(keys[i].aes_key, ENC_KEY_SIZE)) {
-      return -EIO;
+    ret = enc_rand_bytes(keys[i].aes_key, ENC_KEY_SIZE);
+    if (ret < 0) {
+      return ret;
     }
     memcpy(keys[i].read_keys, read_keys + i * STEGO_USER_KEY_SIZE,
            STEGO_USER_KEY_SIZE);
