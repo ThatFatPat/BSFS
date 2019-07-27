@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define STEGO_USER_KEY_SIZE (STEGO_KEY_SIZE * STEGO_LEVELS_PER_PASSWORD)
