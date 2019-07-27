@@ -759,6 +759,8 @@ static void rw_fs_setup(void) {
   ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
 
+  ck_assert_int_eq(keytab_lookup(tmp_fs->disk, lvl, &rw_key), 0);
+
   ck_assert_int_eq(bsfs_mknod(tmp_fs, "readwritelvl/file", S_IFREG), 0);
 
   ck_assert_int_eq(bs_level_get(tmp_fs, "readwritelvl", &rw_level), 0);
