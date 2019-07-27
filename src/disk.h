@@ -12,5 +12,6 @@ int disk_lock_read(bs_disk_t disk, const void** data);
 int disk_unlock_read(bs_disk_t disk);
 int disk_lock_write(bs_disk_t disk, void** data);
 int disk_unlock_write(bs_disk_t disk);
+int disk_sync(bs_disk_t disk);
 
 #endif // BS_DISK_H

@@ -936,9 +936,12 @@ unlock:
 
 int bsfs_fsync(bs_file_t file, bool datasync) {
   if (!datasync) {
-    return level_flush_metadata(file->level);
+    int ret = level_flush_metadata(file->level);
+    if (ret < 0) {
+      return ret;
+    }
   }
-  return 0;
+  return disk_sync(file->level->fs->disk);
 }
 
 static void stat_from_bft_ent(struct stat* st, const bft_entry_t* ent) {

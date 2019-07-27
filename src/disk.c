@@ -99,3 +99,10 @@ int disk_lock_write(bs_disk_t disk, void** data) {
 int disk_unlock_write(bs_disk_t disk) {
   return disk_unlock_read(disk);
 }
+
+int disk_sync(bs_disk_t disk) {
+  if (msync(disk->data, disk->data_size, MS_SYNC) < 0) {
+    return -errno;
+  }
+  return 0;
+}
