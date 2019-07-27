@@ -46,7 +46,7 @@ static int get_passwords(const char* passfile_path, char** passwords,
 
   while (getline(&line, &line_len, passfile) >= 0) {
     if (count >= STEGO_USER_LEVEL_COUNT - 1) {
-      ret = -EINVAL;
+      ret = MKBSFS_TOO_MANY_PASSWORDS;
       goto fail;
     }
 
@@ -79,7 +79,7 @@ int mkbsfs(const char* disk_path, const char* passfile_path) {
   char* passwords[STEGO_USER_LEVEL_COUNT];
   size_t levels;
   int ret = get_passwords(passfile_path, passwords, &levels);
-  if (ret < 0) {
+  if (ret < 0 || ret == MKBSFS_TOO_MANY_PASSWORDS) {
     goto cleanup_disk;
   }
 

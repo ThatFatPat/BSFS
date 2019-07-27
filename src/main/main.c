@@ -17,6 +17,7 @@ struct bsfs_config {
   int show_help;
   int show_version;
   int format;
+  int unmount;
 };
 
 #define BSFS_OPT(templ, memb)                                                  \
@@ -46,12 +47,13 @@ static int bsfs_opt_proc(void* data, const char* arg, int key,
 }
 
 static void show_bsfs_help(const char* progname) {
-  printf("Usage: %s [options] <disk path> <mountpoint|password file>\n\n"
-         "BSFS options:\n"
-         "    %-23sFormat BSFS disk using a newline-separated "
-         "password\n %-25s file. Max passwords is 16. Passwords will be\n "
-         "%-25s trimmed.\n\n",
-         progname, "-F   --format", "", "");
+  printf(
+      "Usage: %s [options] <disk path> <mountpoint|password file>\n\n"
+      "BSFS options:\n"
+      "    %-23sFormat BSFS disk using a newline-separated "
+      "password\n %-25s file. Max passwords is 16. Passwords will be\n "
+      "%-25s trimmed.\n    %-23sUnmount a BSFS filesystem by mountpoint.\n\n",
+      progname, "-F   --format", "", "", "-u   --unmount");
 }
 
 static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
@@ -73,6 +75,8 @@ static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
                                                       show_version),
                                              BSFS_OPT("-F", format),
                                              BSFS_OPT("--format", format),
+                                             BSFS_OPT("-u", unmount),
+                                             BSFS_OPT("--unmount", unmount),
                                              FUSE_OPT_END };
 
 static const struct fuse_operations ops = { .init = bsfs_fuse_init,
@@ -116,7 +120,9 @@ int format_filesystem(const char* disk_path, const char* passfile_path) {
 
   int ret = mkbsfs(disk_path, passfile_path);
   if (ret < 0) {
-    fprintf(stderr, "error: format failed: %s\n", strerror(-ret));
+    fprintf(stderr, "error: format failed: %s\n",
+            ret == MKBSFS_TOO_MANY_PASSWORDS ? "Too many passwords"
+                                             : strerror(-ret));
     return 1;
   }
 
@@ -146,6 +152,12 @@ int main(int argc, char* argv[]) {
     }
     args.argv[0][0] = '\0'; // Prevent FUSE from printing usage.
     return fuse_main(args.argc, args.argv, &ops, NULL);
+  }
+
+  if (config.unmount) {
+    const char* fusermount_args[] = { "fusermount3", "-u", config.disk_path,
+                                      NULL };
+    execvp("fusermount3", (char**) fusermount_args);
   }
 
   if (!config.disk_path) {
