@@ -123,6 +123,13 @@ int mount_filesystem(struct fuse_args* args, struct bsfs_config* config) {
   return fuse_main(args->argc, args->argv, &ops, fs);
 }
 
+int unmount_filesystem(const char* mount_path) {
+  const char* fusermount_args[] = { "fusermount3", "-u", mount_path, NULL };
+  execvp("fusermount3", (char**) fusermount_args);
+  perror("error: failed to invoke fusermount3");
+  return 2;
+}
+
 int format_filesystem(const char* disk_path, const char* passfile_path) {
   if (!passfile_path) {
     fprintf(stderr, "error: no password file specified\n");
@@ -164,11 +171,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (config.unmount) {
-    const char* fusermount_args[] = { "fusermount3", "-u", config.disk_path,
-                                      NULL };
-    execvp("fusermount3", (char**) fusermount_args);
-    perror("error: failed to invoke fusermount3");
-    return 2;
+    return unmount_filesystem(config.disk_path);
   }
 
   if (!config.disk_path) {
