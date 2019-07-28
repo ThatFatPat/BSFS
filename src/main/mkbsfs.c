@@ -79,7 +79,7 @@ int mkbsfs(const char* disk_path, const char* passfile_path) {
   char* passwords[STEGO_USER_LEVEL_COUNT];
   size_t levels;
   int ret = get_passwords(passfile_path, passwords, &levels);
-  if (ret < 0 || ret == MKBSFS_TOO_MANY_PASSWORDS) {
+  if (ret != 0) {
     goto cleanup_disk;
   }
 
