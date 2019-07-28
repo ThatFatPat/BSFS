@@ -72,6 +72,8 @@ static const char* format_mkbsfs_error(int err) {
   switch (err) {
   case MKBSFS_TOO_MANY_PASSWORDS:
     return "Too many passwords";
+  case MKBSFS_INVALID_PASSWORD:
+    return "Invalid password encountered";
   default:
     return strerror(-err);
   }
@@ -128,7 +130,7 @@ int format_filesystem(const char* disk_path, const char* passfile_path) {
   }
 
   int ret = mkbsfs(disk_path, passfile_path);
-  if (ret < 0) {
+  if (ret != 0) {
     fprintf(stderr, "error: format failed: %s\n", format_mkbsfs_error(ret));
     return 1;
   }

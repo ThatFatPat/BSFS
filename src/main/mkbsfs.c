@@ -28,6 +28,10 @@ static int trim(const char* str, char** out) {
   return -errno;
 }
 
+static bool is_valid_password(const char* pass) {
+  return *pass && !strchr(pass, '/');
+}
+
 /**
  * Extract the passwords from the passwords file into an array
  */
@@ -52,6 +56,11 @@ static int get_passwords(const char* passfile_path, char** passwords,
 
     ret = trim(line, &passwords[count++]);
     if (ret < 0) {
+      goto fail;
+    }
+
+    if (!is_valid_password(passwords[count - 1])) {
+      ret = MKBSFS_INVALID_PASSWORD;
       goto fail;
     }
   }
