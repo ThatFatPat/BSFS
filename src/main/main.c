@@ -158,6 +158,8 @@ int main(int argc, char* argv[]) {
     const char* fusermount_args[] = { "fusermount3", "-u", config.disk_path,
                                       NULL };
     execvp("fusermount3", (char**) fusermount_args);
+    perror("error: failed to invoke fusermount3");
+    return 2;
   }
 
   if (!config.disk_path) {
