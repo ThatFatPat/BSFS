@@ -68,6 +68,15 @@ static int init_fs(bs_bsfs_t* fs, const char* disk_path) {
   return ret;
 }
 
+static const char* format_mkbsfs_error(int err) {
+  switch (err) {
+  case MKBSFS_TOO_MANY_PASSWORDS:
+    return "Too many passwords";
+  default:
+    return strerror(-err);
+  }
+}
+
 static const struct fuse_opt bsfs_opts[] = { BSFS_OPT("-h", show_help),
                                              BSFS_OPT("--help", show_help),
                                              BSFS_OPT("-V", show_version),
@@ -120,9 +129,7 @@ int format_filesystem(const char* disk_path, const char* passfile_path) {
 
   int ret = mkbsfs(disk_path, passfile_path);
   if (ret < 0) {
-    fprintf(stderr, "error: format failed: %s\n",
-            ret == MKBSFS_TOO_MANY_PASSWORDS ? "Too many passwords"
-                                             : strerror(-ret));
+    fprintf(stderr, "error: format failed: %s\n", format_mkbsfs_error(ret));
     return 1;
   }
 
