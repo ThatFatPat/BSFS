@@ -45,7 +45,7 @@ static int get_passwords(const char* passfile_path, char** passwords,
   size_t line_len = 0;
 
   while (getline(&line, &line_len, passfile) >= 0) {
-    if (count >= STEGO_USER_LEVEL_COUNT - 1) {
+    if (count >= STEGO_USER_LEVEL_COUNT) {
       ret = MKBSFS_TOO_MANY_PASSWORDS;
       goto fail;
     }
