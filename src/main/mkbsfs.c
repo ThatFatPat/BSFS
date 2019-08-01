@@ -54,15 +54,17 @@ static int get_passwords(const char* passfile_path, char** passwords,
       goto fail;
     }
 
-    ret = trim(line, &passwords[count++]);
+    ret = trim(line, passwords + count);
     if (ret < 0) {
       goto fail;
     }
 
-    if (!is_valid_password(passwords[count - 1])) {
+    if (!is_valid_password(passwords[count])) {
       ret = MKBSFS_INVALID_PASSWORD;
       goto fail;
     }
+
+    count++;
   }
 
   *out_count = count;
