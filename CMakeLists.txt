@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 project(BSFS C)
 
 include(CheckIPOSupported)
+include(CheckCCompilerFlag)
 
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
 if (ipo_supported)
@@ -11,6 +12,15 @@ else()
 endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
+
+if (DEFINED OPTIMIZE_FOR_ARCH)
+    check_c_compiler_flag(-march=${OPTIMIZE_FOR_ARCH} MARCH_SUPPORTED)
+    if (MARCH_SUPPORTED)
+        add_compile_options(-march=${OPTIMIZE_FOR_ARCH})
+    else()
+        message(WARNING "unsupported target architecture")
+    endif()
+endif()
 
 add_subdirectory(src)
 add_subdirectory(tests)
