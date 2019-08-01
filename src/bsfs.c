@@ -279,7 +279,10 @@ static int randomize_disk(bs_disk_t disk) {
   if (ret < 0) {
     return ret;
   }
-  enc_rand_bytes(disk_data, disk_get_size(disk));
+  ret = enc_rand_bytes(disk_data, disk_get_size(disk));
+  if (ret < 0) {
+    return ret;
+  }
   disk_unlock_write(disk);
   return ret;
 }
