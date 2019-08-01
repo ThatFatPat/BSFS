@@ -10,6 +10,8 @@
 typedef struct bs_file_impl* bs_file_t;
 typedef struct bs_bsfs_impl* bs_bsfs_t;
 
+int bsfs_format(int fd, size_t levels, const char* const* passwords);
+
 int bsfs_init(int fd, bs_bsfs_t* out);
 void bsfs_destroy(bs_bsfs_t fs);
 

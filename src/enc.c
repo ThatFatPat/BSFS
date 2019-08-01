@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -28,6 +29,10 @@ init_cipher_ctx(const EVP_CIPHER* cipher, const void* key, const void* iv,
 
   *ctx = tmp_ctx;
   return 0;
+}
+
+int enc_rand_bytes(void* dest, size_t size) {
+  return RAND_bytes(dest, size) ? 0 : -EIO;
 }
 
 int enc_key_from_bytes(const void* password, size_t password_size,

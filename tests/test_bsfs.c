@@ -7,6 +7,7 @@
 #include "stego.h"
 #include <errno.h>
 #include <linux/stat.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -22,6 +23,65 @@ static int create_tmp_file(size_t size) {
   ck_assert_int_ne(ftruncate(fd, size), -1);
   return fd;
 }
+
+static bool is_zero(const uint8_t* mem, size_t size) {
+  return !size || (!mem[0] && !memcmp(mem + 1, mem, size - 1));
+}
+
+START_TEST(test_bsfs_format) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  const char* passwords[] = { "pass1", "pass2" };
+  ck_assert_int_eq(
+      bsfs_format(fd, sizeof(passwords) / sizeof(passwords[0]), passwords), 0);
+
+  bs_disk_t disk;
+  ck_assert_int_eq(disk_create(fd, &disk), 0);
+
+  const void* data;
+  ck_assert_int_eq(disk_lock_read(disk, &data), 0);
+  ck_assert(!is_zero(data, disk_get_size(disk)));
+  ck_assert_int_eq(disk_unlock_read(disk), 0);
+
+  size_t bitmap_size = fs_compute_bitmap_size_from_disk(disk);
+  uint8_t* bitmap = malloc(bitmap_size);
+  uint8_t bft[BFT_SIZE];
+
+  for (size_t i = 0; i < sizeof(passwords) / sizeof(passwords[0]); i++) {
+    stego_key_t key;
+    ck_assert_int_eq(keytab_lookup(disk, passwords[i], &key), 0);
+    ck_assert_int_eq(fs_read_bitmap(&key, disk, bitmap), 0);
+    ck_assert_int_eq(bft_read_table(&key, disk, bft), 0);
+    ck_assert(is_zero(bitmap, bitmap_size));
+    ck_assert(is_zero(bft, BFT_SIZE));
+  }
+
+  free(bitmap);
+  disk_free(disk);
+}
+END_TEST
+
+START_TEST(test_bsfs_format_too_many_lvls) {
+  int fd = create_tmp_file(FS_DISK_SIZE);
+  const char* passwords[] = { "pass1",  "pass2",  "pass3",  "pass4",  "pass5",
+                              "pass6",  "pass7",  "pass8",  "pass9",  "pass10",
+                              "pass11", "pass12", "pass13", "pass14", "pass15",
+                              "pass16", "pass17", "pass18" };
+  ck_assert_int_eq(
+      bsfs_format(fd, sizeof(passwords) / sizeof(passwords[0]), passwords),
+      -EINVAL);
+  close(fd);
+}
+END_TEST
+
+START_TEST(test_bsfs_format_no_space) {
+  int fd = create_tmp_file(0x10);
+  const char* passwords[] = { "pass1", "pass2" };
+  ck_assert_int_eq(
+      bsfs_format(fd, sizeof(passwords) / sizeof(passwords[0]), passwords),
+      -ENOSPC);
+  close(fd);
+}
+END_TEST
 
 START_TEST(test_bsfs_init) {
   int fd = create_tmp_file(FS_DISK_SIZE);
@@ -185,22 +245,12 @@ START_TEST(test_get_dirname_with_file) {
 }
 END_TEST
 
-stego_key_t mknod_key;
 const char* mknod_level_name = "mknodlvl";
 
 static void mknod_fs_setup(void) {
   int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_format(fd, 1, &mknod_level_name), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&mknod_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, mknod_level_name, &mknod_key),
-                   0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&mknod_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&mknod_key, tmp_fs->disk, zero), 0);
-  free(zero);
 }
 
 static void mknod_fs_teardown(void) {
@@ -268,23 +318,12 @@ START_TEST(test_unlink_noent) {
 }
 END_TEST
 
-static stego_key_t getattr_key;
-static const char* getattr_level_name = "getattrlvl";
-
 static void getattr_fs_setup(void) {
+  const char* lvl = "getattrlvl";
   int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
+
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&getattr_key, 1), 0);
-  ck_assert_int_eq(
-      keytab_store(tmp_fs->disk, 0, getattr_level_name, &getattr_key), 0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&getattr_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&getattr_key, tmp_fs->disk, zero), 0);
-  free(zero);
-
   ck_assert_int_eq(
       bsfs_mknod(tmp_fs, "/getattrlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
 }
@@ -347,21 +386,13 @@ START_TEST(test_getattr_level_noent) {
 }
 END_TEST
 
-static stego_key_t chmod_key;
-
 static void chmod_fs_setup(void) {
+  const char* lvl = "chmodlvl";
+
   int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
+
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&chmod_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "chmodlvl", &chmod_key), 0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&chmod_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&chmod_key, tmp_fs->disk, zero), 0);
-  free(zero);
-
   ck_assert_int_eq(
       bsfs_mknod(tmp_fs, "/chmodlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
 }
@@ -408,22 +439,13 @@ START_TEST(test_chmod_file_type) {
 }
 END_TEST
 
-static stego_key_t utimens_key;
-
 static void utimens_fs_setup(void) {
+  const char* lvl = "utimenslvl";
+
   int fd = create_tmp_file(FS_DISK_SIZE);
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
+
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&utimens_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "utimenslvl", &utimens_key),
-                   0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&utimens_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&utimens_key, tmp_fs->disk, zero), 0);
-  free(zero);
-
   ck_assert_int_eq(bsfs_mknod(tmp_fs, "/utimenslvl/file1", S_IFREG), 0);
 }
 
@@ -508,23 +530,12 @@ START_TEST(test_utimens_null) {
 }
 END_TEST
 
-stego_key_t rename_key;
 const char* rename_level_name = "renamelvl";
 
 static void rename_fs_setup(void) {
   int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
+  ck_assert_int_eq(bsfs_format(fd, 1, &rename_level_name), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&rename_key, 1), 0);
-  ck_assert_int_eq(
-      keytab_store(tmp_fs->disk, 0, rename_level_name, &rename_key), 0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&rename_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&rename_key, tmp_fs->disk, zero), 0);
-  free(zero);
-
   char path[256];
   strcpy(path, rename_level_name);
   ck_assert_int_eq(bsfs_mknod(tmp_fs, strcat(path, "/bla"), S_IFREG), 0);
@@ -658,21 +669,11 @@ START_TEST(test_rename_exchange_no_dest) {
 }
 END_TEST
 
-stego_key_t readdir_key;
-
 static void readdir_fs_setup(void) {
   int fd = create_tmp_file(FS_DISK_SIZE);
+  const char* lvl = "readdirlvl";
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  ck_assert_int_eq(stego_gen_user_keys(&readdir_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "readdirlvl", &readdir_key),
-                   0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&readdir_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&readdir_key, tmp_fs->disk, zero), 0);
-  free(zero);
 
   ck_assert_int_eq(
       bsfs_mknod(tmp_fs, "/readdirlvl/file1", S_IFREG | S_IRUSR | S_IWUSR), 0);
@@ -776,17 +777,12 @@ bs_open_level_t rw_level;
 cluster_offset_t rw_extend_cluster;
 
 static void rw_fs_setup(void) {
+  const char* lvl = "readwritelvl";
   int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
 
-  ck_assert_int_eq(stego_gen_user_keys(&rw_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "readwritelvl", &rw_key), 0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&rw_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&rw_key, tmp_fs->disk, zero), 0);
-  free(zero);
+  ck_assert_int_eq(keytab_lookup(tmp_fs->disk, lvl, &rw_key), 0);
 
   ck_assert_int_eq(bsfs_mknod(tmp_fs, "readwritelvl/file", S_IFREG), 0);
 
@@ -934,18 +930,20 @@ START_TEST(test_do_write_extend_off_outside_of_cluster) {
 
   const char* new_data = "The Corridor by Iddo Shavit\n"
                          "The door was open\n"
-                         "And the lock,\n"
-                         "broken So I walk right in In my hand,\n"
-                         "a token And it's not always dark\n"
+                         "And the lock, broken\n"
+                         "So I walk right in\n"
+                         "In my hand, a token And it's not always dark\n"
                          "And on the wall, a mark.\n"
 
-                         "It goes on forever But at the end,\n"
-                         "a lever And once pulled, it will sever\n"
+                         "It goes on forever\n"
+                         "But at the end, a lever\n"
+                         "And once pulled, it will sever\n"
                          "It carves a hole in the wall\n"
 
                          "And the wedge is small,\n"
                          "Token-sized\n"
-                         "So in goes the token Never to be prized\n"
+                         "So in goes the token\n"
+                         "Never to be prized\n"
 
                          "And when I return\n"
                          "The mark is gone\n"
@@ -1228,19 +1226,10 @@ const char* truncate_str = "saljbhajfhaojefbgaof";
 bs_file_t truncate_file;
 
 static void truncate_fs_setup(void) {
+  const char* lvl = "truncatelvl";
   int fd = create_tmp_file(FS_DISK_SIZE + 0x4000);
+  ck_assert_int_eq(bsfs_format(fd, 1, &lvl), 0);
   ck_assert_int_eq(bsfs_init(fd, &tmp_fs), 0);
-
-  stego_key_t truncate_key;
-  ck_assert_int_eq(stego_gen_user_keys(&truncate_key, 1), 0);
-  ck_assert_int_eq(keytab_store(tmp_fs->disk, 0, "truncatelvl", &truncate_key),
-                   0);
-
-  void* zero = calloc(1, BFT_SIZE);
-  ck_assert(zero);
-  ck_assert_int_eq(bft_write_table(&truncate_key, tmp_fs->disk, zero), 0);
-  ck_assert_int_eq(fs_write_bitmap(&truncate_key, tmp_fs->disk, zero), 0);
-  free(zero);
 
   ck_assert_int_eq(bsfs_mknod(tmp_fs, "truncatelvl/file", S_IFREG), 0);
 
@@ -1411,6 +1400,12 @@ END_TEST
 
 Suite* bsfs_suite(void) {
   Suite* suite = suite_create("bsfs");
+
+  TCase* format_tcase = tcase_create("format");
+  tcase_add_test(format_tcase, test_bsfs_format);
+  tcase_add_test(format_tcase, test_bsfs_format_too_many_lvls);
+  tcase_add_test(format_tcase, test_bsfs_format_no_space);
+  suite_add_tcase(suite, format_tcase);
 
   TCase* init_tcase = tcase_create("init");
   tcase_add_test(init_tcase, test_bsfs_init);

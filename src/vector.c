@@ -1,9 +1,9 @@
 #include "vector.h"
 
 #include "bit_util.h"
+#include "enc.h"
 #include <errno.h>
 #include <limits.h>
-#include <openssl/rand.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -61,9 +61,11 @@ int gen_nonzero_vector(vector_t vector, size_t dim) {
   size_t size = round_to_bytes(dim);
 
   do {
-    if (!RAND_bytes(vector, size)) {
-      return -EIO;
+    int ret = enc_rand_bytes(vector, size);
+    if (ret < 0) {
+      return ret;
     }
   } while (!has_nonzero(vector, dim));
+
   return 0;
 }

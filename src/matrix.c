@@ -1,10 +1,10 @@
 #include "matrix.h"
 
 #include "bit_util.h"
+#include "enc.h"
 #include "vector.h"
 #include <errno.h>
 #include <limits.h>
-#include <openssl/rand.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -128,8 +128,8 @@ int matrix_gen_nonsing(matrix_t matrix, size_t dim) {
     size_t n = dim - j;
 
     // Generating `b`: a row vector
-    if (!RAND_bytes(b, round_to_bytes(n - 1))) {
-      ret = -EIO;
+    ret = enc_rand_bytes(b, round_to_bytes(n - 1));
+    if (ret < 0) {
       goto cleanup;
     }
 

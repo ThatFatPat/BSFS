@@ -21,4 +21,4 @@ target_link_libraries(bsfs-core PRIVATE OpenSSL::Crypto PUBLIC Threads::Threads)
 
 target_include_directories(bsfs-core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(fuse)
+add_subdirectory(main)

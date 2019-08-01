@@ -1,6 +1,7 @@
 #include "bsfs_priv.h"
 
 #include "bft.h"
+#include "bit_util.h"
 #include "cluster.h"
 #include "disk.h"
 #include "keytab.h"
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static size_t min(size_t a, size_t b) {
   return a < b ? a : b;
@@ -268,6 +270,169 @@ static int get_locked_level_and_index(bs_bsfs_t fs, const char* path,
 cleanup:
   free(name);
   free(pass);
+  return ret;
+}
+
+static int randomize_disk(bs_disk_t disk) {
+  void* disk_data;
+  int ret = disk_lock_write(disk, &disk_data);
+  if (ret < 0) {
+    return ret;
+  }
+  ret = enc_rand_bytes(disk_data, disk_get_size(disk));
+  if (ret < 0) {
+    return ret;
+  }
+  disk_unlock_write(disk);
+  return ret;
+}
+
+/**
+ * Generate a uniformly distributed random number in the range [start, end)
+ */
+static int rand_byte(uint8_t start, uint8_t end, uint8_t* out) {
+  uint8_t cutoff = UINT8_MAX - ((uint16_t) UINT8_MAX + 1) % (end - start);
+
+  uint8_t byte;
+  do {
+    int ret = enc_rand_bytes(&byte, 1);
+    if (ret < 0) {
+      return ret;
+    }
+  } while (byte > cutoff);
+
+  *out = byte % (end - start) + start;
+  return 0;
+}
+
+static int sample_range(uint8_t start, uint8_t end, size_t count,
+                        uint8_t* out) {
+  if (start >= end) {
+    return -EINVAL;
+  }
+  if (count > end - start) {
+    return -EINVAL;
+  }
+
+  uint8_t* bmp = calloc(1, round_to_bytes(end - start));
+  if (!bmp) {
+    return -ENOMEM;
+  }
+
+  size_t number_count = 0;
+  int ret = 0;
+  while (number_count < count) {
+    uint8_t num;
+    ret = rand_byte(start, end, &num);
+    if (ret < 0) {
+      goto cleaunp;
+    }
+    if (!get_bit(bmp, num)) {
+      out[number_count++] = num;
+      set_bit(bmp, num, true);
+    }
+  }
+
+cleaunp:
+  free(bmp);
+  return ret;
+}
+
+/**
+ *
+ */
+static int store_passwords(bs_disk_t disk, const char* const* passwords,
+                           const stego_key_t* keys, size_t levels) {
+  uint8_t level_indices[STEGO_USER_LEVEL_COUNT];
+  int ret = sample_range(0, STEGO_USER_LEVEL_COUNT, levels, level_indices);
+  if (ret < 0) {
+    return ret;
+  }
+
+  for (size_t i = 0; i < levels; i++) {
+    ret = keytab_store(disk, level_indices[i], passwords[i], keys + i);
+    if (ret < 0) {
+      return ret;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ *
+ */
+static int format_metadata(bs_disk_t disk, const stego_key_t* keys,
+                           size_t levels) {
+  size_t bitmap_size = fs_compute_bitmap_size_from_disk(disk);
+
+  void* zero = calloc(1, max(bitmap_size, BFT_SIZE));
+  if (!zero) {
+    return -ENOMEM;
+  }
+
+  int ret = 0;
+  for (size_t i = 0; i < levels; i++) {
+    ret = bft_write_table(keys + i, disk, zero);
+    if (ret < 0) {
+      goto cleanup;
+    }
+
+    ret = fs_write_bitmap(keys + i, disk, zero);
+    if (ret < 0) {
+      goto cleanup;
+    }
+  }
+
+cleanup:
+  free(zero);
+  return ret;
+}
+
+int bsfs_format(int fd, size_t levels, const char* const* passwords) {
+  // Disks take ownership of their file descriptors, so make sure the user's fd
+  // isn't closed.
+  int dup_fd = dup(fd);
+  if (dup_fd < 0) {
+    return -errno;
+  }
+
+  bs_disk_t disk;
+  int ret = disk_create(dup_fd, &disk);
+  if (ret < 0) {
+    close(dup_fd);
+    return ret;
+  }
+
+  if (!fs_compute_bitmap_size_from_disk(disk)) {
+    // The disk is to small for a BSFS filesystem
+    ret = -ENOSPC;
+    goto cleanup;
+  }
+
+  // Generate passwords
+  stego_key_t keys[STEGO_USER_LEVEL_COUNT];
+  ret = stego_gen_user_keys(keys, levels);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  ret = randomize_disk(disk);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  // Store passwords in the key table
+  ret = store_passwords(disk, passwords, keys, levels);
+  if (ret < 0) {
+    goto cleanup;
+  }
+
+  // Zero out BFTs and Bitmaps
+  ret = format_metadata(disk, keys, levels);
+
+cleanup:
+  disk_free(disk);
   return ret;
 }
 
