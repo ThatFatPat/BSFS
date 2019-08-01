@@ -315,6 +315,9 @@ static int sample_range(uint8_t start, uint8_t end, size_t count,
   }
 
   uint8_t* bmp = calloc(1, (end - start + CHAR_BIT) / CHAR_BIT);
+  if (!bmp) {
+    return -ENOMEM;
+  }
 
   size_t number_count = 0;
   int ret = 0;
