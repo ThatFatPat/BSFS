@@ -400,6 +400,7 @@ int bsfs_format(int fd, size_t levels, const char* const* passwords) {
   bs_disk_t disk;
   int ret = disk_create(dup_fd, &disk);
   if (ret < 0) {
+    close(dup_fd);
     return ret;
   }
 
