@@ -288,7 +288,7 @@ static int randomize_disk(bs_disk_t disk) {
  * Generate a uniformly distributed random number in the range [start, end)
  */
 static int rand_byte(uint8_t start, uint8_t end, uint8_t* out) {
-  uint8_t cutoff = UINT8_MAX - UINT8_MAX % (end - start);
+  uint8_t cutoff = UINT8_MAX - ((uint16_t) UINT8_MAX + 1) % (end - start);
 
   uint8_t byte;
   do {
