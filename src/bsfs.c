@@ -314,7 +314,7 @@ static int sample_range(uint8_t start, uint8_t end, size_t count,
     return -EINVAL;
   }
 
-  uint8_t* bmp = calloc(1, (end - start + CHAR_BIT) / CHAR_BIT);
+  uint8_t* bmp = calloc(1, round_to_bytes(end - start));
   if (!bmp) {
     return -ENOMEM;
   }
@@ -344,7 +344,7 @@ cleaunp:
 static int store_passwords(bs_disk_t disk, const char* const* passwords,
                            const stego_key_t* keys, size_t levels) {
   uint8_t level_indices[STEGO_USER_LEVEL_COUNT];
-  int ret = sample_range(0, STEGO_USER_LEVEL_COUNT, levels, level_indices);
+  int ret = sample_range(0, STEGO_USER_LEVEL_COUNT + 1, levels, level_indices);
   if (ret < 0) {
     return ret;
   }
