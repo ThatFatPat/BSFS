@@ -344,7 +344,7 @@ cleaunp:
 static int store_passwords(bs_disk_t disk, const char* const* passwords,
                            const stego_key_t* keys, size_t levels) {
   uint8_t level_indices[STEGO_USER_LEVEL_COUNT];
-  int ret = sample_range(0, STEGO_USER_LEVEL_COUNT + 1, levels, level_indices);
+  int ret = sample_range(0, STEGO_USER_LEVEL_COUNT, levels, level_indices);
   if (ret < 0) {
     return ret;
   }
